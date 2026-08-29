@@ -99,10 +99,13 @@ function Customer:show(cfg)
     self._walk_t         = 0
 end
 
--- Whether the speech bubble should currently be shown: while there is an
--- unfinished pre-serve message, or while showing an after-message.
+-- Whether the speech bubble should currently be shown: once actually
+-- waiting (not while still walking in) with an unfinished pre-serve
+-- message, or while showing an after-message (always waiting/settled by
+-- the time that happens, since it's set in serve()).
 function Customer:bubble_visible()
-    return (not self.done_talking) or self.state == "talking_after"
+    if self.state == "talking_after" then return true end
+    return self.state == "waiting" and not self.done_talking
 end
 
 -- Advances to the next pre-serve message (or marks pre-serve talk done).

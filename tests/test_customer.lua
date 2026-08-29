@@ -18,10 +18,14 @@ do
     assert(c.requested_type == "cooked_meat", "requested_type should be stored")
     assert(c.name == "Test Customer", "name should be stored")
     assert(not c.done_talking, "done_talking should be false with pre-messages present")
+    assert(not c:bubble_visible(), "bubble should not be visible yet while still walking in")
 
     -- Tick until the customer reaches target_x (state becomes "waiting").
+    -- The bubble must stay hidden for the whole approach and only appear
+    -- once actually arrived.
     local iters = 0
     while c.state ~= "waiting" do
+        assert(not c:bubble_visible(), "bubble should stay hidden throughout walking_in, not just at the start")
         c:update(1 / 60)
         iters = iters + 1
         assert(iters < 10000, "customer never reached waiting state")
@@ -29,6 +33,7 @@ do
     assert(c.x == target_x, "x should snap exactly to target_x on arrival")
     assert(c:arrived(), "arrived() should be true once waiting")
     assert(c:active(), "active() should be true once waiting")
+    assert(c:bubble_visible(), "bubble should become visible immediately once waiting/arrived")
 
     -- Serve: since after_messages exist, should move to talking_after.
     c:serve()
