@@ -188,4 +188,37 @@ do
     print("PASS: item_panel: close button sets should_close, other clicks don't")
 end
 
+-- Test 9: the panel is draggable by its title bar, and everything (grid, --
+-- buttons, close button, the real panel Grid's origin) moves with it.
+
+do
+    local microwave = Item.new("microwave")
+    local panel = ItemPanel.new(microwave)
+
+    local start_grid_x, start_grid_y = panel.grid_x, panel.grid_y
+    local tb = panel.title_bar
+
+    -- Press somewhere in the title bar away from the close button.
+    local px, py = tb.x + 10, tb.y + tb.h / 2
+    panel:mouse_pressed(px, py)
+    assert(panel._dragging_panel == true, "pressing the title bar should start dragging the panel")
+    assert(panel.should_close == false, "dragging the title bar should not close the panel")
+
+    panel:mouse_moved(px + 40, py + 25)
+    assert(panel.grid_x == start_grid_x + 40 and panel.grid_y == start_grid_y + 25,
+        "dragging the title bar should move the grid position by the same delta")
+    assert(microwave.panel.origin_x == panel.grid_x and microwave.panel.origin_y == panel.grid_y,
+        "the real panel Grid's origin should track the panel's new position")
+
+    panel:mouse_released(px + 40, py + 25)
+    assert(panel._dragging_panel == false, "mouse_released should stop the panel drag")
+
+    -- A press inside the grid should not be mistaken for a title-bar drag.
+    local gx, gy = microwave.panel:cell_to_world(0, 0)
+    panel:mouse_pressed(gx + 1, gy + 1)
+    assert(panel._dragging_panel == false, "pressing inside the grid should not start a panel drag")
+
+    print("PASS: item_panel: the panel is draggable by its title bar")
+end
+
 print("ALL TESTS PASSED")

@@ -210,7 +210,11 @@ local function footprint_extent(item)
     return max_dx + 1, max_dy + 1
 end
 
-function Grid:draw()
+-- skip_dragging: if true, don't draw self.dragging here even though it's
+-- mid-drag - used when the caller wants to draw the actively-dragged item
+-- itself, separately, on top of every other draw layer (e.g. above other
+-- scene elements like the customer or an open item panel).
+function Grid:draw(skip_dragging)
     local config = require("lua/game/config")
     local colors = config.COLORS or {}
 
@@ -252,7 +256,7 @@ function Grid:draw()
         if item.draw then item:draw() end
     end
 
-    if self.dragging and self.dragging.draw then
+    if self.dragging and self.dragging.draw and not skip_dragging then
         self.dragging:draw()
     end
 end

@@ -161,6 +161,21 @@ function KitchenScene:mouse_pressed(x, y)
         return
     end
 
+    -- A plain click on the customer (not a drag-and-drop, that's handled in
+    -- mouse_released) advances their dialogue: steps through pre-serve
+    -- messages while waiting, or - crucially - steps through/finishes the
+    -- post-serve thank-you message, which is what actually sends a served
+    -- customer into walking_out. Without this a served customer just stands
+    -- there showing their last line forever.
+    if self.customer:active() and self:_customer_hit(x, y) then
+        if self.customer.state == "talking_after" then
+            self.customer:advance_after()
+        elseif self.customer:arrived() then
+            self.customer:advance()
+        end
+        return
+    end
+
     -- Double-click detection: a second press within DOUBLE_CLICK_WINDOW on
     -- the same cell of an item whose def has has_panel=true opens its panel
     -- instead of starting a drag.
@@ -265,7 +280,12 @@ function KitchenScene:draw()
         love.graphics.rectangle("fill", 0, 0, config.SCREEN_W, config.SPLIT_Y)
     end
 
-    self.grid:draw()
+    -- Everything below draws its own actively-dragged item (if any) inline,
+    -- at its position in that layer's stacking order. Skip that here and
+    -- draw whichever item is actually being dragged once, last, on top of
+    -- every other layer (customer, panel, HUD) - otherwise e.g. the
+    -- customer sprite would occlude an item being dragged up toward them.
+    self.grid:draw(true)
 
     love.graphics.setColor(1, 1, 1, 1)
     self.customer:draw()
@@ -287,7 +307,13 @@ function KitchenScene:draw()
     love.graphics.print("$" .. self.day_state.currency, 16, 56)
 
     if self.panel then
-        self.panel:draw()
+        self.panel:draw(true)
+    end
+
+    local dragging_item = self.grid.dragging
+        or (self.panel and self.panel.item.panel.dragging)
+    if dragging_item and dragging_item.draw then
+        dragging_item:draw()
     end
 
     self.camera:detach()

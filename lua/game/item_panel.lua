@@ -1,7 +1,7 @@
 -- lua/game/item_panel.lua
 -- Popup sub-inventory panel for a container Item: wraps the item's `panel`
 -- Grid plus its def's `actions` as clickable buttons with a progress
--- indicator.
+-- indicator. Draggable by its title bar.
 --
 -- See docs/checklists/cooking-inventory-game.md "Shared contracts" (Task D)
 -- for the intended API summary; the real `Item`/`Grid` files (lua/game/item.lua,
@@ -10,12 +10,13 @@
 -- Coordinate choice (documented per the task instructions): rather than
 -- translating incoming screen x,y into panel-local space on every call, this
 -- module simply repositions `item.panel`'s origin (origin_x/origin_y) to
--- wherever the panel is drawn on screen, at ItemPanel.new() time. That way
--- `item.panel`'s own world_to_cell/cell_to_world math already lines up with
--- screen space, and mouse_pressed/moved/released can forward x,y straight
--- through with no translation. This does mean the panel Grid's origin is no
--- longer (0,0) once opened; nothing else depends on that (the panel grid is
--- only ever drawn/interacted with via ItemPanel while open).
+-- wherever the panel is drawn on screen, whenever the panel is laid out
+-- (construction, and again on every drag move). That way `item.panel`'s own
+-- world_to_cell/cell_to_world math always lines up with screen space, and
+-- mouse_pressed/moved/released can forward x,y straight through with no
+-- translation. This does mean the panel Grid's origin is no longer (0,0)
+-- once opened; nothing else depends on that (the panel grid is only ever
+-- drawn/interacted with via ItemPanel while open).
 
 local config    = require("lua/game/config")
 local item_defs = require("lua/game/data/item_defs")
@@ -25,16 +26,22 @@ ItemPanel.__index = ItemPanel
 
 -- Layout tuning -------------------------------------------------------------
 
-local MARGIN       = 16  -- gap between panel grid and buttons/edges
+local MARGIN       = 16  -- gap between panel content and the backdrop edge
 local BUTTON_W      = 96
 local BUTTON_H      = 28
 local BUTTON_GAP    = 8
 local PROGRESS_H    = 6
 local CLOSE_SIZE    = 22
 local CLOSE_GAP     = 6
+local TITLE_H       = 28
 
 local COLOR_DISABLED = { 0.35, 0.35, 0.35, 1 }
 local COLOR_CLOSE    = { 0.75, 0.25, 0.25, 1 }
+local COLOR_TITLE    = { 0.20, 0.20, 0.26, 1 }
+
+local function point_in_rect(x, y, r)
+    return x >= r.x and x < r.x + r.w and y >= r.y and y < r.y + r.h
+end
 
 -- Construction ---------------------------------------------------------------
 
@@ -46,63 +53,64 @@ function ItemPanel.new(item)
 
     local self = setmetatable({}, ItemPanel)
     self.item = item
-
-    local def = item_defs[item.type_id]
-    self.def = def
+    self.def  = item_defs[item.type_id]
+    self.should_close    = false
+    self._dragging_panel = false
 
     local panel = item.panel
-    local grid_w = panel.cols * panel.cell_size
-    local grid_h = panel.rows * panel.cell_size
+    self.grid_w = panel.cols * panel.cell_size
+    self.grid_h = panel.rows * panel.cell_size
 
-    -- Centered horizontally, upper-middle of the screen (above the main
-    -- floor grid, below/within the customer stage area is avoided by
-    -- sitting just below SPLIT_Y's midpoint region - actually we want it to
-    -- NOT overlap the customer stage (top half) or the main floor grid
-    -- (bottom half), so anchor it around the split line itself.
-    local origin_x = (config.SCREEN_W - grid_w) / 2
-    local origin_y = config.SPLIT_Y - grid_h - MARGIN - BUTTON_H - BUTTON_GAP
+    local actions = (self.def and self.def.actions) or {}
+    self._button_total_w = #actions * BUTTON_W + math.max(0, #actions - 1) * BUTTON_GAP
 
-    -- Reposition the item's real panel grid to this screen location so its
-    -- own world_to_cell/cell_to_world math lines up with screen space; see
-    -- module comment above.
-    panel.origin_x = origin_x
-    panel.origin_y = origin_y
+    -- Overall backdrop size: wide enough for the grid or the button row,
+    -- whichever is wider; tall enough for title bar + grid + button row,
+    -- each separated by MARGIN.
+    self.bg_w = math.max(self.grid_w, self._button_total_w) + MARGIN * 2
+    self.bg_h = TITLE_H + MARGIN + self.grid_h + BUTTON_GAP + BUTTON_H + MARGIN
 
-    self.grid_x, self.grid_y = origin_x, origin_y
-    self.grid_w, self.grid_h = grid_w, grid_h
+    -- Default position: centered horizontally, sitting just above the
+    -- split line so it doesn't overlap the main floor grid.
+    local default_x = (config.SCREEN_W - self.bg_w) / 2
+    local default_y = config.SPLIT_Y - self.bg_h - 12
 
-    -- Close (X) button, overlapping the grid's top-right corner (title-bar
-    -- style). Explicit close only - clicking outside the panel does nothing.
+    self:_layout(default_x, default_y)
+
+    return self
+end
+
+-- Recomputes every rect (bg, title bar, close button, grid position,
+-- action buttons) from the backdrop's top-left corner, and repositions the
+-- real panel Grid to match. Called at construction and on every drag move.
+function ItemPanel:_layout(bg_x, bg_y)
+    self.bg = { x = bg_x, y = bg_y, w = self.bg_w, h = self.bg_h }
+
+    self.title_bar = { x = bg_x, y = bg_y, w = self.bg_w, h = TITLE_H }
+
     self.close_button = {
-        x = origin_x + grid_w - CLOSE_SIZE,
-        y = origin_y - CLOSE_SIZE - CLOSE_GAP,
+        x = bg_x + self.bg_w - CLOSE_SIZE - CLOSE_GAP,
+        y = bg_y + (TITLE_H - CLOSE_SIZE) / 2,
         w = CLOSE_SIZE,
         h = CLOSE_SIZE,
     }
-    self.should_close = false
 
-    -- Button rects, one per action, laid out in a row below the grid.
+    self.grid_x = bg_x + (self.bg_w - self.grid_w) / 2
+    self.grid_y = bg_y + TITLE_H + MARGIN
+
+    -- Reposition the item's real panel grid to this screen location; see
+    -- module comment above.
+    self.item.panel.origin_x = self.grid_x
+    self.item.panel.origin_y = self.grid_y
+
     self.buttons = {}
-    local actions = (def and def.actions) or {}
-    local total_w = #actions * BUTTON_W + math.max(0, #actions - 1) * BUTTON_GAP
-    local start_x = origin_x + (grid_w - total_w) / 2
-    local by = origin_y + grid_h + BUTTON_GAP
-
+    local actions = (self.def and self.def.actions) or {}
+    local start_x = bg_x + (self.bg_w - self._button_total_w) / 2
+    local by = self.grid_y + self.grid_h + BUTTON_GAP
     for i, action in ipairs(actions) do
         local bx = start_x + (i - 1) * (BUTTON_W + BUTTON_GAP)
         self.buttons[action.name] = { x = bx, y = by, w = BUTTON_W, h = BUTTON_H }
     end
-
-    -- Backdrop covering the close button, grid, and button row, padded by
-    -- MARGIN on every side, so the popup reads as one panel over the game
-    -- rather than free-floating UI elements.
-    local bg_x = math.min(origin_x, start_x) - MARGIN
-    local bg_y = self.close_button.y - MARGIN
-    local bg_right  = math.max(origin_x + grid_w, start_x + total_w) + MARGIN
-    local bg_bottom = by + BUTTON_H + MARGIN
-    self.bg = { x = bg_x, y = bg_y, w = bg_right - bg_x, h = bg_bottom - bg_y }
-
-    return self
 end
 
 -- Helpers ---------------------------------------------------------------
@@ -130,10 +138,6 @@ end
 function ItemPanel:_point_in_grid(x, y)
     return x >= self.grid_x and x < self.grid_x + self.grid_w
        and y >= self.grid_y and y < self.grid_y + self.grid_h
-end
-
-local function point_in_rect(x, y, r)
-    return x >= r.x and x < r.x + r.w and y >= r.y and y < r.y + r.h
 end
 
 function ItemPanel:_point_in_close_button(x, y)
@@ -174,10 +178,10 @@ end
 -- Input forwarding ------------------------------------------------------
 
 -- Returns true if (x,y) landed on some part of the panel's own UI (close
--- button, grid, or a button) and was handled here; false if the click
--- missed the panel entirely, so the caller can treat it as a normal click
--- on whatever's behind/around the panel instead (e.g. starting a drag from
--- the main floor grid while the panel stays open).
+-- button, grid, a button, or the title bar) and was handled here; false if
+-- the click missed the panel entirely, so the caller can treat it as a
+-- normal click on whatever's behind/around the panel instead (e.g. starting
+-- a drag from the main floor grid while the panel stays open).
 function ItemPanel:mouse_pressed(x, y)
     if self:_point_in_close_button(x, y) then
         self.should_close = true
@@ -197,16 +201,35 @@ function ItemPanel:mouse_pressed(x, y)
         return true
     end
 
+    -- Title bar (checked last: the close button overlaps its right edge and
+    -- is already handled above) starts dragging the whole panel.
+    if point_in_rect(x, y, self.title_bar) then
+        self._dragging_panel = true
+        self._drag_offset_x  = x - self.bg.x
+        self._drag_offset_y  = y - self.bg.y
+        return true
+    end
+
     return false
 end
 
 function ItemPanel:mouse_moved(x, y)
+    if self._dragging_panel then
+        self:_layout(x - self._drag_offset_x, y - self._drag_offset_y)
+        return
+    end
+
     if self:_point_in_grid(x, y) or self.item.panel.dragging then
         self.item.panel:mouse_moved(x, y)
     end
 end
 
 function ItemPanel:mouse_released(x, y)
+    if self._dragging_panel then
+        self._dragging_panel = false
+        return
+    end
+
     if self:_point_in_grid(x, y) or self.item.panel.dragging then
         self.item.panel:mouse_released(x, y)
     end
@@ -214,7 +237,10 @@ end
 
 -- Draw --------------------------------------------------------------------
 
-function ItemPanel:draw()
+-- skip_dragging: passed straight through to the inner panel Grid's draw, so
+-- a caller can draw whatever's mid-drag separately on top of everything
+-- (see Grid:draw's skip_dragging param).
+function ItemPanel:draw(skip_dragging)
     local colors = config.COLORS or {}
 
     if self.bg then
@@ -222,10 +248,17 @@ function ItemPanel:draw()
         love.graphics.rectangle("fill", self.bg.x, self.bg.y, self.bg.w, self.bg.h)
         love.graphics.setColor(colors.panel_border or { 0.45, 0.45, 0.55, 1 })
         love.graphics.rectangle("line", self.bg.x, self.bg.y, self.bg.w, self.bg.h)
-        love.graphics.setColor(1, 1, 1, 1)
     end
 
-    self.item.panel:draw()
+    local tb = self.title_bar
+    love.graphics.setColor(COLOR_TITLE)
+    love.graphics.rectangle("fill", tb.x, tb.y, tb.w, tb.h)
+    love.graphics.setColor(colors.panel_border or { 0.45, 0.45, 0.55, 1 })
+    love.graphics.rectangle("line", tb.x, tb.y, tb.w, tb.h)
+    love.graphics.setColor(colors.button_text or { 1, 1, 1, 1 })
+    love.graphics.print((self.def and self.def.name) or self.item.type_id, tb.x + 8, tb.y + 6)
+
+    self.item.panel:draw(skip_dragging)
 
     local actions = (self.def and self.def.actions) or {}
 

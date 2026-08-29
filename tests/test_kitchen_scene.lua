@@ -73,6 +73,33 @@ assert(meat.grid == nil, "the served item's grid reference should be cleared")
 
 print("PASS: kitchen_scene: dragging a matching item onto the waiting customer serves them and consumes the item")
 
+-- Regression test: a served customer must actually be able to move on.
+-- Customer:serve() enters "talking_after" to show the thank-you message;
+-- only Customer:advance_after() (wired to a plain click on the customer)
+-- takes it from there to "walking_out". Without that wiring the customer
+-- gets stuck showing the same line forever and the fast_forward_until
+-- below would hit its iteration cap.
+
+assert(scene.customer.state == "talking_after",
+    "serving with after_messages configured should enter talking_after, got " .. scene.customer.state)
+
+-- First click just completes the typewriter reveal of the (only)
+-- after-message; second click advances past it into walking_out.
+scene:mouse_pressed(cx, cy)
+assert(scene.customer.state == "talking_after",
+    "clicking mid-reveal should only complete the reveal, not leave yet")
+
+scene:mouse_pressed(cx, cy)
+assert(scene.customer.state == "walking_out",
+    "clicking after the after-message is fully revealed should send the customer into walking_out")
+
+runner.fast_forward_until(ctx, function() return scene.customer:arrived() end, 0)
+assert(scene.customer:arrived(), "the next customer should walk in and become waiting once the served one leaves")
+assert(scene.day_state.customers_served == served_before + 1,
+    "customers_served should still be exactly 1 after the first customer fully walks off")
+
+print("PASS: kitchen_scene: clicking a served customer advances them through to walking_out and the next customer arrives")
+
 -- Test 2: main-grid items stay draggable while a panel is open, and dragging
 -- one onto the open panel's grid transfers it there (and back out again).
 
