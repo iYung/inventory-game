@@ -198,6 +198,18 @@ end
 
 -- Draw ------------------------------------------------------------------
 
+-- Cell span (cols, rows) of an item's current footprint's bounding box, used
+-- to size the drag-preview outline to match the actual item rather than a
+-- single cell.
+local function footprint_extent(item)
+    local max_dx, max_dy = 0, 0
+    for _, off in ipairs(item:footprint()) do
+        if off[1] > max_dx then max_dx = off[1] end
+        if off[2] > max_dy then max_dy = off[2] end
+    end
+    return max_dx + 1, max_dy + 1
+end
+
 function Grid:draw()
     local config = require("lua/game/config")
     local colors = config.COLORS or {}
@@ -222,6 +234,18 @@ function Grid:draw()
         end
     end
 
+    -- Drop preview: drawn UNDER every item (including the dragged one, drawn
+    -- below) and sized to the dragged item's actual footprint, not a fixed
+    -- single cell.
+    if self.dragging and self.drag_preview_col and colors.grid_line then
+        local w_cells, h_cells = footprint_extent(self.dragging)
+        local x, y = self:cell_to_world(self.drag_preview_col, self.drag_preview_row)
+        love.graphics.setColor(colors.grid_line)
+        love.graphics.rectangle(
+            "line", x, y, w_cells * self.cell_size, h_cells * self.cell_size
+        )
+    end
+
     love.graphics.setColor(1, 1, 1, 1)
 
     for _, item in ipairs(self._items) do
@@ -230,15 +254,6 @@ function Grid:draw()
 
     if self.dragging and self.dragging.draw then
         self.dragging:draw()
-    end
-
-    if self.dragging and self.drag_preview_col and colors.grid_line then
-        local x, y = self:cell_to_world(self.drag_preview_col, self.drag_preview_row)
-        love.graphics.setColor(colors.grid_line)
-        love.graphics.rectangle(
-            "line", x, y, self.cell_size, self.cell_size
-        )
-        love.graphics.setColor(1, 1, 1, 1)
     end
 end
 

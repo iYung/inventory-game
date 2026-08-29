@@ -73,4 +73,65 @@ assert(meat.grid == nil, "the served item's grid reference should be cleared")
 
 print("PASS: kitchen_scene: dragging a matching item onto the waiting customer serves them and consumes the item")
 
+-- Test 2: main-grid items stay draggable while a panel is open, and dragging
+-- one onto the open panel's grid transfers it there (and back out again).
+
+do
+    local ItemPanel = require("lua/game/item_panel")
+
+    local ctx2 = runner.setup(function() return KitchenScene.new() end)
+    local scene2 = ctx2.sm.current
+
+    local microwave, meat2
+    for _, it in ipairs(scene2.grid:items()) do
+        if it.type_id == "microwave" then microwave = it end
+        if it.type_id == "raw_meat" and not meat2 then meat2 = it end
+    end
+    assert(microwave and meat2, "on_enter should have placed a microwave and raw_meat")
+
+    scene2.panel = ItemPanel.new(microwave)
+
+    -- Start dragging the meat straight from the main grid while the panel
+    -- is open; this must work exactly like it would with no panel open.
+    local mx, my = scene2.grid:cell_to_world(meat2.cell_col, meat2.cell_row)
+    mx, my = mx + 1, my + 1
+    scene2:mouse_pressed(mx, my)
+    assert(scene2.grid.dragging == meat2,
+        "main-grid items should still be draggable while a panel is open")
+
+    -- Drop it onto the open panel's inner grid: should transfer there.
+    local px, py = microwave.panel:cell_to_world(0, 0)
+    scene2:mouse_moved(px + 1, py + 1)
+    scene2:mouse_released(px + 1, py + 1)
+
+    assert(scene2.grid.dragging == nil, "drop should clear the main grid's drag state")
+    assert(meat2.grid == microwave.panel, "item dropped on the panel grid should now belong to it")
+
+    local still_on_main_grid = false
+    for _, it in ipairs(scene2.grid:items()) do
+        if it == meat2 then still_on_main_grid = true end
+    end
+    assert(not still_on_main_grid, "transferred item should be gone from the main grid")
+
+    local in_panel = false
+    for _, it in ipairs(microwave.panel:items()) do
+        if it == meat2 then in_panel = true end
+    end
+    assert(in_panel, "transferred item should be listed in the panel's grid")
+
+    -- Drag it back out onto the main floor grid.
+    scene2:mouse_pressed(px + 1, py + 1)
+    assert(microwave.panel.dragging == meat2, "should be able to pick the item back up from the panel")
+
+    local ox, oy = scene2.grid:cell_to_world(3, 3)
+    scene2:mouse_moved(ox + 1, oy + 1)
+    scene2:mouse_released(ox + 1, oy + 1)
+
+    assert(microwave.panel.dragging == nil, "drop should clear the panel grid's drag state")
+    assert(meat2.grid == scene2.grid, "item dragged back out should belong to the main grid again")
+    assert(meat2.cell_col == 3 and meat2.cell_row == 3, "item should land at the dropped cell on the main grid")
+
+    print("PASS: kitchen_scene: dragging items between the main grid and an open panel transfers them")
+end
+
 print("ALL TESTS PASSED")

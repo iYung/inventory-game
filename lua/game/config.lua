@@ -21,6 +21,8 @@ config.COLORS = {
     counter     = { 0.45, 0.32, 0.22, 1 },
     button      = { 0.30, 0.55, 0.30, 1 },
     button_text = { 1, 1, 1, 1 },
+    panel_bg     = { 0.10, 0.10, 0.13, 0.95 },
+    panel_border = { 0.45, 0.45, 0.55, 1 },
 }
 
 return config

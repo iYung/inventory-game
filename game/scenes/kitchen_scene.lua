@@ -122,15 +122,35 @@ local function clear_drag(grid, item)
     grid.drag_preview_row  = nil
 end
 
+-- Moves the item currently being dragged on `from_grid` onto `to_grid` at
+-- world position (x,y), for dragging an item off the main floor grid into
+-- an open item panel (or back out again). Falls back to placing the item
+-- back at its pre-drag cell on `from_grid` if `to_grid` can't take it there.
+local function transfer_drag(from_grid, to_grid, item, x, y)
+    local orig_col, orig_row = from_grid.drag_orig_col, from_grid.drag_orig_row
+    clear_drag(from_grid, item)
+
+    local col, row = to_grid:world_to_cell(x, y)
+    if to_grid:can_place(item, col, row) then
+        to_grid:place(item, col, row)
+    else
+        from_grid:place(item, orig_col, orig_row)
+    end
+end
+
 -- Mouse / keyboard wiring --------------------------------------------------
 
 function KitchenScene:mouse_pressed(x, y)
     if self.panel then
-        self.panel:mouse_pressed(x, y)
+        local consumed = self.panel:mouse_pressed(x, y)
         if self.panel.should_close then
             self.panel = nil
+            return
         end
-        return
+        if consumed then return end
+        -- Click missed the panel's own UI (close/grid/buttons): fall through
+        -- so items on the main floor grid stay draggable while the panel is
+        -- open (needed to drag ingredients into it in the first place).
     end
 
     if self.day_state:day_complete() and point_in_rect(x, y, NEXT_DAY_BTN) then
@@ -174,10 +194,12 @@ function KitchenScene:mouse_pressed(x, y)
 end
 
 function KitchenScene:mouse_moved(x, y)
+    -- Both grids' mouse_moved are no-ops unless they're the one currently
+    -- dragging, so it's safe to always forward to both - lets an in-flight
+    -- main-grid drag keep tracking the cursor even while a panel is open.
+    self.grid:mouse_moved(x, y)
     if self.panel then
         self.panel:mouse_moved(x, y)
-    else
-        self.grid:mouse_moved(x, y)
     end
 end
 
@@ -199,8 +221,24 @@ function KitchenScene:mouse_released(x, y)
         return
     end
 
-    if self.panel then
-        self.panel:mouse_released(x, y)
+    local pgrid = self.panel and self.panel.item.panel or nil
+
+    -- Cross-grid transfer: a main-grid item dropped onto the open panel's
+    -- inner grid moves into it instead of snapping back to the floor.
+    if self.grid.dragging and pgrid and self.panel:_point_in_grid(x, y) then
+        transfer_drag(self.grid, pgrid, self.grid.dragging, x, y)
+        return
+    end
+
+    -- Cross-grid transfer: an item dragged out of the panel and dropped
+    -- outside it moves back onto the main floor grid.
+    if pgrid and pgrid.dragging and not self.panel:_point_in_grid(x, y) then
+        transfer_drag(pgrid, self.grid, pgrid.dragging, x, y)
+        return
+    end
+
+    if pgrid and pgrid.dragging then
+        pgrid:mouse_released(x, y)
         return
     end
 

@@ -93,6 +93,15 @@ function ItemPanel.new(item)
         self.buttons[action.name] = { x = bx, y = by, w = BUTTON_W, h = BUTTON_H }
     end
 
+    -- Backdrop covering the close button, grid, and button row, padded by
+    -- MARGIN on every side, so the popup reads as one panel over the game
+    -- rather than free-floating UI elements.
+    local bg_x = math.min(origin_x, start_x) - MARGIN
+    local bg_y = self.close_button.y - MARGIN
+    local bg_right  = math.max(origin_x + grid_w, start_x + total_w) + MARGIN
+    local bg_bottom = by + BUTTON_H + MARGIN
+    self.bg = { x = bg_x, y = bg_y, w = bg_right - bg_x, h = bg_bottom - bg_y }
+
     return self
 end
 
@@ -164,21 +173,31 @@ end
 
 -- Input forwarding ------------------------------------------------------
 
+-- Returns true if (x,y) landed on some part of the panel's own UI (close
+-- button, grid, or a button) and was handled here; false if the click
+-- missed the panel entirely, so the caller can treat it as a normal click
+-- on whatever's behind/around the panel instead (e.g. starting a drag from
+-- the main floor grid while the panel stays open).
 function ItemPanel:mouse_pressed(x, y)
     if self:_point_in_close_button(x, y) then
         self.should_close = true
-        return
+        return true
     end
 
     if self:_point_in_grid(x, y) then
         self.item.panel:mouse_pressed(x, y)
-        return
+        return true
     end
 
     local name = self:_button_at(x, y)
-    if name and self:is_action_enabled(name) then
-        self.item:start_action(name)
+    if name then
+        if self:is_action_enabled(name) then
+            self.item:start_action(name)
+        end
+        return true
     end
+
+    return false
 end
 
 function ItemPanel:mouse_moved(x, y)
@@ -196,9 +215,18 @@ end
 -- Draw --------------------------------------------------------------------
 
 function ItemPanel:draw()
+    local colors = config.COLORS or {}
+
+    if self.bg then
+        love.graphics.setColor(colors.panel_bg or { 0.1, 0.1, 0.13, 0.95 })
+        love.graphics.rectangle("fill", self.bg.x, self.bg.y, self.bg.w, self.bg.h)
+        love.graphics.setColor(colors.panel_border or { 0.45, 0.45, 0.55, 1 })
+        love.graphics.rectangle("line", self.bg.x, self.bg.y, self.bg.w, self.bg.h)
+        love.graphics.setColor(1, 1, 1, 1)
+    end
+
     self.item.panel:draw()
 
-    local colors = config.COLORS or {}
     local actions = (self.def and self.def.actions) or {}
 
     for _, action in ipairs(actions) do
