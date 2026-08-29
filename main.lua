@@ -23,7 +23,7 @@ end
 love.graphics.setDefaultFilter("nearest", "nearest")
 
 local SceneManager = require("lua/core/scene_manager")
-local GameScene    = require("game/scenes/game_scene")
+local KitchenScene = require("game/scenes/kitchen_scene")
 
 local LOGICAL_W, LOGICAL_H = 1280, 720
 local canvas
@@ -37,7 +37,7 @@ function love.load()
     canvas:setFilter("nearest", "nearest")
 
     manager = SceneManager.new(LOGICAL_W, LOGICAL_H)
-    manager:switch(GameScene.new())
+    manager:switch(KitchenScene.new())
 end
 
 function love.update(dt)
@@ -56,6 +56,45 @@ function love.draw()
     love.graphics.draw(canvas, ox, oy, 0, scale, scale)
 end
 
+-- Converts a window-space coordinate (as reported by love.mouse* callbacks)
+-- into the 1280x720 logical canvas space, inverting the scale/letterbox
+-- transform used above in love.draw().
+local function to_logical(x, y)
+    local scale = math.min(love.graphics.getWidth() / LOGICAL_W, love.graphics.getHeight() / LOGICAL_H)
+    local ox = (love.graphics.getWidth() - LOGICAL_W * scale) / 2
+    local oy = (love.graphics.getHeight() - LOGICAL_H * scale) / 2
+    return (x - ox) / scale, (y - oy) / scale
+end
+
+function love.mousepressed(x, y, button)
+    if button ~= 1 then return end
+    if manager.current and manager.current.mouse_pressed then
+        local lx, ly = to_logical(x, y)
+        manager.current:mouse_pressed(lx, ly)
+    end
+end
+
+function love.mousereleased(x, y, button)
+    if button ~= 1 then return end
+    if manager.current and manager.current.mouse_released then
+        local lx, ly = to_logical(x, y)
+        manager.current:mouse_released(lx, ly)
+    end
+end
+
+function love.mousemoved(x, y)
+    if manager.current and manager.current.mouse_moved then
+        local lx, ly = to_logical(x, y)
+        manager.current:mouse_moved(lx, ly)
+    end
+end
+
 function love.keypressed(key)
-    if key == "escape" then love.event.quit() end
+    if key == "escape" then
+        love.event.quit()
+    elseif key == "r" then
+        if manager.current and manager.current.rotate_dragged then
+            manager.current:rotate_dragged()
+        end
+    end
 end

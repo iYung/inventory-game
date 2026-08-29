@@ -1,21 +1,33 @@
 # love-exemplar
 
-A minimal Love2D project demonstrating clean architecture patterns. Intended as a reference, not a game.
+A Love2D cooking-inventory game. Customers arrive one at a time up top requesting
+a food item; you drag and rotate ingredients and appliances around a grid
+inventory on the bottom half, run timed actions in containers like the
+microwave (double-click it to open its sub-inventory panel), and serve
+customers by dropping a matching item on them. Once everyone for the day is
+served, a "Next Day" button appears to advance.
 
 ## Structure
 
 ```
-core/lua/       Engine classes — no game knowledge (Camera, Drawer, Input, Scene,
-                SceneManager, Sprite, SpriteSet, Timer, Fonts)
-game/           Game-specific code (Player, GameScene)
-lua/headless/   Headless test infrastructure (stubs, HeadlessInput, runner)
-tests/          Test files — run with: love . --headless
-assets/         Images and other assets
-conf.lua        Window config; suppresses graphics/audio modules under --headless
-main.lua        Entry point — canvas rendering with letterboxing, pixel-art filter
+lua/core/           Engine classes — no game knowledge (Camera, Drawer, Input, Scene,
+                     SceneManager, Sprite, SpriteSet, Timer, Fonts)
+lua/game/           Game logic — grid inventory, items, customers, day loop
+  config.lua         Shared constants (grid cell size, screen split line, colors)
+  grid.lua           Generic cell grid: occupancy, placement/collision, drag, rotate
+  item.lua           Base grid item: footprint/rotation, sprite, sub-inventory panel, timed actions
+  item_panel.lua      Popup sub-inventory panel (panel grid + action buttons/progress)
+  customer.lua        Walk-in/wait/talk/walk-out state machine + dialogue bubbles
+  customer_queue.lua  Per-day customer list/spawning
+  day_state.lua       Day number, customers served/total, currency
+  data/item_defs.lua  Data-driven item type definitions (footprint, actions, etc.)
+game/scenes/         Scene(s) built on lua/core (kitchen_scene.lua — the only scene)
+lua/headless/        Headless test infrastructure (stubs, HeadlessInput, runner)
+tests/               Test files — run with: love . --headless
+assets/              Images and other assets
+conf.lua             Window config; suppresses graphics/audio modules under --headless
+main.lua             Entry point — canvas rendering with letterboxing, pixel-art filter, mouse/keyboard wiring
 ```
-
-See [`core/lua/README.md`](core/lua/README.md) for API docs on each engine class.
 
 ## Running
 
