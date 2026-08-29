@@ -71,8 +71,12 @@ function KitchenScene:on_enter()
     self.day_state:start_day(config.CUSTOMERS_PER_DAY)
     self.queue = CustomerQueue.new(config.CUSTOMERS_PER_DAY)
 
+    -- Matches ../wip's convention: customers enter from off-screen on one
+    -- side and walk toward target_x, then walk back out the way they came.
+    -- exit_x sits left of the stage (negative = off-screen left) so
+    -- walking_in moves left-to-right, like wip's customers do.
     local target_x = config.SCREEN_W / 2
-    local exit_x    = config.SCREEN_W + 150
+    local exit_x    = -150
     local y         = config.SPLIT_Y / 2
     self.customer = Customer.new(target_x, exit_x, y)
     self.customer:show(self.queue:next())

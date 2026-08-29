@@ -283,4 +283,24 @@ do
     print("PASS: kitchen_scene: dragging an item straight out of an open panel onto the customer serves them")
 end
 
+-- Test 5: customers enter from off-screen on the left and walk in moving
+-- rightward, matching ../wip's convention (rather than entering from the
+-- right and walking leftward).
+
+do
+    local ctx5 = runner.setup(function() return KitchenScene.new() end)
+    local scene5 = ctx5.sm.current
+    local c = scene5.customer
+
+    assert(c.state == "walking_in", "sanity check: the first customer should be walking in on_enter")
+    assert(c.exit_x < 0, "exit_x should be off-screen to the left (negative)")
+    assert(c.x < c.target_x, "customer should start left of its target position")
+
+    local prev_x = c.x
+    c:update(1 / 60)
+    assert(c.x > prev_x, "walking_in should move the customer rightward (increasing x), left-to-right entry")
+
+    print("PASS: kitchen_scene: customers walk in left-to-right, entering from off-screen on the left")
+end
+
 print("ALL TESTS PASSED")
