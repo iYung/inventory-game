@@ -203,4 +203,84 @@ do
     print("PASS: kitchen_scene: dragging the panel by its title bar actually stops on mouse_released")
 end
 
+-- Test 4: dragging an item straight out of an open panel onto the customer
+-- serves them, without having to drop it back on the main grid first.
+-- Regression test: mouse_released's serve/dismiss check used to only look
+-- at self.grid.dragging, so an item mid-drag from a panel's inner grid was
+-- never recognized as droppable-on-the-customer at all.
+
+do
+    local ItemPanel = require("lua/game/item_panel")
+
+    local ctx4 = runner.setup(function() return KitchenScene.new() end)
+    local scene4 = ctx4.sm.current
+
+    runner.fast_forward_until(ctx4, function() return scene4.customer:arrived() end, 0)
+    -- MVP customers request "cooked_meat" by default - no override needed
+    -- here, unlike Test 1 (which tests raw_meat straight from the floor).
+    assert(scene4.customer.requested_type == "cooked_meat",
+        "sanity check: the default customer request should be cooked_meat")
+
+    local microwave4
+    for _, it in ipairs(scene4.grid:items()) do
+        if it.type_id == "microwave" then microwave4 = it end
+    end
+    assert(microwave4, "on_enter should have placed a microwave")
+
+    scene4.panel = ItemPanel.new(microwave4)
+
+    -- Move a raw_meat item from the floor into the panel and cook it, the
+    -- same way Test 2 already covers the transfer itself.
+    local meat4
+    for _, it in ipairs(scene4.grid:items()) do
+        if it.type_id == "raw_meat" then meat4 = it end
+    end
+    assert(meat4, "on_enter should have placed raw_meat")
+
+    local mx, my = scene4.grid:cell_to_world(meat4.cell_col, meat4.cell_row)
+    scene4:mouse_pressed(mx + 1, my + 1)
+    local px, py = microwave4.panel:cell_to_world(0, 0)
+    scene4:mouse_moved(px + 1, py + 1)
+    scene4:mouse_released(px + 1, py + 1)
+    assert(meat4.grid == microwave4.panel, "sanity check: meat should now be in the panel")
+
+    assert(microwave4:start_action("Cook"), "should be able to start cooking with meat in the panel")
+    microwave4:update(3.5) -- past the 3.0s Cook duration
+
+    -- Cooking replaces the raw_meat item with a brand new cooked_meat Item
+    -- in the freed cell (see lua/game/item.lua's complete_action) rather
+    -- than mutating meat4 in place, so look the result up fresh.
+    local cooked4
+    for _, it in ipairs(microwave4.panel:items()) do
+        if it.type_id == "cooked_meat" then cooked4 = it end
+    end
+    assert(cooked4, "sanity check: panel should contain a cooked_meat item after cooking")
+
+    local currency_before = scene4.day_state.currency
+    local served_before   = scene4.day_state.customers_served
+
+    -- Drag the now-cooked item straight from the panel onto the customer.
+    local cmx, cmy = microwave4.panel:cell_to_world(cooked4.cell_col, cooked4.cell_row)
+    scene4:mouse_pressed(cmx + 1, cmy + 1)
+    assert(microwave4.panel.dragging == cooked4, "should be dragging the cooked item out of the panel")
+
+    local cx4, cy4 = scene4.customer.x, scene4.customer.y
+    scene4:mouse_moved(cx4, cy4)
+    scene4:mouse_released(cx4, cy4)
+
+    assert(microwave4.panel.dragging == nil, "dropping onto the customer should clear the panel grid's drag state")
+    assert(scene4.day_state.currency == currency_before + 10,
+        "currency should increase by 10 when serving directly from the panel")
+    assert(scene4.day_state.customers_served == served_before + 1,
+        "customers_served should increment when serving directly from the panel")
+
+    local still_in_panel = false
+    for _, it in ipairs(microwave4.panel:items()) do
+        if it == cooked4 then still_in_panel = true end
+    end
+    assert(not still_in_panel, "the served item should be removed from the panel")
+
+    print("PASS: kitchen_scene: dragging an item straight out of an open panel onto the customer serves them")
+end
+
 print("ALL TESTS PASSED")

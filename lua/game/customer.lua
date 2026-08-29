@@ -26,6 +26,15 @@ local DEFAULT_COLOR = { 0.85, 0.55, 0.30, 1 }
 local BUBBLE_BG      = { 1, 1, 1, 0.95 }
 local BUBBLE_TEXT    = { 0.08, 0.07, 0.10, 1 }
 
+-- Walking animation (placeholder art: no sprite frames, so the "animation"
+-- is a procedural bob + a pair of swinging leg rectangles beneath the body).
+local WALK_STEP_SPEED     = 9    -- radians/sec of the step cycle
+local WALK_BOB_AMPLITUDE  = 3    -- px of vertical bounce
+local WALK_LEG_SWING      = 5    -- px each leg swings fore/aft
+local LEG_W, LEG_H        = 7, 16
+local LEG_GAP             = 8    -- half-distance between the two legs
+local LEG_COLOR           = { 0.12, 0.10, 0.09, 1 }
+
 local Customer = {}
 Customer.__index = Customer
 
@@ -57,6 +66,8 @@ function Customer.new(target_x, exit_x, y)
     self.reveal_t      = 0
     self._full_text    = ""
 
+    self._walk_t = 0
+
     return self
 end
 
@@ -85,6 +96,7 @@ function Customer:show(cfg)
     self.x = self.exit_x
     self.state          = "walking_in"
     self.sprite.visible = true
+    self._walk_t         = 0
 end
 
 -- Whether the speech bubble should currently be shown: while there is an
@@ -201,13 +213,41 @@ function Customer:update(dt)
         end
     end
 
+    local moving = self.state == "walking_in" or self.state == "walking_out"
+    if moving then
+        self._walk_t = self._walk_t + dt
+    else
+        self._walk_t = 0
+    end
+
+    local bob = moving and math.abs(math.sin(self._walk_t * WALK_STEP_SPEED)) * WALK_BOB_AMPLITUDE or 0
+
     self.sprite.scale_x = (self.state == "walking_out") and -1 or 1
     self.sprite.x = self.x - CW / 2
-    self.sprite.y = self.y - CH / 2
+    self.sprite.y = self.y - CH / 2 - bob
+end
+
+-- Foot offset (fore/aft swing) for each leg while walking; 0 when standing
+-- still. The two legs are always in opposite phase.
+function Customer:_leg_swing()
+    if self.state ~= "walking_in" and self.state ~= "walking_out" then
+        return 0
+    end
+    return math.sin(self._walk_t * WALK_STEP_SPEED) * WALK_LEG_SWING
 end
 
 function Customer:draw()
     if self.state == "idle" then return end
+
+    local swing = self:_leg_swing()
+    if swing ~= 0 then
+        local leg_y = self.sprite.y + self.sprite.height - LEG_H * 0.5
+        love.graphics.setColor(LEG_COLOR)
+        love.graphics.rectangle("fill", self.x - LEG_GAP - LEG_W / 2 + swing, leg_y, LEG_W, LEG_H)
+        love.graphics.rectangle("fill", self.x + LEG_GAP - LEG_W / 2 - swing, leg_y, LEG_W, LEG_H)
+        love.graphics.setColor(1, 1, 1, 1)
+    end
+
     self.sprite:draw()
 end
 

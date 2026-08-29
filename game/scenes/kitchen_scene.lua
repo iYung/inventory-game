@@ -227,12 +227,19 @@ function KitchenScene:mouse_released(x, y)
         return
     end
 
-    -- Dropping a dragged main-grid item onto the waiting customer serves or
-    -- dismisses them, consuming the item either way, instead of placing it
-    -- back on the grid.
-    if self.grid.dragging and self.customer:arrived() and self:_customer_hit(x, y) then
-        local item = self.grid.dragging
-        clear_drag(self.grid, item)
+    local pgrid = self.panel and self.panel.item.panel or nil
+
+    -- Dropping a dragged item - from the main grid OR from an open panel
+    -- (e.g. cooked meat straight out of the microwave) - onto the waiting
+    -- customer serves or dismisses them, consuming the item either way,
+    -- instead of placing it back on whichever grid it came from.
+    local source_grid = self.grid.dragging and self.grid
+        or (pgrid and pgrid.dragging and pgrid)
+        or nil
+
+    if source_grid and self.customer:arrived() and self:_customer_hit(x, y) then
+        local item = source_grid.dragging
+        clear_drag(source_grid, item)
 
         if item.type_id == self.customer.requested_type then
             self.customer:serve()
@@ -243,8 +250,6 @@ function KitchenScene:mouse_released(x, y)
         end
         return
     end
-
-    local pgrid = self.panel and self.panel.item.panel or nil
 
     -- Cross-grid transfer: a main-grid item dropped onto the open panel's
     -- inner grid moves into it instead of snapping back to the floor.

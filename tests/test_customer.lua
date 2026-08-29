@@ -93,4 +93,38 @@ do
     print("PASS: customer: dismiss() short-circuits straight to walking_out, skipping talking_after")
 end
 
+-- Test 3: walking animation - the sprite bobs and legs swing while walking,
+-- and both settle back to rest once the customer is waiting (standing
+-- still). Placeholder-art walk cycle: no sprite frames, just a procedural
+-- vertical bob plus two swinging leg rectangles drawn under the body.
+do
+    local target_x, exit_x, y = 900, 100, 200
+    local c = Customer.new(target_x, exit_x, y)
+    c:show({ name = "Walker", walk_speed = 200 })
+    assert(c.state == "walking_in", "sanity check: should be walking in")
+
+    local saw_bob     = false
+    local saw_leg_off = false
+
+    local iters = 0
+    while c.state == "walking_in" do
+        c:update(1 / 60)
+        if c.sprite.y ~= (c.y - c.sprite.height / 2) then saw_bob = true end
+        if c:_leg_swing() ~= 0 then saw_leg_off = true end
+        iters = iters + 1
+        assert(iters < 10000, "customer never reached waiting state")
+    end
+
+    assert(saw_bob, "sprite.y should bob away from its resting position while walking")
+    assert(saw_leg_off, "_leg_swing() should be nonzero at some point while walking")
+
+    -- Once waiting (standing still), the animation must settle back to rest.
+    assert(c:_leg_swing() == 0, "_leg_swing() should be exactly 0 once standing still")
+    c:update(1 / 60)
+    assert(c.sprite.y == c.y - c.sprite.height / 2,
+        "sprite.y should return to its exact resting position once standing still")
+
+    print("PASS: customer: walking animation bobs/swings legs while moving and rests while standing still")
+end
+
 print("ALL TESTS PASSED")
