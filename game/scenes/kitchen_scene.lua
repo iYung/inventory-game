@@ -219,6 +219,14 @@ function KitchenScene:mouse_moved(x, y)
 end
 
 function KitchenScene:mouse_released(x, y)
+    -- The panel itself being dragged by its title bar takes priority over
+    -- everything below, and must go through ItemPanel:mouse_released (not
+    -- the inner grid directly) since that's what clears _dragging_panel.
+    if self.panel and self.panel._dragging_panel then
+        self.panel:mouse_released(x, y)
+        return
+    end
+
     -- Dropping a dragged main-grid item onto the waiting customer serves or
     -- dismisses them, consuming the item either way, instead of placing it
     -- back on the grid.

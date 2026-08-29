@@ -161,4 +161,46 @@ do
     print("PASS: kitchen_scene: dragging items between the main grid and an open panel transfers them")
 end
 
+-- Test 3: dragging the open panel by its title bar, through KitchenScene's
+-- own mouse_pressed/moved/released, actually stops when the mouse is
+-- released. Regression test: KitchenScene:mouse_released used to reach past
+-- ItemPanel straight into the inner panel Grid, so ItemPanel._dragging_panel
+-- (set on title-bar press) was never cleared and the panel followed the
+-- cursor forever.
+
+do
+    local ItemPanel = require("lua/game/item_panel")
+
+    local ctx3 = runner.setup(function() return KitchenScene.new() end)
+    local scene3 = ctx3.sm.current
+
+    local microwave3
+    for _, it in ipairs(scene3.grid:items()) do
+        if it.type_id == "microwave" then microwave3 = it end
+    end
+    assert(microwave3, "on_enter should have placed a microwave")
+
+    scene3.panel = ItemPanel.new(microwave3)
+    local tb = scene3.panel.title_bar
+
+    scene3:mouse_pressed(tb.x + 10, tb.y + tb.h / 2)
+    assert(scene3.panel._dragging_panel == true, "pressing the title bar (via the scene) should start dragging the panel")
+
+    scene3:mouse_moved(tb.x + 60, tb.y + 40)
+    assert(scene3.panel.grid_x ~= nil, "panel should have re-laid-out after the move")
+
+    scene3:mouse_released(tb.x + 60, tb.y + 40)
+    assert(scene3.panel._dragging_panel == false,
+        "releasing the mouse (via the scene) should stop the panel drag")
+
+    -- It should really be stopped: further mouse_moved calls (as if the
+    -- mouse kept moving after release) must not keep relocating the panel.
+    local gx_after_release = scene3.panel.grid_x
+    scene3:mouse_moved(tb.x + 500, tb.y + 500)
+    assert(scene3.panel.grid_x == gx_after_release,
+        "the panel must not keep following the cursor after mouse_released")
+
+    print("PASS: kitchen_scene: dragging the panel by its title bar actually stops on mouse_released")
+end
+
 print("ALL TESTS PASSED")
