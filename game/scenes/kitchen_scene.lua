@@ -111,22 +111,6 @@ function KitchenScene:_customer_hit(x, y)
     return x >= s.x and x <= s.x + s.width and y >= s.y and y <= s.y + s.height
 end
 
--- Whether (x,y) lands inside the open panel's own UI (grid or buttons).
--- Used to decide whether an outside click should close the panel.
-function KitchenScene:_panel_hit(x, y)
-    local p = self.panel
-    if x >= p.grid_x and x <= p.grid_x + p.grid_w
-       and y >= p.grid_y and y <= p.grid_y + p.grid_h then
-        return true
-    end
-    for _, rect in pairs(p.buttons) do
-        if point_in_rect(x, y, rect) then
-            return true
-        end
-    end
-    return false
-end
-
 -- Clears grid-drag bookkeeping without running Grid:mouse_released's normal
 -- place-back-on-the-grid logic (the item is being consumed, not dropped).
 local function clear_drag(grid, item)
@@ -142,9 +126,8 @@ end
 
 function KitchenScene:mouse_pressed(x, y)
     if self.panel then
-        if self:_panel_hit(x, y) then
-            self.panel:mouse_pressed(x, y)
-        else
+        self.panel:mouse_pressed(x, y)
+        if self.panel.should_close then
             self.panel = nil
         end
         return

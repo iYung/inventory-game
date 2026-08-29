@@ -168,4 +168,24 @@ do
     print("PASS: item_panel: draw() does not error under the headless stub")
 end
 
+-- Test 8: the close button sets should_close; other clicks don't. -----------
+
+do
+    local microwave = Item.new("microwave")
+    local panel = ItemPanel.new(microwave)
+
+    -- A click inside the grid area should not close the panel.
+    local px, py = microwave.panel:cell_to_world(0, 0)
+    panel:mouse_pressed(px + 1, py + 1)
+    assert(panel.should_close == false, "clicking inside the grid should not close the panel")
+    panel:mouse_released(px + 1, py + 1)
+
+    -- A click on the close button should.
+    local cb = panel.close_button
+    panel:mouse_pressed(cb.x + cb.w / 2, cb.y + cb.h / 2)
+    assert(panel.should_close == true, "clicking the close button should set should_close")
+
+    print("PASS: item_panel: close button sets should_close, other clicks don't")
+end
+
 print("ALL TESTS PASSED")

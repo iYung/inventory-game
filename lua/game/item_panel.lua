@@ -30,8 +30,11 @@ local BUTTON_W      = 96
 local BUTTON_H      = 28
 local BUTTON_GAP    = 8
 local PROGRESS_H    = 6
+local CLOSE_SIZE    = 22
+local CLOSE_GAP     = 6
 
 local COLOR_DISABLED = { 0.35, 0.35, 0.35, 1 }
+local COLOR_CLOSE    = { 0.75, 0.25, 0.25, 1 }
 
 -- Construction ---------------------------------------------------------------
 
@@ -67,6 +70,16 @@ function ItemPanel.new(item)
 
     self.grid_x, self.grid_y = origin_x, origin_y
     self.grid_w, self.grid_h = grid_w, grid_h
+
+    -- Close (X) button, overlapping the grid's top-right corner (title-bar
+    -- style). Explicit close only - clicking outside the panel does nothing.
+    self.close_button = {
+        x = origin_x + grid_w - CLOSE_SIZE,
+        y = origin_y - CLOSE_SIZE - CLOSE_GAP,
+        w = CLOSE_SIZE,
+        h = CLOSE_SIZE,
+    }
+    self.should_close = false
 
     -- Button rects, one per action, laid out in a row below the grid.
     self.buttons = {}
@@ -110,6 +123,14 @@ function ItemPanel:_point_in_grid(x, y)
        and y >= self.grid_y and y < self.grid_y + self.grid_h
 end
 
+local function point_in_rect(x, y, r)
+    return x >= r.x and x < r.x + r.w and y >= r.y and y < r.y + r.h
+end
+
+function ItemPanel:_point_in_close_button(x, y)
+    return point_in_rect(x, y, self.close_button)
+end
+
 function ItemPanel:_button_at(x, y)
     for name, rect in pairs(self.buttons) do
         if x >= rect.x and x < rect.x + rect.w
@@ -144,6 +165,11 @@ end
 -- Input forwarding ------------------------------------------------------
 
 function ItemPanel:mouse_pressed(x, y)
+    if self:_point_in_close_button(x, y) then
+        self.should_close = true
+        return
+    end
+
     if self:_point_in_grid(x, y) then
         self.item.panel:mouse_pressed(x, y)
         return
@@ -198,6 +224,12 @@ function ItemPanel:draw()
             love.graphics.print(action.name, rect.x + 6, rect.y + 6)
         end
     end
+
+    local cb = self.close_button
+    love.graphics.setColor(COLOR_CLOSE)
+    love.graphics.rectangle("fill", cb.x, cb.y, cb.w, cb.h)
+    love.graphics.setColor(colors.button_text or { 1, 1, 1, 1 })
+    love.graphics.print("X", cb.x + cb.w / 2 - 4, cb.y + cb.h / 2 - 8)
 
     love.graphics.setColor(1, 1, 1, 1)
 end

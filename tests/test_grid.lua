@@ -210,4 +210,35 @@ do
     print("PASS: grid: draw() does not error under the headless stub")
 end
 
+-- Test 9: dragging positions the item's sprite on the cursor -------------
+
+do
+    local g = Grid.new(10, 6, CELL, 0, 0)
+    local a = make_item({ ONE_BY_ONE })
+    a.sprite = { x = 0, y = 0, width = CELL, height = CELL }
+    g:place(a, 0, 0)
+
+    g:mouse_pressed(1, 1)
+    assert(a.sprite.x == 1 - CELL / 2 and a.sprite.y == 1 - CELL / 2,
+        "mouse_pressed should center the sprite on the cursor immediately")
+
+    g:mouse_moved(200, 150)
+    assert(a.sprite.x == 200 - CELL / 2 and a.sprite.y == 150 - CELL / 2,
+        "mouse_moved should keep re-centering the sprite on the cursor while dragging")
+
+    -- rotate_dragged re-centers using whatever the sprite's current
+    -- width/height are at call time (Item:rotate() is what actually resizes
+    -- them; Grid just re-applies the centering math afterward).
+    a.sprite.width, a.sprite.height = CELL * 2, CELL
+    g:rotate_dragged()
+    assert(a.sprite.x == 200 - CELL and a.sprite.y == 150 - CELL / 2,
+        "rotate_dragged should re-center the sprite using its post-rotate dimensions")
+
+    g:mouse_released(200, 150)
+    assert(g.drag_cursor_x == nil and g.drag_cursor_y == nil,
+        "mouse_released should clear drag cursor tracking")
+
+    print("PASS: grid: dragging keeps the item's sprite centered on the cursor")
+end
+
 print("ALL TESTS PASSED")

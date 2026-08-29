@@ -27,8 +27,22 @@ function Grid.new(cols, rows, cell_size, origin_x, origin_y)
     self.drag_orig_row     = nil
     self.drag_preview_col  = nil
     self.drag_preview_row  = nil
+    self.drag_cursor_x     = nil -- raw world-space cursor pos while dragging
+    self.drag_cursor_y     = nil
 
     return self
+end
+
+-- Re-centers the dragging item's sprite on the last known cursor position,
+-- so it visually follows the mouse instead of sitting at its origin cell.
+-- Item:draw() skips its own cell-based repositioning while
+-- `item.grid.dragging == item`, deferring to whatever position is set here.
+function Grid:_position_dragging_sprite()
+    if not self.dragging or not self.dragging.sprite then return end
+    if not self.drag_cursor_x then return end
+    local s = self.dragging.sprite
+    s.x = self.drag_cursor_x - s.width  / 2
+    s.y = self.drag_cursor_y - s.height / 2
 end
 
 -- Coordinate conversion ----------------------------------------------------
@@ -124,6 +138,8 @@ function Grid:mouse_pressed(x, y)
         -- Take it out of collision bookkeeping so can_place checks against
         -- OTHER items don't reject its own current cells during preview.
         self:_unlist(item)
+        self.drag_cursor_x, self.drag_cursor_y = x, y
+        self:_position_dragging_sprite()
     end
     self.drag_preview_col, self.drag_preview_row = col, row
 end
@@ -131,6 +147,8 @@ end
 function Grid:mouse_moved(x, y)
     if not self.dragging then return end
     self.drag_preview_col, self.drag_preview_row = self:world_to_cell(x, y)
+    self.drag_cursor_x, self.drag_cursor_y = x, y
+    self:_position_dragging_sprite()
 end
 
 function Grid:mouse_released(x, y)
@@ -151,13 +169,17 @@ function Grid:mouse_released(x, y)
     self.drag_orig_row    = nil
     self.drag_preview_col = nil
     self.drag_preview_row = nil
+    self.drag_cursor_x    = nil
+    self.drag_cursor_y    = nil
 end
 
 -- Rotates the currently-dragged item in place. No validity check - validity
--- is only enforced at drop time.
+-- is only enforced at drop time. Re-centers the sprite afterward since
+-- rotating can change its width/height.
 function Grid:rotate_dragged()
     if self.dragging then
         self.dragging:rotate()
+        self:_position_dragging_sprite()
     end
 end
 

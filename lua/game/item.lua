@@ -235,7 +235,11 @@ end
 function Item:draw()
     if not self.sprite then return end
 
-    if self.grid and self.cell_col and self.cell_row then
+    -- While this item is the grid's active drag, Grid keeps sprite.x/y
+    -- centered on the cursor each frame (see Grid:_position_dragging_sprite);
+    -- don't fight that by snapping back to the (stale) cell_col/cell_row.
+    local being_dragged = self.grid and self.grid.dragging == self
+    if not being_dragged and self.grid and self.cell_col and self.cell_row then
         self.sprite.x, self.sprite.y = self.grid:cell_to_world(self.cell_col, self.cell_row)
     end
 
