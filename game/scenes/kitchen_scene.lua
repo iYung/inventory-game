@@ -35,6 +35,13 @@ KitchenScene.__index = KitchenScene
 function KitchenScene.new()
     local self = Scene.new(config.SCREEN_W, config.SCREEN_H)
     setmetatable(self, KitchenScene)
+    -- All draw/hit-test code in this scene works in absolute top-left-origin
+    -- screen coordinates (grid origin, customer x/y, HUD text at 16,16, ...).
+    -- Camera:attach() always translates by (w/2, h/2) before subtracting the
+    -- camera position, so the camera must sit at screen-center for that
+    -- translation to net out to zero and leave (0,0) at the top-left corner.
+    self.camera.x = config.SCREEN_W / 2
+    self.camera.y = config.SCREEN_H / 2
     return self
 end
 
