@@ -692,4 +692,60 @@ do
     print("PASS: kitchen_scene: dragging an item directly between two open panels transfers it")
 end
 
+-- Test 10: the Next Day button must not appear/be clickable until the
+-- day's LAST customer has actually left (walked fully off and gone idle) -
+-- not merely been served/dismissed. Regression test: DayState:day_complete()
+-- flips true the instant the last serve/dismiss is recorded, while that
+-- customer is still animating off-screen (talking_after, then walking_out).
+
+do
+    local ctx10 = runner.setup(function() return KitchenScene.new() end)
+    local scene10 = ctx10.sm.current
+
+    scene10.customer:show(order_cfg({ after_messages = { "Thanks!" } }))
+    runner.fast_forward_until(ctx10, function() return scene10.customer:arrived() end, 0)
+
+    -- Simulate being down to the day's last customer without actually
+    -- driving two full prior visits: bump the served count directly, and
+    -- exhaust the queue to match (on_enter already drew once for this
+    -- customer; two more draws brings total draws to CUSTOMERS_PER_DAY, so
+    -- has_next() is false and KitchenScene:update won't auto-spawn a
+    -- replacement once this customer goes idle).
+    scene10.day_state.customers_served = scene10.day_state.customers_total - 1
+    scene10.queue:next()
+    scene10.queue:next()
+    assert(not scene10.queue:has_next(), "sanity check: queue should be fully drained")
+
+    scene10.customer:serve() -- enters talking_after (after_messages present)
+    scene10.day_state:record_serve()
+
+    assert(scene10.day_state:day_complete(), "sanity check: day should now be complete by count")
+    assert(scene10.customer:active(), "sanity check: the served customer should still be on stage (talking_after)")
+    assert(not scene10:_next_day_ready(),
+        "Next Day should not be ready while the day's last customer is still talking_after")
+
+    -- Advance through their thank-you message into walking_out.
+    scene10.customer:skip_reveal()
+    scene10.customer:advance_after()
+    assert(scene10.customer.state == "walking_out", "sanity check: should now be walking out")
+    assert(not scene10:_next_day_ready(),
+        "Next Day should not be ready while the day's last customer is still walking_out")
+
+    -- Let them actually leave (no next customer queued, so this reaches
+    -- idle and stays idle).
+    runner.fast_forward_until(ctx10, function() return not scene10.customer:active() end, 0)
+    assert(scene10:_next_day_ready(), "Next Day should be ready once the day's last customer has fully left")
+
+    -- The click handler itself must honor the same gating, not just the
+    -- drawn button's visibility. Replicates kitchen_scene.lua's private
+    -- NEXT_DAY_BTN rect (not exported) since it's not exposed on the scene.
+    local config = require("lua/game/config")
+    local next_day_btn = { x = config.SCREEN_W - 170, y = config.SPLIT_Y - 56, w = 150, h = 40 }
+    local day_before = scene10.day_state.day
+    scene10:mouse_pressed(next_day_btn.x + 10, next_day_btn.y + 10)
+    assert(scene10.day_state.day == day_before + 1, "clicking Next Day once ready should advance the day")
+
+    print("PASS: kitchen_scene: Next Day is not ready until the day's last customer has actually left")
+end
+
 print("ALL TESTS PASSED")

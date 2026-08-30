@@ -118,6 +118,15 @@ function KitchenScene:_customer_hit(x, y)
     return x >= s.x and x <= s.x + s.width and y >= s.y and y <= s.y + s.height
 end
 
+-- Whether the "Next Day" button should show/be clickable: the day's last
+-- customer has to have actually left (walked all the way off and gone
+-- idle), not just been served/dismissed - day_state:day_complete() flips
+-- true the instant that happens, while they're still animating off-screen
+-- (walking_out, or talking_after for a served food customer).
+function KitchenScene:_next_day_ready()
+    return self.day_state:day_complete() and not self.customer:active()
+end
+
 -- Multi-panel bookkeeping ---------------------------------------------------
 --
 -- Any number of item panels (microwave, merchant stock, ...) can be open at
@@ -256,7 +265,7 @@ function KitchenScene:mouse_pressed(x, y)
         end
     end
 
-    if self.day_state:day_complete() and point_in_rect(x, y, NEXT_DAY_BTN) then
+    if self:_next_day_ready() and point_in_rect(x, y, NEXT_DAY_BTN) then
         self.day_state:advance_day()
         self.day_state:start_day(config.CUSTOMERS_PER_DAY)
         self.queue = CustomerQueue.new(config.CUSTOMERS_PER_DAY)
@@ -453,7 +462,7 @@ function KitchenScene:draw()
     self.customer:draw()
     self.customer:draw_bubble()
 
-    if self.day_state:day_complete() then
+    if self:_next_day_ready() then
         love.graphics.setColor(colors.button or { 0.3, 0.55, 0.3, 1 })
         love.graphics.rectangle("fill", NEXT_DAY_BTN.x, NEXT_DAY_BTN.y, NEXT_DAY_BTN.w, NEXT_DAY_BTN.h)
         love.graphics.setColor(colors.button_text or { 1, 1, 1, 1 })
