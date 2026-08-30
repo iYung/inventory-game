@@ -17,6 +17,7 @@ function DayState.new()
     self.customers_served = 0
     self.customers_total  = 0
     self.currency         = 0
+    self.sold_items       = {}
 
     return self
 end
@@ -29,9 +30,10 @@ function DayState:start_day(total)
 end
 
 -- Happy path: item matched the request. Awards currency.
-function DayState:record_serve()
+function DayState:record_serve(type_id)
     self.customers_served = self.customers_served + 1
     self.currency         = self.currency + 10
+    self.sold_items[type_id] = (self.sold_items[type_id] or 0) + 1
 end
 
 -- Failure path: wrong item / send-away. No currency awarded.
@@ -48,8 +50,9 @@ end
 -- must separately build a fresh CustomerQueue.new(config.CUSTOMERS_PER_DAY)
 -- and call start_day(config.CUSTOMERS_PER_DAY) to fully set up the new day.
 function DayState:advance_day()
-    self.day               = self.day + 1
+    self.day              = self.day + 1
     self.customers_served = 0
+    self.sold_items       = {}
 end
 
 return DayState

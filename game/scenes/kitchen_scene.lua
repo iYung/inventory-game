@@ -31,6 +31,8 @@ local NEXT_DAY_BTN = {
     h = 40,
 }
 
+local SUMMARY_BTN = { x = 540, y = 470, w = 200, h = 44 }
+
 local KitchenScene = {}
 KitchenScene.__index = KitchenScene
 
@@ -136,6 +138,8 @@ function KitchenScene:on_enter()
     self._last_click_grid = nil
     self._last_click_col  = nil
     self._last_click_row  = nil
+
+    self._showing_summary = false
 end
 
 -- Frame tick --------------------------------------------------------------
@@ -386,6 +390,21 @@ end
 -- Mouse / keyboard wiring --------------------------------------------------
 
 function KitchenScene:mouse_pressed(x, y)
+    -- Summary overlay is modal: only the Continue button is live.
+    if self._showing_summary then
+        if point_in_rect(x, y, SUMMARY_BTN) then
+            self.day_state:advance_day()
+            self.day_state:start_day(config.CUSTOMERS_PER_DAY)
+            self.queue = CustomerQueue.new(config.CUSTOMERS_PER_DAY)
+            self.customer:show(self.queue:next())
+            for _, item in ipairs(self.grid:items()) do
+                item:refill_daily()
+            end
+            self._showing_summary = false
+        end
+        return
+    end
+
     -- Panels are opaque windows, hit-tested topmost-first. A click landing
     -- anywhere on an open panel's backdrop is claimed by it - even if it
     -- misses every interactive element inside (dead space) - so it never
@@ -409,7 +428,7 @@ function KitchenScene:mouse_pressed(x, y)
                 local served_item = panel.item.panel:items()[1]
                 panel.item.panel:remove(served_item)
                 self.customer:serve()
-                self.day_state:record_serve()
+                self.day_state:record_serve(served_item.type_id)
             end
             if panel.should_skip then
                 local items = {}
@@ -431,13 +450,7 @@ function KitchenScene:mouse_pressed(x, y)
     end
 
     if self:_next_day_ready() and point_in_rect(x, y, NEXT_DAY_BTN) then
-        self.day_state:advance_day()
-        self.day_state:start_day(config.CUSTOMERS_PER_DAY)
-        self.queue = CustomerQueue.new(config.CUSTOMERS_PER_DAY)
-        self.customer:show(self.queue:next())
-        for _, item in ipairs(self.grid:items()) do
-            item:refill_daily()
-        end
+        self._showing_summary = true
         return
     end
 
@@ -654,6 +667,54 @@ function KitchenScene:draw()
     end
 
     self.camera:detach()
+
+    if self._showing_summary then
+        -- backdrop
+        love.graphics.setColor(0, 0, 0, 0.7)
+        love.graphics.rectangle("fill", 0, 0, config.SCREEN_W, config.SCREEN_H)
+
+        -- box
+        local bx, by, bw, bh = 440, 160, 400, 330
+        love.graphics.setColor(0.12, 0.12, 0.16, 1)
+        love.graphics.rectangle("fill", bx, by, bw, bh)
+        love.graphics.setColor(0.5, 0.5, 0.6, 1)
+        love.graphics.rectangle("line", bx, by, bw, bh)
+
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.print("Day " .. self.day_state.day .. " Summary", bx + 16, by + 16)
+
+        local ly = by + 52
+        local has_sales = false
+        for type_id, count in pairs(self.day_state.sold_items) do
+            local def = item_defs[type_id]
+            local name = def and def.name or type_id
+            love.graphics.print(name .. " \xc3\x97 " .. count, bx + 16, ly)
+            ly = ly + 22
+            has_sales = true
+        end
+        if not has_sales then
+            love.graphics.print("Nothing sold", bx + 16, ly)
+            ly = ly + 22
+        end
+
+        ly = ly + 10
+        love.graphics.print("Revenue: $" .. self.day_state.currency, bx + 16, ly)
+        ly = ly + 22
+        love.graphics.print(
+            "Customers: " .. self.day_state.customers_served .. "/" .. self.day_state.customers_total,
+            bx + 16, ly
+        )
+
+        -- continue button
+        local colors = config.COLORS or {}
+        love.graphics.setColor(colors.button or { 0.3, 0.55, 0.3, 1 })
+        love.graphics.rectangle("fill", SUMMARY_BTN.x, SUMMARY_BTN.y, SUMMARY_BTN.w, SUMMARY_BTN.h)
+        love.graphics.setColor(colors.button_text or { 1, 1, 1, 1 })
+        love.graphics.print(
+            "Start Day " .. (self.day_state.day + 1) .. " \xe2\x86\x92",
+            SUMMARY_BTN.x + 12, SUMMARY_BTN.y + 14
+        )
+    end
 end
 
 return KitchenScene
