@@ -106,6 +106,9 @@ function Customer:show(cfg)
         for _, type_id in ipairs(cfg.stock or {}) do
             place_first_fit(self.panel, Item.new(type_id))
         end
+    elseif self.kind == "order" then
+        self.type_id = "order_customer"
+        self.panel   = Grid.new(config.ORDER_PANEL_COLS, config.ORDER_PANEL_ROWS, config.U, 0, 0)
     end
 
     self.name            = cfg.name or "Customer"

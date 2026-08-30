@@ -16,6 +16,9 @@ config.CUSTOMERS_PER_DAY = 3
 config.MERCHANT_PANEL_COLS = 3
 config.MERCHANT_PANEL_ROWS = 2
 
+config.ORDER_PANEL_COLS = 3
+config.ORDER_PANEL_ROWS = 3
+
 config.COLORS = {
     grid_bg     = { 0.16, 0.16, 0.20, 1 },
     grid_cell   = { 0.22, 0.22, 0.27, 1 },

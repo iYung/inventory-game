@@ -35,6 +35,7 @@ local PROGRESS_H    = 6
 local CLOSE_SIZE    = 22
 local CLOSE_GAP     = 6
 local TITLE_H       = 28
+local REMINDER_H    = 24  -- order-kind only: reminder-text row between title bar and grid
 
 local COLOR_DISABLED = { 0.35, 0.35, 0.35, 1 }
 local COLOR_CLOSE    = { 0.75, 0.25, 0.25, 1 }
@@ -61,6 +62,8 @@ function ItemPanel.new(item)
     self.def  = item_defs[item.type_id]
     self.should_close    = false
     self.should_leave    = false
+    self.should_serve    = false
+    self.should_skip     = false
     self._dragging_panel = false
 
     local panel = item.panel
@@ -68,20 +71,30 @@ function ItemPanel.new(item)
     self.grid_h = panel.rows * panel.cell_size
 
     -- Button row sizing: any def.actions plus one more slot for "Leave" when
-    -- this is a merchant-kind item. "Leave" is not a def.actions entry (a
-    -- merchant has no matching action def to look up) - it's additive to the
-    -- same row/centering math, kept generic so an item with both actions AND
-    -- kind == "merchant" would still get both (never happens today, but the
-    -- layout math doesn't assume otherwise).
+    -- this is a merchant-kind item, or two more slots ("Serve" + "Skip")
+    -- when this is an order-kind item. Neither "Leave" nor "Serve"/"Skip"
+    -- are def.actions entries (there's no matching action def to look up
+    -- for any of them) - they're additive to the same row/centering math.
+    -- kind == "merchant" and kind == "order" are mutually exclusive, so a
+    -- simple branch is fine.
     local actions = (self.def and self.def.actions) or {}
-    local button_count = #actions + ((item.kind == "merchant") and 1 or 0)
+    local extra_buttons = 0
+    if item.kind == "merchant" then
+        extra_buttons = 1
+    elseif item.kind == "order" then
+        extra_buttons = 2
+    end
+    local button_count = #actions + extra_buttons
     self._button_total_w = button_count * BUTTON_W + math.max(0, button_count - 1) * BUTTON_GAP
 
     -- Overall backdrop size: wide enough for the grid or the button row,
-    -- whichever is wider; tall enough for title bar + grid + button row,
-    -- each separated by MARGIN.
+    -- whichever is wider; tall enough for title bar + (reminder row, for
+    -- order-kind items) + grid + button row, each separated by MARGIN.
     self.bg_w = math.max(self.grid_w, self._button_total_w) + MARGIN * 2
     self.bg_h = TITLE_H + MARGIN + self.grid_h + BUTTON_GAP + BUTTON_H + MARGIN
+    if item.kind == "order" then
+        self.bg_h = self.bg_h + REMINDER_H
+    end
 
     -- Default position: centered horizontally, sitting just above the
     -- split line so it doesn't overlap the main floor grid.
@@ -110,6 +123,9 @@ function ItemPanel:_layout(bg_x, bg_y)
 
     self.grid_x = bg_x + (self.bg_w - self.grid_w) / 2
     self.grid_y = bg_y + TITLE_H + MARGIN
+    if self.item.kind == "order" then
+        self.grid_y = self.grid_y + REMINDER_H
+    end
 
     -- Reposition the item's real panel grid to this screen location; see
     -- module comment above.
@@ -130,10 +146,19 @@ function ItemPanel:_layout(bg_x, bg_y)
 
     -- "Leave" occupies the next slot in the same row, when present. It is
     -- NOT a def.actions entry - there's no action def to look it up by, it's
-    -- purely an ItemPanel-level button for merchant-kind items.
+    -- purely an ItemPanel-level button for merchant-kind items. "Serve" and
+    -- "Skip" are the order-kind equivalent, occupying the next two slots.
     if self.item.kind == "merchant" then
         local bx = start_x + slot * (BUTTON_W + BUTTON_GAP)
         self.buttons["Leave"] = { x = bx, y = by, w = BUTTON_W, h = BUTTON_H }
+        slot = slot + 1
+    elseif self.item.kind == "order" then
+        local bx = start_x + slot * (BUTTON_W + BUTTON_GAP)
+        self.buttons["Serve"] = { x = bx, y = by, w = BUTTON_W, h = BUTTON_H }
+        slot = slot + 1
+
+        bx = start_x + slot * (BUTTON_W + BUTTON_GAP)
+        self.buttons["Skip"] = { x = bx, y = by, w = BUTTON_W, h = BUTTON_H }
         slot = slot + 1
     end
 end
@@ -192,6 +217,17 @@ function ItemPanel:is_action_enabled(name)
     return #Item.matching_recipes(action, self.item.panel) > 0
 end
 
+-- Whether "Serve" is currently clickable: order-kind only, exactly one item
+-- sitting in the panel, and it carries the tag the customer requested.
+function ItemPanel:_serve_enabled()
+    if self.item.kind ~= "order" then return false end
+
+    local items = self.item.panel:items()
+    if #items ~= 1 then return false end
+
+    return Item.has_tag(items[1], self.item.requested_tag)
+end
+
 -- Input forwarding ------------------------------------------------------
 
 -- Returns true if (x,y) landed on some part of the panel's own UI (close
@@ -217,6 +253,26 @@ function ItemPanel:mouse_pressed(x, y)
     if self.buttons["Leave"] and point_in_rect(x, y, self.buttons["Leave"]) then
         self.should_close = true
         self.should_leave = true
+        return true
+    end
+
+    -- "Serve" / "Skip" (order-kind only, absent otherwise): like "Leave"
+    -- above, these only raise flags for the caller (KitchenScene) to act
+    -- on - ItemPanel itself never touches the panel's items, the Customer,
+    -- or day_state. Serve only fires when enabled; an out-of-range click
+    -- still counts as "landed on the button" (absorbed, no-op), same as a
+    -- disabled action button below.
+    if self.buttons["Serve"] and point_in_rect(x, y, self.buttons["Serve"]) then
+        if self:_serve_enabled() then
+            self.should_close = true
+            self.should_serve = true
+        end
+        return true
+    end
+
+    if self.buttons["Skip"] and point_in_rect(x, y, self.buttons["Skip"]) then
+        self.should_close = true
+        self.should_skip = true
         return true
     end
 
@@ -285,6 +341,14 @@ function ItemPanel:draw(skip_dragging)
     love.graphics.setColor(colors.button_text or { 1, 1, 1, 1 })
     love.graphics.print((self.def and self.def.name) or self.item.type_id, tb.x + 8, tb.y + 6)
 
+    if self.item.kind == "order" then
+        love.graphics.setColor(colors.button_text or { 1, 1, 1, 1 })
+        love.graphics.print(
+            "Order: " .. tostring(self.item.requested_tag),
+            self.bg.x + MARGIN, tb.y + TITLE_H + (REMINDER_H - love.graphics.getFont():getHeight()) / 2
+        )
+    end
+
     self.item.panel:draw(skip_dragging)
 
     local actions = (self.def and self.def.actions) or {}
@@ -321,6 +385,29 @@ function ItemPanel:draw(skip_dragging)
         love.graphics.rectangle("fill", leave_rect.x, leave_rect.y, leave_rect.w, leave_rect.h)
         love.graphics.setColor(colors.button_text or { 1, 1, 1, 1 })
         love.graphics.print("Leave", leave_rect.x + 6, leave_rect.y + 6)
+    end
+
+    -- "Serve" / "Skip" (order-kind only): Serve uses the same
+    -- disabled/enabled color split as the action buttons above, since
+    -- whether it's clickable depends on the panel's current contents; Skip
+    -- is always drawn in the normal enabled color - it isn't a warning
+    -- action the way Leave/close are, so it doesn't use COLOR_LEAVE.
+    local serve_rect = self.buttons["Serve"]
+    if serve_rect then
+        local enabled = self:_serve_enabled()
+        local color = enabled and (colors.button or { 0.3, 0.55, 0.3, 1 }) or COLOR_DISABLED
+        love.graphics.setColor(color)
+        love.graphics.rectangle("fill", serve_rect.x, serve_rect.y, serve_rect.w, serve_rect.h)
+        love.graphics.setColor(colors.button_text or { 1, 1, 1, 1 })
+        love.graphics.print("Serve", serve_rect.x + 6, serve_rect.y + 6)
+    end
+
+    local skip_rect = self.buttons["Skip"]
+    if skip_rect then
+        love.graphics.setColor(colors.button or { 0.3, 0.55, 0.3, 1 })
+        love.graphics.rectangle("fill", skip_rect.x, skip_rect.y, skip_rect.w, skip_rect.h)
+        love.graphics.setColor(colors.button_text or { 1, 1, 1, 1 })
+        love.graphics.print("Skip", skip_rect.x + 6, skip_rect.y + 6)
     end
 
     local cb = self.close_button
