@@ -98,6 +98,49 @@ do
     print("PASS: customer: dismiss() short-circuits straight to walking_out, skipping talking_after")
 end
 
+-- Test 2b: dismiss(message) shows a rejection line first (same
+-- talking_after/typewriter path serve() uses for after_messages) instead of
+-- silently walking off - so a wrong-item drop reads as an actual rejection.
+do
+    local target_x, exit_x, y = 500, 100, 200
+    local c = Customer.new(target_x, exit_x, y)
+
+    c:show({
+        name           = "Wrong Item Customer",
+        messages       = { "I wanted cooked meat!" },
+        requested_type = "cooked_meat",
+        walk_speed     = 1000,
+    })
+
+    local iters = 0
+    while c.state ~= "waiting" do
+        c:update(1 / 60)
+        iters = iters + 1
+        assert(iters < 10000, "customer never reached waiting state")
+    end
+
+    c:dismiss("Sorry, that's not what I ordered!")
+    assert(c.state == "talking_after", "dismiss(message) should show the message via talking_after")
+    assert(c.dismissed, "dismissed flag should be set")
+    assert(c:bubble_visible(), "bubble should be visible while showing the rejection message")
+    assert(c._full_text == "Sorry, that's not what I ordered!", "bubble text should be the rejection message")
+
+    c:skip_reveal()
+    assert(c:line_complete(), "line should be complete after skip_reveal")
+    c:advance_after()
+    assert(c.state == "walking_out", "advancing past the (only) rejection message should walk_out")
+
+    iters = 0
+    while c.state ~= "idle" do
+        c:update(1 / 60)
+        iters = iters + 1
+        assert(iters < 10000, "dismissed customer never returned to idle")
+    end
+    assert(c.x == exit_x, "x should snap exactly to exit_x on exit after a messaged dismiss")
+
+    print("PASS: customer: dismiss(message) shows a rejection line before walking out")
+end
+
 -- Test 3: walking animation - the sprite bobs and legs swing while walking,
 -- and both settle back to rest once the customer is waiting (standing
 -- still). Placeholder-art walk cycle: no sprite frames, just a procedural

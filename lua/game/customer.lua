@@ -203,13 +203,27 @@ function Customer:advance_after()
     end
 end
 
--- Failure path: wrong item (or explicit send-away). Skips straight to
--- walking_out, no after_messages shown, regardless of whether any exist.
-function Customer:dismiss()
-    self.state        = "walking_out"
+-- Failure path: wrong item (or explicit send-away). With no message, skips
+-- straight to walking_out as before (used for e.g. a merchant's Leave
+-- button, where "rejection" doesn't apply). With a message, shows it first
+-- using the same talking_after/typewriter mechanism serve() uses for its
+-- after_messages, so a wrong-item drop reads as a clear rejection instead
+-- of silently walking off indistinguishably from a successful serve.
+function Customer:dismiss(message)
+    if message then
+        self.after_messages  = { message }
+        self.after_msg_index = 1
+        self.done_after       = false
+        self.state            = "talking_after"
+        self._full_text       = message
+        self.reveal_index     = 0
+        self.reveal_t          = 0
+    else
+        self.done_after = true
+        self.state       = "walking_out"
+    end
     self.done_talking = true
-    self.done_after     = true
-    self.dismissed      = true
+    self.dismissed     = true
 end
 
 function Customer:arrived()

@@ -748,4 +748,81 @@ do
     print("PASS: kitchen_scene: Next Day is not ready until the day's last customer has actually left")
 end
 
+-- Test 11: dropping the WRONG item on a customer must actually be rejected
+-- (not served), and now shows a clear rejection message before they walk
+-- out - not just silently leave indistinguishably from a successful serve.
+
+do
+    local ctx11 = runner.setup(function() return KitchenScene.new() end)
+    local scene11 = ctx11.sm.current
+
+    scene11.customer:show(order_cfg()) -- default request: cooked_meat
+    runner.fast_forward_until(ctx11, function() return scene11.customer:arrived() end, 0)
+    assert(scene11.customer.requested_type == "cooked_meat", "sanity check: forced customer wants cooked_meat")
+
+    local meat11
+    for _, it in ipairs(scene11.grid:items()) do
+        if it.type_id == "raw_meat" then meat11 = it end
+    end
+    assert(meat11, "on_enter should have placed raw_meat")
+
+    local currency_before = scene11.day_state.currency
+    local served_before   = scene11.day_state.customers_served
+
+    local mx11, my11 = scene11.grid:cell_to_world(meat11.cell_col, meat11.cell_row)
+    scene11:mouse_pressed(mx11 + 1, my11 + 1)
+    scene11:mouse_moved(scene11.customer.x, scene11.customer.y)
+    scene11:mouse_released(scene11.customer.x, scene11.customer.y)
+
+    -- Rejected, not served: no currency, but the visit still counts toward
+    -- the day (matches the existing dismiss-on-mismatch behavior).
+    assert(scene11.day_state.currency == currency_before,
+        "dropping the wrong item must not award currency")
+    assert(scene11.day_state.customers_served == served_before + 1,
+        "dropping the wrong item should still count as this customer's visit")
+    assert(scene11.customer.dismissed, "customer should be marked dismissed")
+
+    -- And now, unlike before, this must be visibly a rejection: a message
+    -- showing via talking_after, not a silent walking_out.
+    assert(scene11.customer.state == "talking_after",
+        "a wrong-item drop should show a rejection message (talking_after), got " .. scene11.customer.state)
+    assert(scene11.customer:bubble_visible(), "the rejection message's bubble should be visible")
+    assert(#scene11.customer._full_text > 0, "the rejection message should be non-empty")
+
+    -- Click through it like any other dialogue, same as a served customer.
+    scene11:mouse_pressed(scene11.customer.x, scene11.customer.y) -- completes the reveal
+    assert(scene11.customer.state == "talking_after", "first click should only complete the reveal")
+    scene11:mouse_pressed(scene11.customer.x, scene11.customer.y) -- advances past it
+    assert(scene11.customer.state == "walking_out", "second click should send the customer into walking_out")
+
+    print("PASS: kitchen_scene: dropping the wrong item is rejected with a visible message, not silently accepted")
+end
+
+-- Test 12: the microwave now occupies a single cell (was 2x2), freeing up
+-- the main floor grid's (1,0) cell that used to be part of its footprint.
+
+do
+    local Item = require("lua/game/item")
+
+    local ctx12 = runner.setup(function() return KitchenScene.new() end)
+    local scene12 = ctx12.sm.current
+
+    local microwave12
+    for _, it in ipairs(scene12.grid:items()) do
+        if it.type_id == "microwave" then microwave12 = it end
+    end
+    assert(microwave12, "on_enter should have placed a microwave")
+
+    assert(#microwave12:footprint() == 1, "microwave footprint should be a single cell, got " .. #microwave12:footprint())
+    assert(microwave12.cell_col == 0 and microwave12.cell_row == 0, "microwave should still start at (0,0)")
+
+    -- (1,0) used to be part of the microwave's 2x2 footprint; it must be
+    -- free now that the microwave is 1x1.
+    local probe = Item.new("raw_meat")
+    assert(scene12.grid:can_place(probe, 1, 0),
+        "(1,0) should be free now that the microwave only occupies (0,0)")
+
+    print("PASS: kitchen_scene: the microwave occupies a single cell on the main grid")
+end
+
 print("ALL TESTS PASSED")

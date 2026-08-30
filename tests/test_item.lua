@@ -44,15 +44,16 @@ do
     print("PASS: item: rotate() cycles through 4 states and returns to the original footprint")
 end
 
--- Test 1b: a 2x2 item's bounding box stays square through rotation (sanity
--- check on the rotation math specifically for the microwave).
+-- Test 1b: a 1x1 item's bounding box is trivially unchanged through
+-- rotation (sanity check that rotate() still correctly refreshes sprite
+-- dimensions from the footprint even when they don't actually change).
 do
     local microwave = Item.new("microwave")
-    assert(microwave.sprite.width  == 2 * 36, "microwave sprite width should start at 2 cells")
-    assert(microwave.sprite.height == 2 * 36, "microwave sprite height should start at 2 cells")
+    assert(microwave.sprite.width  == 1 * 36, "microwave sprite width should start at 1 cell")
+    assert(microwave.sprite.height == 1 * 36, "microwave sprite height should start at 1 cell")
     microwave:rotate()
-    assert(microwave.sprite.width  == 2 * 36, "microwave sprite width should remain 2 cells after rotation (square footprint)")
-    assert(microwave.sprite.height == 2 * 36, "microwave sprite height should remain 2 cells after rotation (square footprint)")
+    assert(microwave.sprite.width  == 1 * 36, "microwave sprite width should remain 1 cell after rotation (1x1 footprint)")
+    assert(microwave.sprite.height == 1 * 36, "microwave sprite height should remain 1 cell after rotation (1x1 footprint)")
     print("PASS: item: rotate() refreshes sprite dimensions from the rotated footprint")
 end
 

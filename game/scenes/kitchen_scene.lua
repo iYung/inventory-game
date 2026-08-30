@@ -54,9 +54,9 @@ function KitchenScene:on_enter()
         config.GRID_ORIGIN_X, config.GRID_ORIGIN_Y
     )
 
-    -- Starting layout: one microwave (2x2, top-left area) and three raw meat
+    -- Starting layout: one microwave (1x1, top-left cell) and three raw meat
     -- items (1x1) placed to its right. Manually verified non-overlapping:
-    -- microwave occupies (0,0)-(1,1); meat sits at (2,0), (3,0), (4,0).
+    -- microwave occupies (0,0); meat sits at (2,0), (3,0), (4,0).
     local microwave = Item.new("microwave")
     assert(self.grid:can_place(microwave, 0, 0), "microwave starting cell should be free")
     self.grid:place(microwave, 0, 0)
@@ -416,7 +416,11 @@ function KitchenScene:mouse_released(x, y)
             self.customer:serve()
             self.day_state:record_serve()
         else
-            self.customer:dismiss()
+            -- A message here (unlike the merchant Leave case below, which
+            -- passes none) makes a wrong-item drop read as a clear
+            -- rejection instead of the customer just silently walking off
+            -- indistinguishably from a successful serve.
+            self.customer:dismiss("Sorry, that's not what I ordered!")
             self.day_state:record_dismiss()
         end
         return
