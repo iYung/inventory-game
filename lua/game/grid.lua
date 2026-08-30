@@ -67,6 +67,13 @@ function Grid:world_to_cell(x, y)
            math.floor((y - self.origin_y) / self.cell_size)
 end
 
+-- Whether world-space (x,y) falls within this grid's own cell area (not the
+-- surrounding panel backdrop, if any - just the grid rectangle itself).
+function Grid:_point_in_bounds(x, y)
+    return x >= self.origin_x and x < self.origin_x + self.cols * self.cell_size
+       and y >= self.origin_y and y < self.origin_y + self.rows * self.cell_size
+end
+
 -- Query ---------------------------------------------------------------------
 
 function Grid:items()
@@ -295,7 +302,7 @@ function Grid:draw(skip_dragging)
             self._preview_override_item, self._preview_override_col, self._preview_override_row
     end
 
-    if preview_item and colors.grid_line then
+    if preview_item and colors.grid_line and self:can_place(preview_item, preview_col, preview_row) then
         local w_cells, h_cells = footprint_extent(preview_item)
         local x, y = self:cell_to_world(preview_col, preview_row)
         love.graphics.setColor(colors.grid_line)
