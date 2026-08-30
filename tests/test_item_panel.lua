@@ -351,4 +351,98 @@ do
     print("PASS: item_panel: _point_in_bg covers the whole backdrop")
 end
 
+-- Test 15: a fully-loaded dutch oven sitting inside the microwave's own -----
+-- panel enables Cook, via the container-recipe path in Item.matching_recipes.
+
+do
+    local microwave = Item.new("microwave")
+    local panel = ItemPanel.new(microwave)
+
+    local dutch_oven = Item.new("dutch_oven")
+    assert(microwave.panel:can_place(dutch_oven, 0, 0),
+        "dutch oven (2x1) should fit in the microwave's 2-col panel")
+    microwave.panel:place(dutch_oven, 0, 0)
+
+    local potato   = Item.new("potato")
+    local water    = Item.new("water")
+    local raw_meat = Item.new("raw_meat")
+    dutch_oven.panel:place(potato, 0, 0)
+    dutch_oven.panel:place(water, 1, 0)
+    dutch_oven.panel:place(raw_meat, 2, 0)
+
+    assert(panel:is_action_enabled("Cook") == true,
+        "Cook should be enabled when a fully-loaded dutch oven sits in the microwave's panel")
+
+    print("PASS: item_panel: is_action_enabled is true for a fully-loaded dutch oven in the microwave")
+end
+
+-- Test 16: a partially-loaded dutch oven (missing raw_meat) in the ----------
+-- microwave's panel does not enable Cook.
+
+do
+    local microwave = Item.new("microwave")
+    local panel = ItemPanel.new(microwave)
+
+    local dutch_oven = Item.new("dutch_oven")
+    assert(microwave.panel:can_place(dutch_oven, 0, 0), "dutch oven should fit in the microwave's panel")
+    microwave.panel:place(dutch_oven, 0, 0)
+
+    local potato = Item.new("potato")
+    local water  = Item.new("water")
+    dutch_oven.panel:place(potato, 0, 0)
+    dutch_oven.panel:place(water, 1, 0)
+    -- No raw_meat placed - the dutch oven is only partially loaded.
+
+    assert(panel:is_action_enabled("Cook") == false,
+        "Cook should stay disabled when the dutch oven is missing an ingredient")
+
+    print("PASS: item_panel: is_action_enabled is false for a partially-loaded dutch oven")
+end
+
+-- Test 17: a fully-loaded dutch oven sitting loose on the main floor grid --
+-- (not inside the microwave's own panel) does not enable the microwave's
+-- Cook button - the container must actually be present in the microwave's
+-- panel, not just exist somewhere satisfying its own requires.
+
+do
+    local floor_grid = Grid.new(config.GRID_COLS, config.GRID_ROWS, config.U, 0, 0)
+
+    local dutch_oven = Item.new("dutch_oven")
+    assert(floor_grid:can_place(dutch_oven, 0, 0), "dutch oven should fit on the main floor grid")
+    floor_grid:place(dutch_oven, 0, 0)
+
+    local potato   = Item.new("potato")
+    local water    = Item.new("water")
+    local raw_meat = Item.new("raw_meat")
+    dutch_oven.panel:place(potato, 0, 0)
+    dutch_oven.panel:place(water, 1, 0)
+    dutch_oven.panel:place(raw_meat, 2, 0)
+
+    -- A fresh microwave, with nothing in its own panel - the fully-loaded
+    -- dutch oven above is not sitting inside it.
+    local microwave = Item.new("microwave")
+    local panel = ItemPanel.new(microwave)
+
+    assert(panel:is_action_enabled("Cook") == false,
+        "Cook should stay disabled when a loaded dutch oven exists but isn't inside the microwave's panel")
+
+    print("PASS: item_panel: is_action_enabled is false when the dutch oven isn't inside the microwave's panel")
+end
+
+-- Test 18: sanity check that the new plain potato -> baked_potato recipe ---
+-- still enables Cook through the Item.matching_recipes-backed is_action_enabled.
+
+do
+    local microwave = Item.new("microwave")
+    local panel = ItemPanel.new(microwave)
+
+    local potato = Item.new("potato")
+    microwave.panel:place(potato, 0, 0)
+
+    assert(panel:is_action_enabled("Cook") == true,
+        "Cook should be enabled with a lone potato in the panel (potato -> baked_potato)")
+
+    print("PASS: item_panel: is_action_enabled is true for the plain potato recipe")
+end
+
 print("ALL TESTS PASSED")

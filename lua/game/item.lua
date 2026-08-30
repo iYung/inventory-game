@@ -138,27 +138,61 @@ local function action_recipes(action)
     return action.recipes or { { requires = action.requires, produces = action.produces } }
 end
 
--- Returns the first recipe in `action` whose `requires` is satisfied by
--- `counts` (from count_panel_items), or nil if none match.
-local function matching_recipe(action, counts)
-    for _, recipe in ipairs(action_recipes(action)) do
-        local satisfied = true
-        for type_id, needed in pairs(recipe.requires or {}) do
-            if (counts[type_id] or 0) < needed then
-                satisfied = false
-                break
-            end
+-- Returns true iff every type_id = needed pair in `requires` has
+-- (counts[type_id] or 0) >= needed. `requires` may be nil - treated as
+-- "always satisfied".
+local function satisfies(requires, counts)
+    for type_id, needed in pairs(requires or {}) do
+        if (counts[type_id] or 0) < needed then
+            return false
         end
-        if satisfied then return recipe end
+    end
+    return true
+end
+
+-- Returns the first item in `panel:items()` whose type_id == type_id, or
+-- nil if none match.
+local function find_item_of_type(panel, type_id)
+    for _, it in ipairs(panel:items()) do
+        if it.type_id == type_id then
+            return it
+        end
     end
     return nil
 end
 
--- Finds a recipe on `action` satisfied by the panel's current contents;
+-- Returns every recipe on `action` satisfied by panel's contents right now,
+-- as a list of { recipe, target_item } - target_item is the matched
+-- container instance for a `container` recipe, else nil (meaning "act on
+-- panel itself", the existing behavior). Deducts each match's `requires`
+-- from a running `counts` copy so two recipes never double-claim the same
+-- ingredient; a container recipe's own requirements are checked against
+-- (and only ever deducted from) the container's own panel, never `counts`.
+local function matching_recipes(action, panel)
+    local counts = count_panel_items(panel)
+    local matches = {}
+    for _, recipe in ipairs(action_recipes(action)) do
+        if recipe.container then
+            local container_item = find_item_of_type(panel, recipe.container)
+            if container_item and satisfies(recipe.requires, count_panel_items(container_item.panel)) then
+                matches[#matches + 1] = { recipe = recipe, target_item = container_item }
+            end
+        elseif satisfies(recipe.requires, counts) then
+            matches[#matches + 1] = { recipe = recipe, target_item = nil }
+            for type_id, needed in pairs(recipe.requires or {}) do
+                counts[type_id] = counts[type_id] - needed
+            end
+        end
+    end
+    return matches
+end
+
+-- Finds every recipe on `action` satisfied by the panel's current contents;
 -- starts the timer (self.action_state[name] = { running = true, elapsed =
--- 0, recipe = <the matched recipe> }) and returns true if one was found.
--- Returns false (no-op) if the action doesn't exist, there is no panel,
--- it's already running, or no recipe's requirements are met.
+-- 0, matches = <list of { recipe, target_item } from matching_recipes> })
+-- and returns true if at least one was found. Returns false (no-op) if the
+-- action doesn't exist, there is no panel, it's already running, or no
+-- recipe's requirements are met.
 function Item:start_action(name)
     local def = item_defs[self.type_id]
     local action = find_action(def, name)
@@ -172,12 +206,12 @@ function Item:start_action(name)
         return false
     end
 
-    local recipe = matching_recipe(action, count_panel_items(self.panel))
-    if not recipe then
+    local matches = matching_recipes(action, self.panel)
+    if #matches == 0 then
         return false
     end
 
-    self.action_state[name] = { running = true, elapsed = 0, recipe = recipe }
+    self.action_state[name] = { running = true, elapsed = 0, matches = matches }
     return true
 end
 
@@ -219,15 +253,22 @@ local function place_first_fit(panel, item, cols, rows)
     return false
 end
 
-local function complete_action(self, def, recipe)
-    for type_id, count in pairs(recipe.requires or {}) do
-        remove_matching(self.panel, type_id, count)
-    end
+local function complete_action(self, def, matches)
+    for _, match in ipairs(matches) do
+        local recipe      = match.recipe
+        local target_item = match.target_item
+        local target_panel = target_item and target_item.panel or self.panel
+        local target_def   = target_item and item_defs[target_item.type_id] or def
 
-    for type_id, count in pairs(recipe.produces or {}) do
-        for _ = 1, count do
-            local new_item = Item.new(type_id)
-            place_first_fit(self.panel, new_item, def.panel_cols, def.panel_rows)
+        for type_id, count in pairs(recipe.requires or {}) do
+            remove_matching(target_panel, type_id, count)
+        end
+
+        for type_id, count in pairs(recipe.produces or {}) do
+            for _ = 1, count do
+                local new_item = Item.new(type_id)
+                place_first_fit(target_panel, new_item, target_def.panel_cols, target_def.panel_rows)
+            end
         end
     end
 end
@@ -250,7 +291,7 @@ function Item:update(dt)
         if state and state.running then
             state.elapsed = state.elapsed + dt
             if state.elapsed >= action.duration then
-                complete_action(self, def, state.recipe)
+                complete_action(self, def, state.matches)
                 self.action_state[action.name] = nil
             end
         end
@@ -272,5 +313,7 @@ function Item:draw()
 
     self.sprite:draw()
 end
+
+Item.matching_recipes = matching_recipes
 
 return Item

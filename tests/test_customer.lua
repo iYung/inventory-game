@@ -1,4 +1,5 @@
-local Customer = require("lua/game/customer")
+local Customer      = require("lua/game/customer")
+local CustomerQueue = require("lua/game/customer_queue")
 
 -- Test 1: full state walk — idle -> walking_in -> waiting -> serve ->
 -- talking_after -> walking_out -> idle.
@@ -206,6 +207,40 @@ do
     assert(counts.cooked_meat == 1, "panel should contain 1 cooked_meat")
 
     print("PASS: customer: show() with kind == 'merchant' populates panel/type_id with first-fit stock")
+end
+
+-- Test 4b: regression guard for a real bug - the merchant's actual stock
+-- list (from CustomerQueue, not a hand-picked small list) must fully fit
+-- in the merchant panel. place_first_fit silently drops anything past the
+-- panel's capacity with no error, so a panel too small for the real stock
+-- list would quietly make some purchasable items (e.g. water/potato,
+-- appended last) never actually appear for the player, while cfg.stock
+-- itself still "correctly" lists them. Use CustomerQueue.new(1) - which by
+-- design always makes its single slot a merchant - to get the real cfg
+-- rather than duplicating the stock list here, so this test can't drift
+-- out of sync with whatever customer_queue.lua actually stocks.
+do
+    local config = require("lua/game/config")
+
+    local q   = CustomerQueue.new(1)
+    local cfg = q:next()
+    assert(cfg.kind == "merchant", "CustomerQueue.new(1)'s single slot should be the merchant")
+
+    local target_x, exit_x, y = 500, 100, 200
+    local c = Customer.new(target_x, exit_x, y)
+    c:show(cfg)
+
+    local capacity = config.MERCHANT_PANEL_COLS * config.MERCHANT_PANEL_ROWS
+    assert(#cfg.stock <= capacity,
+        "merchant panel capacity (" .. capacity .. " cells) must fit the full real stock list ("
+            .. #cfg.stock .. " items) - grow config.MERCHANT_PANEL_COLS/ROWS if stock grows")
+
+    local items = c.panel:items()
+    assert(#items == #cfg.stock,
+        "every stock item should actually land in the panel, got " .. #items .. " of " .. #cfg.stock
+            .. " (place_first_fit silently drops anything that doesn't fit)")
+
+    print("PASS: customer: the real merchant stock list fully fits in the merchant panel, nothing silently dropped")
 end
 
 -- Test 5: show() with cfg.kind omitted (a normal order-customer config)

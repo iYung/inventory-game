@@ -128,7 +128,7 @@ do
 
     local started = microwave:start_action("Cook")
     assert(started == true, "Cook should start with broccoli in the panel too, not just raw_meat")
-    assert(microwave.action_state["Cook"].recipe.produces.steamed_broccoli == 1,
+    assert(microwave.action_state["Cook"].matches[1].recipe.produces.steamed_broccoli == 1,
         "the matched recipe should be the broccoli->steamed_broccoli one")
 
     microwave:update(3.5) -- past the 3.0s duration
@@ -188,6 +188,147 @@ do
     local meat = Item.new("raw_meat")
     meat:draw() -- should not error even though cell_col/cell_row/grid are nil
     print("PASS: item: draw() does not error for an unplaced item")
+end
+
+-- Test 6: container recipe, happy path. A loaded dutch oven sitting inside
+-- the microwave's panel cooks into beef_stew inside the dutch oven's OWN
+-- panel, not the microwave's - and the dutch oven itself is never consumed.
+do
+    local microwave  = Item.new("microwave")
+    local dutch_oven = Item.new("dutch_oven")
+    microwave.panel:place(dutch_oven, 0, 0)
+
+    local potato   = Item.new("potato")
+    local water    = Item.new("water")
+    local raw_meat = Item.new("raw_meat")
+    dutch_oven.panel:place(potato, 0, 0)
+    dutch_oven.panel:place(water, 1, 0)
+    dutch_oven.panel:place(raw_meat, 2, 0)
+
+    local started = microwave:start_action("Cook")
+    assert(started == true, "Cook should start with a fully loaded dutch oven in the microwave's panel")
+
+    microwave:update(3.5) -- past the 3.0s duration
+
+    local stew_items = dutch_oven.panel:items()
+    assert(#stew_items == 1 and stew_items[1].type_id == "beef_stew",
+        "dutch oven's own panel should contain exactly one beef_stew after cooking")
+
+    local microwave_items = microwave.panel:items()
+    assert(#microwave_items == 1 and microwave_items[1].type_id == "dutch_oven" and microwave_items[1] == dutch_oven,
+        "microwave's own panel should still contain only the same (uneaten) dutch oven item")
+
+    print("PASS: item: container recipe cooks a loaded dutch oven's contents into beef_stew inside its own panel")
+end
+
+-- Test 7: container recipe, not satisfied - a dutch oven missing one
+-- ingredient (water) does not let Cook start.
+do
+    local microwave  = Item.new("microwave")
+    local dutch_oven = Item.new("dutch_oven")
+    microwave.panel:place(dutch_oven, 0, 0)
+
+    local potato   = Item.new("potato")
+    local raw_meat = Item.new("raw_meat")
+    dutch_oven.panel:place(potato, 0, 0)
+    dutch_oven.panel:place(raw_meat, 2, 0)
+    -- No water placed.
+
+    local started = microwave:start_action("Cook")
+    assert(started == false, "Cook should not start with a partially loaded dutch oven (missing water)")
+    assert(microwave.action_state["Cook"] == nil, "action_state should stay unset when the container recipe isn't satisfied")
+
+    print("PASS: item: container recipe does not fire when the dutch oven is only partially loaded")
+end
+
+-- Test 8: container recipe requires the container itself to be present -
+-- loose ingredients sitting directly in the microwave's own 2-cell panel
+-- (no dutch_oven item present) do not satisfy the container recipe. Note:
+-- potato and raw_meat each already have their OWN flat, non-container Cook
+-- recipe (potato -> baked_potato, raw_meat -> cooked_meat), so placing
+-- either of them loose would start Cook via that unrelated recipe instead
+-- and wouldn't isolate what this test is checking; water has no flat
+-- recipe of its own, so two waters (filling both of the microwave's panel
+-- cells) are used here to keep the "no container present" check isolated
+-- from those other, already-passing recipes.
+do
+    local microwave = Item.new("microwave")
+
+    local water_a = Item.new("water")
+    local water_b = Item.new("water")
+    microwave.panel:place(water_a, 0, 0)
+    microwave.panel:place(water_b, 1, 0)
+
+    local started = microwave:start_action("Cook")
+    assert(started == false, "Cook should not start via the container recipe when no dutch_oven item is present")
+
+    print("PASS: item: container recipe never fires without an actual container item present")
+end
+
+-- Test 9: multiple recipes fire in one press - raw_meat and broccoli
+-- together in the microwave's (now 2-wide) panel both cook from a single
+-- Cook press.
+do
+    local microwave = Item.new("microwave")
+    local meat      = Item.new("raw_meat")
+    local broccoli  = Item.new("broccoli")
+    microwave.panel:place(meat, 0, 0)
+    microwave.panel:place(broccoli, 1, 0)
+
+    local started = microwave:start_action("Cook")
+    assert(started == true, "Cook should start with both raw_meat and broccoli present")
+
+    microwave:update(3.5) -- past the 3.0s duration
+
+    local items = microwave.panel:items()
+    assert(#items == 2, "panel should contain exactly two items after both recipes fire, got " .. #items)
+
+    local has_cooked_meat, has_steamed_broccoli = false, false
+    for _, it in ipairs(items) do
+        if it.type_id == "cooked_meat" then has_cooked_meat = true end
+        if it.type_id == "steamed_broccoli" then has_steamed_broccoli = true end
+    end
+    assert(has_cooked_meat, "panel should contain cooked_meat after the single Cook press")
+    assert(has_steamed_broccoli, "panel should contain steamed_broccoli after the single Cook press")
+
+    print("PASS: item: a single Cook press fires every satisfied recipe (raw_meat and broccoli together)")
+end
+
+-- Test 10: the new simple potato recipe (potato -> baked_potato) works like
+-- the other flat, non-container microwave recipes.
+do
+    local microwave = Item.new("microwave")
+    local potato    = Item.new("potato")
+    microwave.panel:place(potato, 0, 0)
+
+    local started = microwave:start_action("Cook")
+    assert(started == true, "Cook should start with a potato in the microwave's panel")
+
+    microwave:update(3.5) -- past the 3.0s duration
+
+    local items = microwave.panel:items()
+    assert(#items == 1 and items[1].type_id == "baked_potato",
+        "potato should have cooked into baked_potato")
+
+    print("PASS: item: potato -> baked_potato recipe works via the microwave's Cook button")
+end
+
+-- Test 11: the fryer's single-recipe Fry action (potato -> fries).
+do
+    local fryer  = Item.new("fryer")
+    local potato = Item.new("potato")
+    fryer.panel:place(potato, 0, 0)
+
+    local started = fryer:start_action("Fry")
+    assert(started == true, "Fry should start with a potato in the fryer's panel")
+
+    fryer:update(3.5) -- past the 3.0s duration
+
+    local items = fryer.panel:items()
+    assert(#items == 1 and items[1].type_id == "fries",
+        "potato should have fried into fries")
+
+    print("PASS: item: fryer's Fry action turns potato into fries")
 end
 
 print("ALL TESTS PASSED")

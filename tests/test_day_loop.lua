@@ -110,10 +110,12 @@ do
                 end
                 assert(counts.raw_meat == 2, "merchant stock should contain exactly 2 raw_meat")
                 assert(counts.broccoli and counts.broccoli >= 1, "merchant stock should contain broccoli")
+                assert(counts.water and counts.water >= 1, "merchant stock should contain water")
+                assert(counts.potato and counts.potato >= 1, "merchant stock should contain potato")
                 assert(counts.cooked_meat == nil, "merchant stock should not offer cooked_meat (raw ingredients only)")
                 local total_stock = 0
                 for _ in pairs(counts) do total_stock = total_stock + 1 end
-                assert(total_stock == 2, "merchant stock should only contain raw_meat and broccoli entries")
+                assert(total_stock == 4, "merchant stock should only contain raw_meat, broccoli, water, and potato entries")
             else
                 order_count = order_count + 1
                 assert(cfg.kind == nil or cfg.kind == "order",

@@ -804,8 +804,9 @@ do
 end
 
 -- Test 12: the microwave itself still occupies a 2x2 area on the main
--- floor grid, but its own internal cooking panel is a single cell (not
--- 2x1) - the item's footprint and its inner inventory size are unrelated.
+-- floor grid, but its own internal cooking panel is a separate 2x1 shape
+-- (grown from 1x1 to fit the dutch oven's 2x1 footprint) - the item's
+-- footprint and its inner inventory size are unrelated.
 
 do
     local Item = require("lua/game/item")
@@ -827,11 +828,12 @@ do
     local probe = Item.new("raw_meat")
     assert(not scene12.grid:can_place(probe, 1, 0), "(1,0) should still be occupied by the microwave's footprint")
 
-    -- Its own cooking panel, though, is a single cell.
-    assert(microwave12.panel.cols == 1 and microwave12.panel.rows == 1,
-        "microwave's internal panel should be 1x1, got " .. microwave12.panel.cols .. "x" .. microwave12.panel.rows)
+    -- Its own cooking panel, though, is 2x1 (grown from 1x1 so the dutch
+    -- oven's 2x1 footprint fits inside it).
+    assert(microwave12.panel.cols == 2 and microwave12.panel.rows == 1,
+        "microwave's internal panel should be 2x1, got " .. microwave12.panel.cols .. "x" .. microwave12.panel.rows)
 
-    print("PASS: kitchen_scene: the microwave is 2x2 on the floor grid but has a 1x1 internal panel")
+    print("PASS: kitchen_scene: the microwave is 2x2 on the floor grid but has a 2x1 internal panel")
 end
 
 -- Test 13: right-click is a one-click shortcut for double-click-to-open-
@@ -888,21 +890,26 @@ end
 
 -- Test 14: dragging an item directly onto the microwave's own floor cells
 -- inserts it into the microwave's panel (first-fit) if there's room,
--- without needing to open the panel first; if there's no room, it snaps
--- back instead of being lost.
+-- without needing to open the panel first; once both of its 2 panel cells
+-- are full, a further drop snaps back instead of being lost.
 
 do
     local ctx14 = runner.setup(function() return KitchenScene.new() end)
     local scene14 = ctx14.sm.current
 
-    local microwave14, meatA, meatB
+    local microwave14, meatA, meatB, meatC
     for _, it in ipairs(scene14.grid:items()) do
         if it.type_id == "microwave" then microwave14 = it end
         if it.type_id == "raw_meat" then
-            if not meatA then meatA = it elseif not meatB then meatB = it end
+            if not meatA then meatA = it
+            elseif not meatB then meatB = it
+            elseif not meatC then meatC = it end
         end
     end
-    assert(microwave14 and meatA and meatB, "on_enter should have placed a microwave and multiple raw_meat")
+    assert(microwave14 and meatA and meatB and meatC,
+        "on_enter should have placed a microwave and at least three raw_meat")
+
+    local wx14, wy14 = scene14.grid:cell_to_world(0, 0) -- microwave's top-left cell
 
     -- Drag the first raw_meat onto the microwave's own cell (not via its
     -- panel - it isn't even open).
@@ -910,7 +917,6 @@ do
     scene14:mouse_pressed(mxA + 1, myA + 1)
     assert(scene14.grid.dragging == meatA)
 
-    local wx14, wy14 = scene14.grid:cell_to_world(0, 0) -- microwave's top-left cell
     scene14:mouse_moved(wx14 + 1, wy14 + 1)
     scene14:mouse_released(wx14 + 1, wy14 + 1)
 
@@ -918,26 +924,42 @@ do
     assert(#scene14.panels == 0, "dropping onto the microwave should not itself open its panel")
     assert(meatA.grid == microwave14.panel, "item dropped on the microwave should land in its panel")
 
-    local still_on_main_grid = false
+    local still_on_main_grid_A = false
     for _, it in ipairs(scene14.grid:items()) do
-        if it == meatA then still_on_main_grid = true end
+        if it == meatA then still_on_main_grid_A = true end
     end
-    assert(not still_on_main_grid, "the inserted item should be gone from the main grid")
+    assert(not still_on_main_grid_A, "the inserted item should be gone from the main grid")
 
-    -- The microwave's panel is 1x1 and now full - a second item dropped on
-    -- it the same way must not be lost; it should snap back to its
-    -- original cell on the main grid instead.
+    -- The microwave's panel is 2 cells wide - a second item dropped on it
+    -- the same way still has room and should also land in the panel.
     local mxB, myB = scene14.grid:cell_to_world(meatB.cell_col, meatB.cell_row)
-    local orig_col, orig_row = meatB.cell_col, meatB.cell_row
     scene14:mouse_pressed(mxB + 1, myB + 1)
     scene14:mouse_moved(wx14 + 1, wy14 + 1)
     scene14:mouse_released(wx14 + 1, wy14 + 1)
 
-    assert(meatB.grid == scene14.grid, "with no room in the panel, the item should snap back to the main grid")
-    assert(meatB.cell_col == orig_col and meatB.cell_row == orig_row,
+    assert(meatB.grid == microwave14.panel,
+        "a second item dropped on the microwave should also land in its 2-cell panel")
+
+    local still_on_main_grid_B = false
+    for _, it in ipairs(scene14.grid:items()) do
+        if it == meatB then still_on_main_grid_B = true end
+    end
+    assert(not still_on_main_grid_B, "the second inserted item should be gone from the main grid")
+
+    -- Both panel cells are now full - a third item dropped the same way
+    -- must not be lost; it should snap back to its original cell on the
+    -- main grid instead.
+    local mxC, myC = scene14.grid:cell_to_world(meatC.cell_col, meatC.cell_row)
+    local orig_col, orig_row = meatC.cell_col, meatC.cell_row
+    scene14:mouse_pressed(mxC + 1, myC + 1)
+    scene14:mouse_moved(wx14 + 1, wy14 + 1)
+    scene14:mouse_released(wx14 + 1, wy14 + 1)
+
+    assert(meatC.grid == scene14.grid, "with no room left in the panel, the item should snap back to the main grid")
+    assert(meatC.cell_col == orig_col and meatC.cell_row == orig_row,
         "the snapped-back item should return to exactly its original cell")
 
-    print("PASS: kitchen_scene: dragging an item onto the microwave inserts it into the panel if there's room, else snaps back")
+    print("PASS: kitchen_scene: dragging items onto the microwave fills its 2-cell panel, then snaps back once full")
 end
 
 -- Test 15: the broccoli/Cook/steamed_broccoli pipeline works end-to-end
@@ -1074,6 +1096,113 @@ do
     assert_raw_drop_rejected("broccoli", "Protein")
 
     print("PASS: kitchen_scene: dropping any raw (untagged) item on a customer is always rejected, regardless of the requested tag")
+end
+
+-- Test 17: double-click and right-click to open a container's panel also
+-- work on an item sitting INSIDE an already-open panel's own grid - the
+-- dutch-oven-in-microwave scenario from docs/design/cooking-methods.md.
+-- Also a regression check that right-clicking dead backdrop space (e.g. a
+-- panel's title bar) is still a no-op, unaffected by that generalization.
+
+do
+    local ItemPanel = require("lua/game/item_panel")
+
+    local ctx17 = runner.setup(function() return KitchenScene.new() end)
+    local scene17 = ctx17.sm.current
+
+    local microwave17
+    for _, it in ipairs(scene17.grid:items()) do
+        if it.type_id == "microwave" then microwave17 = it end
+    end
+    assert(microwave17, "on_enter should have placed a microwave")
+
+    scene17.panels = { ItemPanel.new(microwave17) }
+
+    -- Place a dutch oven directly into the OPEN microwave panel (it fits:
+    -- the microwave's panel is 2 cols wide, the dutch oven's footprint is
+    -- 2x1) - no need to drive it through a drag for this test.
+    local dutch_oven17 = Item.new("dutch_oven")
+    assert(microwave17.panel:can_place(dutch_oven17, 0, 0),
+        "dutch oven should fit in the microwave's 2-wide panel")
+    microwave17.panel:place(dutch_oven17, 0, 0)
+
+    -- Double-click the dutch oven's cell within the open microwave panel.
+    local dx17, dy17 = microwave17.panel:cell_to_world(0, 0)
+    dx17, dy17 = dx17 + 1, dy17 + 1
+
+    scene17:mouse_pressed(dx17, dy17)
+    scene17:mouse_released(dx17, dy17)
+    scene17:mouse_pressed(dx17, dy17)
+    scene17:mouse_released(dx17, dy17)
+
+    assert(#scene17.panels == 2,
+        "double-clicking a has_panel item inside an open panel should open a second panel")
+    assert(scene17.panels[2].item == dutch_oven17,
+        "the newly opened (topmost) panel should wrap the dutch oven")
+
+    print("PASS: kitchen_scene: double-clicking a dutch oven sitting inside an already-open microwave panel opens its own panel")
+end
+
+do
+    local ItemPanel = require("lua/game/item_panel")
+
+    local ctx17b = runner.setup(function() return KitchenScene.new() end)
+    local scene17b = ctx17b.sm.current
+
+    local microwave17b
+    for _, it in ipairs(scene17b.grid:items()) do
+        if it.type_id == "microwave" then microwave17b = it end
+    end
+    assert(microwave17b, "on_enter should have placed a microwave")
+
+    scene17b.panels = { ItemPanel.new(microwave17b) }
+
+    local dutch_oven17b = Item.new("dutch_oven")
+    assert(microwave17b.panel:can_place(dutch_oven17b, 0, 0),
+        "dutch oven should fit in the microwave's 2-wide panel")
+    microwave17b.panel:place(dutch_oven17b, 0, 0)
+
+    -- Right-click the dutch oven's cell within the open microwave panel:
+    -- should open its panel in one click.
+    local dx17b, dy17b = microwave17b.panel:cell_to_world(0, 0)
+    dx17b, dy17b = dx17b + 1, dy17b + 1
+
+    scene17b:mouse_right_pressed(dx17b, dy17b)
+
+    assert(#scene17b.panels == 2,
+        "right-clicking a has_panel item inside an open panel should open its panel in one click")
+    assert(scene17b.panels[2].item == dutch_oven17b,
+        "the newly opened (topmost) panel should wrap the dutch oven")
+
+    print("PASS: kitchen_scene: right-clicking a dutch oven sitting inside an already-open microwave panel opens its panel in one click")
+end
+
+do
+    -- Regression check: right-clicking elsewhere on an open panel's backdrop
+    -- (e.g. its title bar) - dead space, not its inner grid - must remain a
+    -- no-op. Confirms Task 3's generalization (checking a click's target
+    -- grid topmost-first) didn't loosen the "backdrop dead space is a
+    -- no-op" rule for right-click.
+    local ItemPanel = require("lua/game/item_panel")
+
+    local ctx17c = runner.setup(function() return KitchenScene.new() end)
+    local scene17c = ctx17c.sm.current
+
+    local microwave17c
+    for _, it in ipairs(scene17c.grid:items()) do
+        if it.type_id == "microwave" then microwave17c = it end
+    end
+    assert(microwave17c, "on_enter should have placed a microwave")
+
+    local panel17c = ItemPanel.new(microwave17c)
+    scene17c.panels = { panel17c }
+
+    scene17c:mouse_right_pressed(panel17c.title_bar.x + 5, panel17c.title_bar.y + 5)
+
+    assert(#scene17c.panels == 1,
+        "right-clicking an open panel's dead backdrop space (e.g. its title bar) should remain a no-op")
+
+    print("PASS: kitchen_scene: right-clicking dead backdrop space on an open panel is still a no-op")
 end
 
 print("ALL TESTS PASSED")
