@@ -109,11 +109,11 @@ do
                     counts[item_type] = (counts[item_type] or 0) + 1
                 end
                 assert(counts.raw_meat == 2, "merchant stock should contain exactly 2 raw_meat")
-                assert(counts.cooked_meat == 1, "merchant stock should contain exactly 1 cooked_meat")
                 assert(counts.broccoli and counts.broccoli >= 1, "merchant stock should contain broccoli")
+                assert(counts.cooked_meat == nil, "merchant stock should not offer cooked_meat (raw ingredients only)")
                 local total_stock = 0
                 for _ in pairs(counts) do total_stock = total_stock + 1 end
-                assert(total_stock == 3, "merchant stock should only contain raw_meat, cooked_meat, and broccoli entries")
+                assert(total_stock == 2, "merchant stock should only contain raw_meat and broccoli entries")
             else
                 order_count = order_count + 1
                 assert(cfg.kind == nil or cfg.kind == "order",
@@ -178,11 +178,13 @@ do
         while q:has_next() do
             local cfg = q:next()
             if cfg.kind == "merchant" then
-                local has_broccoli = false
+                local has_broccoli, has_cooked_meat = false, false
                 for _, item_type in ipairs(cfg.stock) do
                     if item_type == "broccoli" then has_broccoli = true end
+                    if item_type == "cooked_meat" then has_cooked_meat = true end
                 end
                 assert(has_broccoli, "merchant config's stock should contain broccoli")
+                assert(not has_cooked_meat, "merchant config's stock should never contain cooked_meat")
             else
                 local tags = known_tags()
                 local found = false
