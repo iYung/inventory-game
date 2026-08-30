@@ -285,6 +285,7 @@ local function clear_drag(grid, item)
     grid.drag_orig_row     = nil
     grid.drag_preview_col  = nil
     grid.drag_preview_row  = nil
+    grid:clear_hover()
 end
 
 -- Moves the item currently being dragged on `from_grid` onto `to_grid` at
@@ -294,6 +295,7 @@ end
 local function transfer_drag(from_grid, to_grid, item, x, y)
     local orig_col, orig_row = from_grid.drag_orig_col, from_grid.drag_orig_row
     clear_drag(from_grid, item)
+    to_grid:clear_hover()
 
     local col, row = to_grid:world_to_cell(x, y)
     if to_grid:can_place(item, col, row) then
@@ -311,6 +313,7 @@ end
 local function transfer_drag_first_fit(from_grid, to_grid, item)
     local orig_col, orig_row = from_grid.drag_orig_col, from_grid.drag_orig_row
     clear_drag(from_grid, item)
+    to_grid:clear_hover()
 
     if not to_grid:place_first_fit(item) then
         from_grid:place(item, orig_col, orig_row)

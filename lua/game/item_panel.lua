@@ -304,6 +304,8 @@ function ItemPanel:mouse_moved(x, y)
 
     if self:_point_in_grid(x, y) or self.item.panel.dragging then
         self.item.panel:mouse_moved(x, y)
+    else
+        self.item.panel:clear_hover()
     end
 end
 
