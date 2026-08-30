@@ -196,6 +196,30 @@ do
     print("PASS: grid: update(dt) ticks placed items, including the one mid-drag")
 end
 
+-- Test: mouse_moved tracks hover cell unconditionally ----------------------
+
+do
+    local g = Grid.new(10, 6, CELL, 0, 0)
+
+    assert(g._hover_col == nil and g._hover_row == nil,
+        "hover cell should start nil")
+
+    g:mouse_moved(2 * CELL + 1, 1 * CELL + 1)
+    assert(g._hover_col == 2 and g._hover_row == 1,
+        "mouse_moved should update hover cell even without a drag, got "
+        .. tostring(g._hover_col) .. "," .. tostring(g._hover_row))
+
+    local a = make_item({ ONE_BY_ONE })
+    g:place(a, 0, 0)
+    g:mouse_pressed(1, 1)
+    g:mouse_moved(5 * CELL + 1, 3 * CELL + 1)
+    assert(g._hover_col == 5 and g._hover_row == 3,
+        "mouse_moved should update hover cell during drag")
+    g:mouse_released(5 * CELL + 1, 3 * CELL + 1)
+
+    print("PASS: grid: mouse_moved tracks hover cell unconditionally")
+end
+
 -- Test 8: draw() does not error under the headless love.graphics stub ----
 
 do

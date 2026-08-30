@@ -37,6 +37,9 @@ function Grid.new(cols, rows, cell_size, origin_x, origin_y)
     self._preview_override_col  = nil
     self._preview_override_row  = nil
 
+    self._hover_col = nil
+    self._hover_row = nil
+
     return self
 end
 
@@ -167,6 +170,7 @@ function Grid:mouse_pressed(x, y)
 end
 
 function Grid:mouse_moved(x, y)
+    self._hover_col, self._hover_row = self:world_to_cell(x, y)
     if not self.dragging then return end
     self.drag_preview_col, self.drag_preview_row = self:world_to_cell(x, y)
     self.drag_cursor_x, self.drag_cursor_y = x, y
@@ -309,6 +313,30 @@ function Grid:draw(skip_dragging)
     if self.dragging and self.dragging.draw and not skip_dragging then
         self.dragging:draw()
     end
+
+    -- Labels: item display name shown below the sprite while hovering or dragging.
+    local function draw_label(item)
+        if not item.label or item.label == "" then return end
+        if not item.sprite then return end
+        local font = love.graphics.getFont()
+        local tw = font:getWidth(item.label)
+        local th = font:getHeight()
+        local lx = item.sprite.x + item.sprite.width / 2
+        local ly = item.sprite.y + item.sprite.height + 3
+        love.graphics.setColor(0, 0, 0, 0.55)
+        love.graphics.rectangle("fill", lx - tw / 2 - 3, ly - 1, tw + 6, th + 2)
+        love.graphics.setColor(1, 1, 1, 0.95)
+        love.graphics.print(item.label, lx - tw / 2, ly)
+    end
+
+    if not self.dragging and self._hover_col and self._hover_row then
+        local hov = self:item_at(self._hover_col, self._hover_row)
+        if hov then draw_label(hov) end
+    end
+
+    if self.dragging then draw_label(self.dragging) end
+
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 return Grid

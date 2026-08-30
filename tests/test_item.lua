@@ -19,6 +19,20 @@ do
     print("PASS: item: raw items carry no tags, prepared items carry their def's tags")
 end
 
+-- Test: item.label is set from def.name
+do
+    local raw = Item.new("raw_meat")
+    assert(raw.label == "Raw Meat", "raw_meat label should be 'Raw Meat', got " .. tostring(raw.label))
+
+    local cooked = Item.new("cooked_meat")
+    assert(cooked.label == "Cooked Meat", "cooked_meat label should be 'Cooked Meat', got " .. tostring(cooked.label))
+
+    local mw = Item.new("microwave")
+    assert(mw.label == "Microwave", "microwave label should be 'Microwave', got " .. tostring(mw.label))
+
+    print("PASS: item: label field matches def.name for each item type")
+end
+
 -- Test 1: rotate cycles through 4 states and returns to the original
 -- footprint on the 4th call.
 do
