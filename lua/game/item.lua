@@ -64,6 +64,7 @@ function Item.new(type_id)
     -- Plain field, not a method like footprint() - tags don't depend on
     -- rotation state, they never change after construction.
     self.tags          = def.tags or {}
+    self.label         = def.name or ""
 
     local w, h = bounding_box(def.footprint)
     self.sprite = Sprite.new(0, 0, w * config.U, h * config.U)

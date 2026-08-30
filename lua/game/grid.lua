@@ -37,6 +37,9 @@ function Grid.new(cols, rows, cell_size, origin_x, origin_y)
     self._preview_override_col  = nil
     self._preview_override_row  = nil
 
+    self._hover_col = nil
+    self._hover_row = nil
+
     return self
 end
 
@@ -167,6 +170,7 @@ function Grid:mouse_pressed(x, y)
 end
 
 function Grid:mouse_moved(x, y)
+    self._hover_col, self._hover_row = self:world_to_cell(x, y)
     if not self.dragging then return end
     self.drag_preview_col, self.drag_preview_row = self:world_to_cell(x, y)
     self.drag_cursor_x, self.drag_cursor_y = x, y
@@ -309,6 +313,44 @@ function Grid:draw(skip_dragging)
     if self.dragging and self.dragging.draw and not skip_dragging then
         self.dragging:draw()
     end
+
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
+-- Draws the name+tag label for the hovered or dragged item on this grid.
+-- Must be called AFTER all other draw layers (panels, buttons, HUD) so the
+-- label is never occluded by UI drawn on top of Grid:draw().
+function Grid:draw_labels()
+    local item_to_label
+    if self.dragging then
+        item_to_label = self.dragging
+    elseif self._hover_col and self._hover_row then
+        item_to_label = self:item_at(self._hover_col, self._hover_row)
+    end
+    if not item_to_label then return end
+    if not item_to_label.label or item_to_label.label == "" then return end
+    if not item_to_label.sprite then return end
+
+    local font = love.graphics.getFont()
+    local th = font:getHeight()
+    local tag_str = (item_to_label.tags and #item_to_label.tags > 0)
+        and table.concat(item_to_label.tags, ", ") or nil
+    local nw = font:getWidth(item_to_label.label)
+    local tw = tag_str and font:getWidth(tag_str) or 0
+    local box_w = math.max(nw, tw) + 6
+    local box_h = th * (tag_str and 2 or 1) + 4
+    local lx = item_to_label.sprite.x + item_to_label.sprite.width / 2
+    local ly = item_to_label.sprite.y - box_h - 3
+
+    love.graphics.setColor(0, 0, 0, 0.55)
+    love.graphics.rectangle("fill", lx - box_w / 2, ly, box_w, box_h)
+    love.graphics.setColor(1, 1, 1, 0.95)
+    love.graphics.print(item_to_label.label, lx - nw / 2, ly + 2)
+    if tag_str then
+        love.graphics.setColor(0.95, 0.85, 0.45, 0.95)
+        love.graphics.print(tag_str, lx - tw / 2, ly + th + 2)
+    end
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 return Grid

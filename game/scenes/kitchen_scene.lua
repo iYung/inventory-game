@@ -627,6 +627,12 @@ function KitchenScene:draw()
         owner.dragging:draw()
     end
 
+    -- Labels drawn last so they appear above every other layer: panels,
+    -- buttons, HUD, and the dragged item sprite itself.
+    for _, grid in ipairs(self:_all_grids()) do
+        grid:draw_labels()
+    end
+
     self.camera:detach()
 end
 
