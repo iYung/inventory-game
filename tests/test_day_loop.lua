@@ -4,6 +4,13 @@ local DayState      = require("lua/game/day_state")
 -- Test 1: CustomerQueue exhausts after N next() calls, each returning a
 -- config table with the expected fields; has_next() flips false once
 -- exhausted.
+--
+-- Deviation from the original version of this test: CustomerQueue.new()
+-- now mixes exactly one random merchant config in among the order configs
+-- (see docs/design/merchant-npc.md), so configs are no longer all
+-- identical. Each returned config is checked against the fields expected
+-- for its own kind rather than assuming every slot is a food-order config;
+-- merchant-specific field coverage lives in Test 1b below.
 do
     local q = CustomerQueue.new(3)
     assert(q.total == 3, "total should be stored")
@@ -12,11 +19,16 @@ do
         assert(q:has_next(), "has_next() should be true before customer " .. i)
         local cfg = q:next()
         assert(cfg ~= nil, "next() should return a config table for customer " .. i)
-        assert(cfg.name == "Customer", "config should have a name field")
-        assert(cfg.requested_type == "cooked_meat", "config should have requested_type field")
         assert(type(cfg.messages) == "table" and #cfg.messages > 0, "config should have non-empty messages")
-        assert(type(cfg.after_messages) == "table" and #cfg.after_messages > 0, "config should have non-empty after_messages")
         assert(type(cfg.walk_speed) == "number", "config should have a numeric walk_speed")
+
+        if cfg.kind == "merchant" then
+            assert(cfg.name == "Merchant", "merchant config should have name Merchant")
+        else
+            assert(cfg.name == "Customer", "order config should have a name field")
+            assert(cfg.requested_type == "cooked_meat", "order config should have requested_type field")
+            assert(type(cfg.after_messages) == "table" and #cfg.after_messages > 0, "order config should have non-empty after_messages")
+        end
     end
 
     assert(not q:has_next(), "has_next() should be false once exhausted")
@@ -24,6 +36,88 @@ do
     assert(cfg4 == nil, "next() should return nil once exhausted")
 
     print("PASS: customer_queue: next() yields N configs then nil, has_next() tracks exhaustion")
+end
+
+-- Test 1b: CustomerQueue.new(total) mixes in exactly one merchant config
+-- among the food-order configs, for several values of total (including
+-- total == 1, where the single slot must still always be the merchant).
+-- Position is random (math.random(1, total)) so we assert on counts, not
+-- on which index holds the merchant.
+do
+    for _, total in ipairs({ 1, 3, 5 }) do
+        local q = CustomerQueue.new(total)
+
+        local merchant_count = 0
+        local order_count    = 0
+        local drained        = 0
+
+        while q:has_next() do
+            local cfg = q:next()
+            assert(cfg ~= nil, "next() should return a config while has_next() is true")
+            drained = drained + 1
+
+            if cfg.kind == "merchant" then
+                merchant_count = merchant_count + 1
+
+                assert(cfg.name == "Merchant", "merchant config should be named Merchant")
+                assert(type(cfg.messages) == "table" and #cfg.messages > 0,
+                    "merchant config should have non-empty messages")
+                assert(type(cfg.walk_speed) == "number", "merchant config should have a numeric walk_speed")
+
+                assert(type(cfg.stock) == "table", "merchant config should have a stock list")
+                local counts = {}
+                for _, item_type in ipairs(cfg.stock) do
+                    counts[item_type] = (counts[item_type] or 0) + 1
+                end
+                assert(counts.raw_meat == 2, "merchant stock should contain exactly 2 raw_meat")
+                assert(counts.cooked_meat == 1, "merchant stock should contain exactly 1 cooked_meat")
+                local total_stock = 0
+                for _ in pairs(counts) do total_stock = total_stock + 1 end
+                assert(total_stock == 2, "merchant stock should only contain raw_meat and cooked_meat entries")
+            else
+                order_count = order_count + 1
+                assert(cfg.kind == nil or cfg.kind == "order",
+                    "non-merchant config should have no kind field, or kind == 'order'")
+            end
+        end
+
+        assert(drained == total, "queue of total " .. total .. " should drain exactly " .. total .. " configs")
+        assert(merchant_count == 1,
+            "queue of total " .. total .. " should contain exactly one merchant config, got " .. merchant_count)
+        assert(order_count == total - 1,
+            "queue of total " .. total .. " should contain total-1 order configs, got " .. order_count)
+    end
+
+    print("PASS: customer_queue: new(total) always mixes in exactly one merchant config among order configs")
+end
+
+-- Test 1c: the merchant slot is actually randomly positioned, not
+-- hardcoded to a fixed index — across enough trials with total > 1, the
+-- merchant should land at more than one distinct index. Uses a decent
+-- trial count to keep this robust against coincidental non-variation.
+do
+    local total  = 5
+    local trials = 200
+    local seen_indices = {}
+
+    for _ = 1, trials do
+        local q = CustomerQueue.new(total)
+        local i = 0
+        while q:has_next() do
+            i = i + 1
+            local cfg = q:next()
+            if cfg.kind == "merchant" then
+                seen_indices[i] = true
+            end
+        end
+    end
+
+    local distinct = 0
+    for _ in pairs(seen_indices) do distinct = distinct + 1 end
+    assert(distinct > 1,
+        "merchant slot should vary across runs (saw " .. distinct .. " distinct index/indices over " .. trials .. " trials)")
+
+    print("PASS: customer_queue: merchant slot position varies across multiple new() calls")
 end
 
 -- Test 2: DayState tracks day/customers_served/customers_total/currency

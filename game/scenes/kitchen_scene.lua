@@ -147,6 +147,13 @@ end
 function KitchenScene:mouse_pressed(x, y)
     if self.panel then
         local consumed = self.panel:mouse_pressed(x, y)
+        -- "Leave" (merchant-only) sets should_close AND should_leave together
+        -- on the same click; check should_leave first since it's about to be
+        -- nilled out by the should_close handling right below.
+        if self.panel.should_leave then
+            self.customer:dismiss()
+            self.day_state:record_dismiss()
+        end
         if self.panel.should_close then
             self.panel = nil
             return
@@ -172,6 +179,15 @@ function KitchenScene:mouse_pressed(x, y)
     -- customer into walking_out. Without this a served customer just stands
     -- there showing their last line forever.
     if self.customer:active() and self:_customer_hit(x, y) then
+        -- A merchant doesn't have dialogue to advance through past their
+        -- greeting - clicking their body opens their stock panel instead,
+        -- as long as one isn't already open (re-clicking the body while the
+        -- panel is up just falls through to the dialogue-advance logic
+        -- below, which is a harmless no-op for a merchant by then).
+        if self.customer.kind == "merchant" and self.customer:arrived() and self.panel == nil then
+            self.panel = ItemPanel.new(self.customer)
+            return
+        end
         if self.customer.state == "talking_after" then
             self.customer:advance_after()
         elseif self.customer:arrived() then
@@ -241,7 +257,7 @@ function KitchenScene:mouse_released(x, y)
         or (pgrid and pgrid.dragging and pgrid)
         or nil
 
-    if source_grid and self.customer:arrived() and self:_customer_hit(x, y) then
+    if source_grid and self.customer:arrived() and self.customer.kind ~= "merchant" and self:_customer_hit(x, y) then
         local item = source_grid.dragging
         clear_drag(source_grid, item)
 

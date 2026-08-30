@@ -3,23 +3,51 @@
 -- customer" serve through KitchenScene's public mouse_pressed/moved/released
 -- methods (not real love.mouse* events, which aren't available headless).
 --
--- The MVP CustomerQueue always requests "cooked_meat", but on_enter() only
--- pre-places "raw_meat" on the grid (cooking it requires running the
--- microwave's timed action first). To test the serve/consume mechanism
--- itself without also driving the cook timer, this test overrides the
--- on-stage customer's requested_type to "raw_meat" right before the drag —
--- a direct field poke that's fine for a test exercising the drop-to-serve
--- wiring rather than the cooking pipeline (covered separately by
--- tests/test_item.lua / tests/test_item_panel.lua).
+-- CustomerQueue now mixes exactly one random merchant slot into each day's
+-- queue (see lua/game/customer_queue.lua), so the on-stage customer that
+-- on_enter() happens to queue up first is no longer guaranteed to be a
+-- food-order customer. Tests below that need a deterministic food-order
+-- customer force one directly via Customer:show(order_cfg(...)) rather than
+-- relying on whichever config CustomerQueue randomly drew first — see
+-- order_cfg() just below. (The MVP default order config always requests
+-- "cooked_meat", but on_enter() only pre-places "raw_meat" on the grid —
+-- cooking it requires running the microwave's timed action first — so
+-- order_cfg() is overridable per test, e.g. Test 1 below asks for
+-- "raw_meat" directly to test the serve/consume mechanism itself without
+-- also driving the cook timer; that pipeline is covered separately by
+-- tests/test_item.lua / tests/test_item_panel.lua.)
 
 local runner        = require("lua/headless/runner")
 local KitchenScene   = require("game/scenes/kitchen_scene")
+
+-- A deterministic food-order (kind == "order", i.e. kind omitted) customer
+-- config, with any fields overridden. Mirrors customer_queue.lua's
+-- make_default_cfg() shape.
+local function order_cfg(overrides)
+    local cfg = {
+        name            = "Test Customer",
+        requested_type  = "cooked_meat",
+        messages        = { "Could I get some food?" },
+        after_messages  = { "Thanks, that's delicious!" },
+        walk_speed      = 80,
+    }
+    for k, v in pairs(overrides or {}) do
+        cfg[k] = v
+    end
+    return cfg
+end
 
 local ctx = runner.setup(function(input, sm)
     return KitchenScene.new()
 end)
 
 local scene = ctx.sm.current
+
+-- Force a known food-order config (requesting raw_meat, so the drag-a-raw-
+-- meat-item-off-the-floor serve below doesn't need to drive the cook timer)
+-- regardless of what CustomerQueue's random merchant-slot pick queued up
+-- first for this day.
+scene.customer:show(order_cfg({ requested_type = "raw_meat" }))
 
 -- Tick (dt = 1.0 per step) until the first customer has walked in and is
 -- waiting.
@@ -28,9 +56,7 @@ runner.fast_forward_until(ctx, function()
 end, 0)
 
 assert(scene.customer:arrived(), "customer should be waiting after fast-forwarding")
-
--- Force a matching request so the drop below counts as a serve.
-scene.customer.requested_type = "raw_meat"
+assert(scene.customer.requested_type == "raw_meat", "sanity check: forced order config should request raw_meat")
 
 -- Find the raw_meat item placed at on_enter and its world position.
 local meat
@@ -215,11 +241,14 @@ do
     local ctx4 = runner.setup(function() return KitchenScene.new() end)
     local scene4 = ctx4.sm.current
 
+    -- Force a deterministic food-order customer (requesting the default
+    -- "cooked_meat") regardless of whatever CustomerQueue's random
+    -- merchant-slot pick queued up first for this day.
+    scene4.customer:show(order_cfg())
+
     runner.fast_forward_until(ctx4, function() return scene4.customer:arrived() end, 0)
-    -- MVP customers request "cooked_meat" by default - no override needed
-    -- here, unlike Test 1 (which tests raw_meat straight from the floor).
     assert(scene4.customer.requested_type == "cooked_meat",
-        "sanity check: the default customer request should be cooked_meat")
+        "sanity check: the forced order customer request should be cooked_meat")
 
     local microwave4
     for _, it in ipairs(scene4.grid:items()) do
@@ -301,6 +330,132 @@ do
     assert(c.x > prev_x, "walking_in should move the customer rightward (increasing x), left-to-right entry")
 
     print("PASS: kitchen_scene: customers walk in left-to-right, entering from off-screen on the left")
+end
+
+-- Test 6: full merchant visit - dropping an item on a merchant's body is a
+-- no-op (no serve/dismiss, no panel), clicking their body opens their stock
+-- panel, dragging a stock item out lands it on the main floor grid, and
+-- clicking "Leave" ends the visit (customers_served increments, currency
+-- does not - no payment system).
+
+do
+    local function merchant_cfg()
+        return {
+            kind       = "merchant",
+            name       = "Merchant",
+            messages   = { "Fresh stock, take a look!" },
+            stock      = { "raw_meat", "cooked_meat" },
+            walk_speed = 1000, -- fast: reach `waiting` almost immediately
+        }
+    end
+
+    local ctx6 = runner.setup(function() return KitchenScene.new() end)
+    local scene6 = ctx6.sm.current
+
+    -- Force a deterministic merchant as the active customer, regardless of
+    -- whatever CustomerQueue's random merchant-slot pick queued up first.
+    scene6.customer:show(merchant_cfg())
+    runner.fast_forward_until(ctx6, function() return scene6.customer:arrived() end, 0)
+    assert(scene6.customer:arrived(), "merchant should be waiting after fast-forwarding")
+    assert(scene6.customer.kind == "merchant", "sanity check: forced customer should be merchant-kind")
+
+    -- Step 7 (checked early, before opening the panel): dropping a dragged
+    -- item directly onto a merchant's body must do nothing special - no
+    -- serve/dismiss, no panel opened, the item just falls through to normal
+    -- grid-drop handling (and snaps back here since the drop point isn't a
+    -- valid cell for it).
+    local served_before_drop = scene6.day_state.customers_served
+
+    local meat6
+    for _, it in ipairs(scene6.grid:items()) do
+        if it.type_id == "raw_meat" then meat6 = it end
+    end
+    assert(meat6, "on_enter should have placed raw_meat on the main grid")
+
+    local mx6, my6 = scene6.grid:cell_to_world(meat6.cell_col, meat6.cell_row)
+    scene6:mouse_pressed(mx6 + 1, my6 + 1)
+    assert(scene6.grid.dragging == meat6, "mouse_pressed on the meat's cell should start dragging it")
+
+    local ccx, ccy = scene6.customer.x, scene6.customer.y
+    scene6:mouse_moved(ccx, ccy)
+    scene6:mouse_released(ccx, ccy)
+
+    assert(scene6.grid.dragging == nil, "drop should clear the grid's drag state either way")
+    assert(scene6.panel == nil, "dropping on a merchant's body should not open a panel")
+    assert(scene6.day_state.customers_served == served_before_drop,
+        "dropping an item on a merchant's body should not trigger serve/dismiss")
+    assert(meat6.grid == scene6.grid, "the dropped item should fall through to normal grid-drop handling")
+
+    -- Steps 1-3: clicking the merchant's body opens their stock panel.
+    scene6:mouse_pressed(scene6.customer.x, scene6.customer.y)
+    assert(scene6.panel ~= nil, "clicking the merchant's body should open their stock panel")
+    assert(scene6.panel.item == scene6.customer, "the panel should wrap the customer itself")
+
+    -- Step 4: drag a stock item out of the merchant's panel onto the main
+    -- floor grid, at a cell free per on_enter's starting layout (microwave
+    -- occupies (0,0)-(1,1); raw_meat sits at (2,0),(3,0),(4,0); (5,3) is
+    -- untouched).
+    local stock_item
+    for _, it in ipairs(scene6.customer.panel:items()) do
+        stock_item = it
+        break
+    end
+    assert(stock_item, "merchant's panel should contain stock items")
+
+    local sx, sy = scene6.customer.panel:cell_to_world(stock_item.cell_col, stock_item.cell_row)
+    scene6:mouse_pressed(sx + 1, sy + 1)
+    assert(scene6.customer.panel.dragging == stock_item,
+        "should be dragging the stock item out of the merchant's panel")
+
+    local gx, gy = scene6.grid:cell_to_world(5, 3)
+    scene6:mouse_moved(gx + 1, gy + 1)
+    scene6:mouse_released(gx + 1, gy + 1)
+
+    assert(scene6.customer.panel.dragging == nil, "drop should clear the merchant panel's drag state")
+    assert(stock_item.grid == scene6.grid, "dragged stock item should now belong to the main grid")
+    assert(stock_item.cell_col == 5 and stock_item.cell_row == 3,
+        "dragged stock item should land at the dropped cell")
+
+    local in_main_grid = false
+    for _, it in ipairs(scene6.grid:items()) do
+        if it == stock_item then in_main_grid = true end
+    end
+    assert(in_main_grid, "dragged stock item should be listed on the main grid")
+
+    local still_in_panel = false
+    for _, it in ipairs(scene6.customer.panel:items()) do
+        if it == stock_item then still_in_panel = true end
+    end
+    assert(not still_in_panel, "dragged stock item should no longer be in the merchant's panel")
+
+    -- Step 5: click the panel's "Leave" button.
+    local served_before_leave   = scene6.day_state.customers_served
+    local currency_before_leave = scene6.day_state.currency
+
+    local leave = scene6.panel.buttons["Leave"]
+    assert(leave, "merchant panel should have a Leave button")
+    scene6:mouse_pressed(leave.x + leave.w / 2, leave.y + leave.h / 2)
+
+    assert(scene6.panel == nil, "clicking Leave should close the panel")
+    assert(scene6.customer.state == "walking_out", "clicking Leave should send the merchant into walking_out")
+    assert(scene6.day_state.customers_served == served_before_leave + 1,
+        "merchant leaving should still increment customers_served")
+    assert(scene6.day_state.currency == currency_before_leave,
+        "merchant leaving should not change currency (no payment system)")
+
+    -- Step 6: fast-forward until the merchant fully walks off and (per
+    -- KitchenScene:update's existing auto-advance) the next queued customer
+    -- walks in and arrives - mirrors the pattern the Test 1 continuation
+    -- above already uses for a served food customer walking off. (The
+    -- merchant transitions walking_out -> idle -> immediately walking_in
+    -- again for the next queued customer within a single tick, so polling
+    -- for state == "idle" would never observe it; polling for the next
+    -- arrival is the same robust signal the rest of this file already
+    -- relies on.)
+    runner.fast_forward_until(ctx6, function() return scene6.customer:arrived() end, 0)
+    assert(scene6.customer:arrived(), "the next queued customer should walk in and become waiting once the merchant fully leaves")
+
+    print("PASS: kitchen_scene: full merchant visit - drop-on-body is a no-op, panel opens, stock drags out, Leave ends the visit")
 end
 
 print("ALL TESTS PASSED")

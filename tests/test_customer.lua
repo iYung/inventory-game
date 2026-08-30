@@ -132,4 +132,100 @@ do
     print("PASS: customer: walking animation bobs/swings legs while moving and rests while standing still")
 end
 
+-- Test 4: show() with cfg.kind == "merchant" populates panel/type_id and
+-- first-fit places the stock items into a Grid sized per config.
+do
+    local config = require("lua/game/config")
+
+    local target_x, exit_x, y = 500, 100, 200
+    local c = Customer.new(target_x, exit_x, y)
+
+    c:show({
+        name  = "Merchant",
+        kind  = "merchant",
+        stock = { "raw_meat", "raw_meat", "cooked_meat" },
+    })
+
+    assert(c.kind == "merchant", "kind should be 'merchant'")
+    assert(c.type_id == "merchant", "type_id should be 'merchant'")
+    assert(c.panel ~= nil, "panel should be populated for a merchant")
+    assert(c.panel.cols == config.MERCHANT_PANEL_COLS, "panel cols should match config.MERCHANT_PANEL_COLS")
+    assert(c.panel.rows == config.MERCHANT_PANEL_ROWS, "panel rows should match config.MERCHANT_PANEL_ROWS")
+
+    local items = c.panel:items()
+    assert(#items == 3, "panel should contain all 3 stock items")
+
+    local counts = {}
+    for _, it in ipairs(items) do
+        counts[it.type_id] = (counts[it.type_id] or 0) + 1
+    end
+    assert(counts.raw_meat == 2, "panel should contain 2 raw_meat")
+    assert(counts.cooked_meat == 1, "panel should contain 1 cooked_meat")
+
+    print("PASS: customer: show() with kind == 'merchant' populates panel/type_id with first-fit stock")
+end
+
+-- Test 5: show() with cfg.kind omitted (a normal order-customer config)
+-- leaves panel/type_id nil - regression guard against merchant fields
+-- leaking into ordinary order customers.
+do
+    local target_x, exit_x, y = 500, 100, 200
+    local c = Customer.new(target_x, exit_x, y)
+
+    c:show({
+        name            = "Test Customer",
+        messages        = { "Could I get some cooked meat?" },
+        after_messages  = { "Thanks so much!" },
+        requested_type  = "cooked_meat",
+        walk_speed      = 1000,
+    })
+
+    assert(c.kind == "order", "kind should default to 'order' when omitted")
+    assert(c.panel == nil, "panel should be nil for a non-merchant customer")
+    assert(c.type_id == nil, "type_id should be nil for a non-merchant customer")
+
+    print("PASS: customer: show() with kind omitted leaves panel/type_id nil (regression guard)")
+end
+
+-- Test 6: a reused Customer instance correctly resets panel/type_id when
+-- show() is called again without kind == "merchant" - guards against a
+-- stale panel/type_id from a previous merchant visit leaking into a later
+-- order-customer visit on the same object (Customer instances are reused
+-- across a day, per kitchen_scene.lua's existing pattern).
+do
+    local target_x, exit_x, y = 500, 100, 200
+    local c = Customer.new(target_x, exit_x, y)
+
+    c:show({
+        name  = "Merchant",
+        kind  = "merchant",
+        stock = { "raw_meat" },
+    })
+    assert(c.panel ~= nil, "sanity check: panel should be set after merchant show()")
+    assert(c.type_id == "merchant", "sanity check: type_id should be set after merchant show()")
+
+    c:show({
+        name            = "Test Customer",
+        messages        = { "Could I get some cooked meat?" },
+        requested_type  = "cooked_meat",
+    })
+    assert(c.kind == "order", "kind should reset to 'order' on a subsequent non-merchant show()")
+    assert(c.panel == nil, "panel should reset to nil on a subsequent non-merchant show()")
+    assert(c.type_id == nil, "type_id should reset to nil on a subsequent non-merchant show()")
+
+    -- And the reverse direction: order -> merchant should also populate
+    -- fresh fields correctly (not just reset from merchant -> order).
+    c:show({
+        name  = "Merchant",
+        kind  = "merchant",
+        stock = { "cooked_meat", "cooked_meat" },
+    })
+    assert(c.kind == "merchant", "kind should become 'merchant' again on a subsequent merchant show()")
+    assert(c.panel ~= nil, "panel should be repopulated on a subsequent merchant show()")
+    assert(c.type_id == "merchant", "type_id should be set again on a subsequent merchant show()")
+    assert(#c.panel:items() == 2, "repopulated panel should contain the new stock, not the old")
+
+    print("PASS: customer: show() on a reused instance resets panel/type_id correctly in both directions")
+end
+
 print("ALL TESTS PASSED")
