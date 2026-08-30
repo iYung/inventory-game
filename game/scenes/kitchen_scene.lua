@@ -68,10 +68,11 @@ function KitchenScene:on_enter()
         self.grid:place(meat, cell[1], cell[2])
     end
 
-    -- A couple of raw broccoli too, so the Steam recipe / Healthy tag is
-    -- actually reachable from the starting floor layout, not just via the
-    -- merchant. (2,1)/(3,1) sit just below the meat row - clear of the
-    -- microwave's (0,0)-(1,1) footprint and the meat at (2,0)/(3,0)/(4,0).
+    -- A couple of raw broccoli too, so the Cook recipe that produces
+    -- steamed_broccoli / the Healthy tag is actually reachable from the
+    -- starting floor layout, not just via the merchant. (2,1)/(3,1) sit
+    -- just below the meat row - clear of the microwave's (0,0)-(1,1)
+    -- footprint and the meat at (2,0)/(3,0)/(4,0).
     local broccoli_cells = { { 2, 1 }, { 3, 1 } }
     for _, cell in ipairs(broccoli_cells) do
         local broccoli = Item.new("broccoli")

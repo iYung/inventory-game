@@ -940,10 +940,11 @@ do
     print("PASS: kitchen_scene: dragging an item onto the microwave inserts it into the panel if there's room, else snaps back")
 end
 
--- Test 15: the broccoli/Steam/steamed_broccoli pipeline works end-to-end
+-- Test 15: the broccoli/Cook/steamed_broccoli pipeline works end-to-end
 -- through this scene too, mirroring Test 4's meat/Cook/cooked_meat pipeline
 -- but for the "Healthy" tag - proves the has_tag match-check isn't
--- special-cased to Protein/cooked_meat.
+-- special-cased to Protein/cooked_meat, and that the single "Cook" button
+-- auto-matches broccoli's recipe just like it does raw meat's.
 
 do
     local ItemPanel = require("lua/game/item_panel")
@@ -986,10 +987,10 @@ do
     scene15:mouse_released(px + 1, py + 1)
     assert(broccoli15.grid == microwave15.panel, "sanity check: broccoli should now be in the panel")
 
-    assert(microwave15:start_action("Steam"), "should be able to start steaming with broccoli in the panel")
-    microwave15:update(3.5) -- past the 3.0s Steam duration
+    assert(microwave15:start_action("Cook"), "should be able to start cooking with broccoli in the panel")
+    microwave15:update(3.5) -- past the 3.0s duration
 
-    -- Steaming replaces the broccoli item with a brand new steamed_broccoli
+    -- Cooking replaces the broccoli item with a brand new steamed_broccoli
     -- Item in the freed cell (see lua/game/item.lua's complete_action)
     -- rather than mutating broccoli15 in place, so look the result up fresh.
     local steamed15
@@ -1023,7 +1024,7 @@ do
     end
     assert(not still_in_panel, "the served item should be removed from the panel")
 
-    print("PASS: kitchen_scene: the broccoli/Steam/steamed_broccoli pipeline serves a Healthy-tag request end-to-end")
+    print("PASS: kitchen_scene: the broccoli/Cook/steamed_broccoli pipeline serves a Healthy-tag request end-to-end")
 end
 
 -- Test 16: dropping a RAW item (no tags at all) directly on a customer is

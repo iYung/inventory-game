@@ -8,10 +8,14 @@
 -- integer cell offsets relative to the item's anchor cell.
 --
 -- `actions` (only present on containers) is a list of:
---   { name, requires = {type_id = count, ...}, produces = {type_id = count, ...}, duration }
--- A container can have more than one independently-named action (e.g. the
--- microwave's Cook and Steam) - each just needs requirements a different
--- ingredient satisfies; no other code changes needed to add a new recipe.
+--   { name, duration, requires = {type_id = count, ...}, produces = {type_id = count, ...} }
+-- or, for one button that handles more than one ingredient (e.g. the
+-- microwave's single "Cook" button working for both raw meat and
+-- broccoli):
+--   { name, duration, recipes = { { requires = {...}, produces = {...} }, ... } }
+-- start_action tries each recipe in order and uses the first one whose
+-- requires is satisfied by the panel's current contents; add a new recipe
+-- to grow what a button handles, no other code changes needed.
 --
 -- `tags` (optional, default none) is a list of strings a customer's
 -- requested_tag can match against (see lua/game/item.lua's Item.tags and
@@ -62,15 +66,11 @@ local item_defs = {
         actions = {
             {
                 name = "Cook",
-                requires = { raw_meat = 1 },
-                produces = { cooked_meat = 1 },
                 duration = 3.0,
-            },
-            {
-                name = "Steam",
-                requires = { broccoli = 1 },
-                produces = { steamed_broccoli = 1 },
-                duration = 3.0,
+                recipes = {
+                    { requires = { raw_meat = 1 }, produces = { cooked_meat = 1 } },
+                    { requires = { broccoli = 1 }, produces = { steamed_broccoli = 1 } },
+                },
             },
         },
     },

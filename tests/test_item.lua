@@ -118,6 +118,40 @@ do
     print("PASS: item: start_action returns false when item has no panel")
 end
 
+-- Test 3d: the microwave's single "Cook" button handles more than one
+-- recipe - it auto-matches whichever ingredient is actually present
+-- (raw_meat or broccoli) rather than needing a separate button per recipe.
+do
+    local microwave = Item.new("microwave")
+    local broccoli = Item.new("broccoli")
+    microwave.panel:place(broccoli, 0, 0)
+
+    local started = microwave:start_action("Cook")
+    assert(started == true, "Cook should start with broccoli in the panel too, not just raw_meat")
+    assert(microwave.action_state["Cook"].recipe.produces.steamed_broccoli == 1,
+        "the matched recipe should be the broccoli->steamed_broccoli one")
+
+    microwave:update(3.5) -- past the 3.0s duration
+    local items = microwave.panel:items()
+    assert(#items == 1 and items[1].type_id == "steamed_broccoli",
+        "broccoli should have cooked into steamed_broccoli via the same Cook button")
+
+    print("PASS: item: Cook auto-matches whichever recipe the panel's contents satisfy")
+end
+
+-- Test 3e: start_action returns false when the panel holds nothing that
+-- matches ANY of Cook's recipes (not raw_meat, not broccoli).
+do
+    local microwave = Item.new("microwave")
+    local cooked = Item.new("cooked_meat") -- not an ingredient for any recipe
+    microwave.panel:place(cooked, 0, 0)
+
+    local started = microwave:start_action("Cook")
+    assert(started == false, "Cook should not start when nothing in the panel matches any recipe")
+    assert(microwave.action_state["Cook"] == nil, "action_state should stay unset")
+    print("PASS: item: start_action returns false when no recipe's requirements are met")
+end
+
 -- Test 4: update(dt) advanced past duration transforms matching items in
 -- panel from raw_meat to cooked_meat in place (same cell).
 do
