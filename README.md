@@ -15,11 +15,16 @@ panel's contents currently satisfy, not just one — so raw meat and broccoli
 dropped in together both cook from a single press. The microwave alone
 handles raw meat -> Protein-tagged cooked meat, broccoli -> Healthy-tagged
 steamed broccoli, and potato -> Filling-tagged baked potato; the fryer turns
-potato into Greasy-tagged fries. A **pot** is a movable container in
-its own right: load it with water + raw meat, then place the
+potato into Greasy-tagged fries, and onion into Greasy-tagged blooming onion.
+A **pot** is a movable container in
+its own right: load it with water + raw meat (or water + onion), then place the
 loaded pot itself inside the microwave's panel and press Cook to turn
-its contents into Protein-and-Hearty-tagged soup, produced inside the
-pot's own panel without consuming the pot. One visitor per day
+its contents into Protein-and-Hearty-tagged soup or Hearty-tagged onion soup,
+produced inside the pot's own panel without consuming the pot.
+Two **plants** sit on the kitchen floor as passive suppliers: the broccoli
+plant and the onion plant each hold 3 of their ingredient in a built-in
+panel; both panels automatically refill to 3 items at the start of every
+new day. One visitor per day
 is a merchant instead of a food order — click them to open their stock panel
 and drag free items (including water and potato) into your grid, then click
 "Leave" to send them off. Once everyone for the day is served, a "Next Day"

@@ -1510,4 +1510,76 @@ do
     print("PASS: kitchen_scene: releasing a drag outside all grids snaps the item back to its original cell")
 end
 
+-- Test 21: after a full day cycle triggered via the "Next Day" button, the
+-- plant on the floor has 3 broccoli in its panel and the onion_plant has 3
+-- onions. Verifies that kitchen_scene.lua's Next Day handler calls
+-- item:refill_daily() on every grid item, and that plant/onion_plant's
+-- daily_fill definitions are wired up correctly end-to-end.
+
+do
+    local ctx21 = runner.setup(function() return KitchenScene.new() end)
+    local scene21 = ctx21.sm.current
+
+    -- Find the plant and onion_plant placed by on_enter.
+    local plant21, onion_plant21
+    for _, it in ipairs(scene21.grid:items()) do
+        if it.type_id == "plant"       then plant21       = it end
+        if it.type_id == "onion_plant" then onion_plant21 = it end
+    end
+    assert(plant21,       "on_enter should have placed a plant")
+    assert(onion_plant21, "on_enter should have placed an onion_plant")
+
+    -- Simulate the player having taken all items from each plant's panel.
+    local function drain_panel(panel)
+        local items = {}
+        for _, it in ipairs(panel:items()) do items[#items + 1] = it end
+        for _, it in ipairs(items) do panel:remove(it) end
+    end
+    drain_panel(plant21.panel)
+    drain_panel(onion_plant21.panel)
+    assert(#plant21.panel:items()       == 0, "plant panel should be empty after draining")
+    assert(#onion_plant21.panel:items() == 0, "onion_plant panel should be empty after draining")
+
+    -- Drive the day to completion: exhaust the customer queue (on_enter
+    -- already drew one; drain whatever remains) and record the last visit.
+    while scene21.queue:has_next() do scene21.queue:next() end
+    scene21.day_state.customers_served = scene21.day_state.customers_total - 1
+    -- Dismiss the active customer without a rejection message so they go
+    -- directly into walking_out (no talking_after).
+    scene21.customer:dismiss()
+    scene21.day_state:record_dismiss()
+    assert(scene21.day_state:day_complete(),
+        "day should be complete after exhausting the queue and recording the last visit")
+
+    -- Fast-forward until the customer has fully walked off (state == "idle").
+    -- The customer starts near exit_x so this resolves in one tick.
+    runner.fast_forward_until(ctx21, function() return not scene21.customer:active() end, 0)
+    assert(not scene21.customer:active(), "customer should have fully walked off")
+    assert(scene21:_next_day_ready(), "Next Day button should be ready")
+
+    -- Replicate kitchen_scene.lua's private NEXT_DAY_BTN rect (same pattern
+    -- as Test 10 above) and click it.
+    local config21   = require("lua/game/config")
+    local btn_x = config21.SCREEN_W - 170
+    local btn_y = config21.SPLIT_Y - 56
+    scene21:mouse_pressed(btn_x + 5, btn_y + 5)
+
+    -- Both panels must now be refilled with their daily_fill contents.
+    local broccoli_count = 0
+    for _, it in ipairs(plant21.panel:items()) do
+        if it.type_id == "broccoli" then broccoli_count = broccoli_count + 1 end
+    end
+    assert(broccoli_count == 3,
+        "plant panel should have 3 broccoli after Next Day, got " .. broccoli_count)
+
+    local onion_count = 0
+    for _, it in ipairs(onion_plant21.panel:items()) do
+        if it.type_id == "onion" then onion_count = onion_count + 1 end
+    end
+    assert(onion_count == 3,
+        "onion_plant panel should have 3 onions after Next Day, got " .. onion_count)
+
+    print("PASS: kitchen_scene: plant and onion_plant panels are refilled with 3 items each after clicking Next Day")
+end
+
 print("ALL TESTS PASSED")
