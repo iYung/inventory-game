@@ -38,10 +38,23 @@ local item_defs = {
         color = { 0.75, 0.25, 0.25, 1 },
     },
 
+    raw_beef = {
+        name = "Raw Beef",
+        footprint = { { 0, 0 } },
+        color = { 0.65, 0.15, 0.15, 1 },
+    },
+
     baked_chicken = {
         name = "Baked Chicken",
         footprint = { { 0, 0 } },
         color = { 0.55, 0.36, 0.20, 1 },
+        tags = { "Protein" },
+    },
+
+    steak = {
+        name = "Steak",
+        footprint = { { 0, 0 } },
+        color = { 0.55, 0.25, 0.12, 1 },
         tags = { "Protein" },
     },
 
@@ -90,12 +103,13 @@ local item_defs = {
                 duration = 3.0,
                 recipes = {
                     { requires = { raw_chicken = 1 }, produces = { baked_chicken = 1 } },
+                    { requires = { raw_beef = 1 },    produces = { steak = 1 } },
                     { requires = { broccoli = 1 }, produces = { steamed_broccoli = 1 } },
                     { requires = { potato = 1 },   produces = { baked_potato = 1 } },
                     {
                         container = "pot",
                         requires  = { water = 1, raw_chicken = 1 },
-                        produces  = { soup = 1 },
+                        produces  = { chicken_soup = 1 },
                     },
                     {
                         container = "pot",
@@ -106,6 +120,11 @@ local item_defs = {
                         container = "pot",
                         requires  = { water = 1, egg = 1 },
                         produces  = { boiled_egg = 1 },
+                    },
+                    {
+                        container = "pot",
+                        requires  = { water = 1, potato = 1, raw_beef = 1 },
+                        produces  = { beef_stew = 1 },
                     },
                 },
             },
@@ -145,8 +164,8 @@ local item_defs = {
         tags = { "Filling", "Protein" },
     },
 
-    soup = {
-        name = "Soup",
+    chicken_soup = {
+        name = "Chicken Soup",
         footprint = { { 0, 0 } },
         color = { 0.70, 0.50, 0.30, 1 },
         tags = { "Protein", "Hearty" },
@@ -185,6 +204,12 @@ local item_defs = {
         color    = { 0.72, 0.55, 0.30, 1 },
     },
 
+    cow = {
+        name     = "Cow",
+        footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },
+        color    = { 0.45, 0.28, 0.15, 1 },
+    },
+
     egg = {
         name     = "Egg",
         footprint = { { 0, 0 } },
@@ -206,17 +231,18 @@ local item_defs = {
 
     meat_machine = {
         name      = "Meat Machine",
-        footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },
+        footprint = { { 0, 0 }, { 1, 0 }, { 2, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },
         color     = { 0.40, 0.40, 0.45, 1 },
         has_panel  = true,
         panel_cols = 2,
-        panel_rows = 1,
+        panel_rows = 2,
         actions = {
             {
                 name     = "Process",
                 duration = 1.0,
                 recipes  = {
-                    { requires = { chicken = 1 }, produces = { raw_chicken = 1 } },
+                    { requires = { chicken = 1 }, produces = { raw_chicken = 2 } },
+                    { requires = { cow = 1 },     produces = { raw_beef = 4 } },
                 },
             },
         },

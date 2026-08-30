@@ -88,7 +88,7 @@ do
     print("PASS: overnight: incubator resets progress when egg is removed mid-incubation")
 end
 
--- Test 5: meat_machine Process action consumes chicken and produces raw_chicken.
+-- Test 5: meat_machine Process action consumes chicken and produces 2 raw_chicken.
 do
     local mm      = Item.new("meat_machine")
     local chicken = Item.new("chicken")
@@ -102,9 +102,9 @@ do
     local chickens  = count_type(mm.panel, "chicken")
     local raw_chickens = count_type(mm.panel, "raw_chicken")
     assert(chickens == 0,   "chicken should be consumed by Process, got " .. chickens)
-    assert(raw_chickens == 1,  "Process should produce 1 raw_chicken, got " .. raw_chickens)
+    assert(raw_chickens == 2,  "Process should produce 2 raw_chicken, got " .. raw_chickens)
 
-    print("PASS: overnight: meat_machine Process turns chicken into raw_chicken")
+    print("PASS: overnight: meat_machine Process turns 1 chicken into 2 raw_chicken")
 end
 
 -- Test 6: overnight_tick is a no-op on items without overnight_actions.
