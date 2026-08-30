@@ -798,8 +798,9 @@ do
     print("PASS: kitchen_scene: dropping the wrong item is rejected with a visible message, not silently accepted")
 end
 
--- Test 12: the microwave now occupies a single cell (was 2x2), freeing up
--- the main floor grid's (1,0) cell that used to be part of its footprint.
+-- Test 12: the microwave itself still occupies a 2x2 area on the main
+-- floor grid, but its own internal cooking panel is a single cell (not
+-- 2x1) - the item's footprint and its inner inventory size are unrelated.
 
 do
     local Item = require("lua/game/item")
@@ -813,16 +814,19 @@ do
     end
     assert(microwave12, "on_enter should have placed a microwave")
 
-    assert(#microwave12:footprint() == 1, "microwave footprint should be a single cell, got " .. #microwave12:footprint())
-    assert(microwave12.cell_col == 0 and microwave12.cell_row == 0, "microwave should still start at (0,0)")
+    assert(#microwave12:footprint() == 4, "microwave footprint should be 2x2 (4 cells), got " .. #microwave12:footprint())
+    assert(microwave12.cell_col == 0 and microwave12.cell_row == 0, "microwave should start at (0,0)")
 
-    -- (1,0) used to be part of the microwave's 2x2 footprint; it must be
-    -- free now that the microwave is 1x1.
+    -- (1,0)/(0,1)/(1,1) are still part of the microwave's 2x2 footprint on
+    -- the main grid, so nothing else should be placeable there.
     local probe = Item.new("raw_meat")
-    assert(scene12.grid:can_place(probe, 1, 0),
-        "(1,0) should be free now that the microwave only occupies (0,0)")
+    assert(not scene12.grid:can_place(probe, 1, 0), "(1,0) should still be occupied by the microwave's footprint")
 
-    print("PASS: kitchen_scene: the microwave occupies a single cell on the main grid")
+    -- Its own cooking panel, though, is a single cell.
+    assert(microwave12.panel.cols == 1 and microwave12.panel.rows == 1,
+        "microwave's internal panel should be 1x1, got " .. microwave12.panel.cols .. "x" .. microwave12.panel.rows)
+
+    print("PASS: kitchen_scene: the microwave is 2x2 on the floor grid but has a 1x1 internal panel")
 end
 
 print("ALL TESTS PASSED")

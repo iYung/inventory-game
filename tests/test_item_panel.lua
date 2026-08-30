@@ -133,7 +133,10 @@ do
 end
 
 -- Test 6: mouse_pressed/moved/released forward into the panel grid when --
--- x,y fall inside the panel's screen bounds (drag an item within the panel).
+-- x,y fall inside the panel's screen bounds. The microwave's panel is a
+-- single cell (1x1), so there's no second in-panel cell to move an item
+-- to - this exercises the forwarding itself (start a drag, track it, drop
+-- it back on its own only cell) rather than an actual cell-to-cell move.
 
 do
     local microwave = Item.new("microwave")
@@ -147,13 +150,12 @@ do
     assert(microwave.panel.dragging == meat,
         "mouse_pressed inside the panel grid bounds should forward to panel:mouse_pressed and start a drag")
 
-    local tx, ty = microwave.panel:cell_to_world(1, 0)
-    panel:mouse_moved(tx + 1, ty + 1)
-    panel:mouse_released(tx + 1, ty + 1)
+    panel:mouse_moved(px + 2, py + 2)
+    panel:mouse_released(px + 2, py + 2)
 
     assert(microwave.panel.dragging == nil, "mouse_released should clear the panel's drag state")
-    assert(meat.cell_col == 1 and meat.cell_row == 0,
-        "dragging within the panel via ItemPanel forwarding should move the item to the new cell")
+    assert(meat.cell_col == 0 and meat.cell_row == 0,
+        "dropping back on the panel's only cell via ItemPanel forwarding should leave the item there")
 
     print("PASS: item_panel: mouse_pressed/moved/released forward into the panel grid")
 end
