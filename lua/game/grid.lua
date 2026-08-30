@@ -30,6 +30,13 @@ function Grid.new(cols, rows, cell_size, origin_x, origin_y)
     self.drag_cursor_x     = nil -- raw world-space cursor pos while dragging
     self.drag_cursor_y     = nil
 
+    -- Set by an external owner (the scene) to show a drop-preview for an
+    -- item that's being dragged on a DIFFERENT grid but is currently
+    -- hovering over this one - see preview_override()/clear_preview_override().
+    self._preview_override_item = nil
+    self._preview_override_col  = nil
+    self._preview_override_row  = nil
+
     return self
 end
 
@@ -173,6 +180,23 @@ function Grid:mouse_released(x, y)
     self.drag_cursor_y    = nil
 end
 
+-- Shows a drop-preview for `item` at world (x,y) on THIS grid's own
+-- coordinate system, even though `item` isn't this grid's self.dragging
+-- (it belongs to some other grid that's currently mid-drag). Used by the
+-- scene when a cross-grid drag's cursor is hovering over a grid other than
+-- the one that owns the drag, so the preview always snaps to whichever
+-- grid it would actually land on - not the origin grid's coordinate system.
+function Grid:preview_override(item, x, y)
+    self._preview_override_item = item
+    self._preview_override_col, self._preview_override_row = self:world_to_cell(x, y)
+end
+
+function Grid:clear_preview_override()
+    self._preview_override_item = nil
+    self._preview_override_col  = nil
+    self._preview_override_row  = nil
+end
+
 -- Rotates the currently-dragged item in place. No validity check - validity
 -- is only enforced at drop time. Re-centers the sprite afterward since
 -- rotating can change its width/height.
@@ -240,10 +264,21 @@ function Grid:draw(skip_dragging)
 
     -- Drop preview: drawn UNDER every item (including the dragged one, drawn
     -- below) and sized to the dragged item's actual footprint, not a fixed
-    -- single cell.
-    if self.dragging and self.drag_preview_col and colors.grid_line then
-        local w_cells, h_cells = footprint_extent(self.dragging)
-        local x, y = self:cell_to_world(self.drag_preview_col, self.drag_preview_row)
+    -- single cell. Prefer this grid's own drag (self.dragging) over an
+    -- external override - the two are never both set for the same grid in
+    -- practice (a grid is either actively dragging its own item, or
+    -- previewing someone else's drag hovering over it, never both).
+    local preview_item, preview_col, preview_row
+    if self.dragging and self.drag_preview_col then
+        preview_item, preview_col, preview_row = self.dragging, self.drag_preview_col, self.drag_preview_row
+    elseif self._preview_override_item and self._preview_override_col then
+        preview_item, preview_col, preview_row =
+            self._preview_override_item, self._preview_override_col, self._preview_override_row
+    end
+
+    if preview_item and colors.grid_line then
+        local w_cells, h_cells = footprint_extent(preview_item)
+        local x, y = self:cell_to_world(preview_col, preview_row)
         love.graphics.setColor(colors.grid_line)
         love.graphics.rectangle(
             "line", x, y, w_cells * self.cell_size, h_cells * self.cell_size

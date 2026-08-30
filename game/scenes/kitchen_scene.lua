@@ -229,12 +229,43 @@ function KitchenScene:mouse_pressed(x, y)
 end
 
 function KitchenScene:mouse_moved(x, y)
-    -- Both grids' mouse_moved are no-ops unless they're the one currently
-    -- dragging, so it's safe to always forward to both - lets an in-flight
-    -- main-grid drag keep tracking the cursor even while a panel is open.
-    self.grid:mouse_moved(x, y)
-    if self.panel then
-        self.panel:mouse_moved(x, y)
+    local pgrid = self.panel and self.panel.item.panel or nil
+
+    if not (self.grid.dragging or (pgrid and pgrid.dragging)) then
+        -- No active drag: both grids' mouse_moved are no-ops, harmless to
+        -- forward to both unconditionally.
+        self.grid:mouse_moved(x, y)
+        if self.panel then self.panel:mouse_moved(x, y) end
+        return
+    end
+
+    -- An item is being dragged, from either the main grid or an open
+    -- panel's inner grid. ItemPanel:mouse_moved's own forwarding keeps
+    -- tracking the drag regardless of cursor position (so a drag doesn't
+    -- get dropped mid-move once the cursor leaves the grid rect) - which
+    -- means it always recomputes the preview using THAT grid's own
+    -- coordinate system, even while the cursor is actually over the OTHER
+    -- grid. Bypass it here and drive both grids directly, so the preview
+    -- always uses whichever grid's coordinate system the cursor is
+    -- actually hovering over.
+    local over_panel = pgrid and self.panel:_point_in_grid(x, y)
+
+    if self.grid.dragging then
+        if over_panel then
+            self.grid.drag_preview_col, self.grid.drag_preview_row = nil, nil
+            pgrid:preview_override(self.grid.dragging, x, y)
+        else
+            self.grid:mouse_moved(x, y)
+            if pgrid then pgrid:clear_preview_override() end
+        end
+    else -- pgrid.dragging
+        if over_panel then
+            pgrid:mouse_moved(x, y)
+            self.grid:clear_preview_override()
+        else
+            pgrid.drag_preview_col, pgrid.drag_preview_row = nil, nil
+            self.grid:preview_override(pgrid.dragging, x, y)
+        end
     end
 end
 
@@ -248,6 +279,13 @@ function KitchenScene:mouse_released(x, y)
     end
 
     local pgrid = self.panel and self.panel.item.panel or nil
+
+    -- The drag (whichever grid it's really on) is about to be resolved one
+    -- way or another below; clear any cross-grid preview override now so a
+    -- stale one doesn't linger into the next frame's draw before any new
+    -- mouse_moved call would otherwise refresh it.
+    self.grid:clear_preview_override()
+    if pgrid then pgrid:clear_preview_override() end
 
     -- Dropping a dragged item - from the main grid OR from an open panel
     -- (e.g. cooked meat straight out of the microwave) - onto the waiting

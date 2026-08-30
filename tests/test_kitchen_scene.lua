@@ -458,4 +458,80 @@ do
     print("PASS: kitchen_scene: full merchant visit - drop-on-body is a no-op, panel opens, stock drags out, Leave ends the visit")
 end
 
+-- Test 7: the drop-preview shown while dragging an item out of an open
+-- panel (e.g. a merchant's stock) onto the main floor grid must use the
+-- MAIN GRID's coordinate system, not the panel's. Regression test:
+-- ItemPanel:mouse_moved forwards to the panel's inner grid whenever it's
+-- mid-drag, regardless of where the cursor actually is, so the panel grid
+-- kept recomputing (and drawing) a preview using its own origin even while
+-- the cursor was hovering over the main grid far away - the preview looked
+-- "snapped" to the wrong grid's cell alignment instead of the main grid's.
+
+do
+    local ItemPanel = require("lua/game/item_panel")
+
+    local ctx7 = runner.setup(function() return KitchenScene.new() end)
+    local scene7 = ctx7.sm.current
+
+    local microwave7
+    for _, it in ipairs(scene7.grid:items()) do
+        if it.type_id == "microwave" then microwave7 = it end
+    end
+    assert(microwave7, "on_enter should have placed a microwave")
+
+    scene7.panel = ItemPanel.new(microwave7)
+
+    -- Move a raw_meat item into the microwave's panel first (same pattern
+    -- other tests in this file already use), so there's something in an
+    -- open panel to drag back out.
+    local meat7
+    for _, it in ipairs(scene7.grid:items()) do
+        if it.type_id == "raw_meat" then meat7 = it end
+    end
+    local px7, py7 = microwave7.panel:cell_to_world(0, 0)
+    local mx7, my7 = scene7.grid:cell_to_world(meat7.cell_col, meat7.cell_row)
+    scene7:mouse_pressed(mx7 + 1, my7 + 1)
+    scene7:mouse_moved(px7 + 1, py7 + 1)
+    scene7:mouse_released(px7 + 1, py7 + 1)
+    assert(meat7.grid == microwave7.panel, "sanity check: meat should now be in the microwave's panel")
+
+    -- Start dragging it back out of the panel...
+    scene7:mouse_pressed(px7 + 1, py7 + 1)
+    assert(microwave7.panel.dragging == meat7, "should be dragging the item out of the panel")
+
+    -- ...and hover it over a cell on the MAIN grid, well outside the
+    -- panel's own bounds.
+    local target_col, target_row = 6, 4
+    local gx7, gy7 = scene7.grid:cell_to_world(target_col, target_row)
+    scene7:mouse_moved(gx7 + 1, gy7 + 1)
+
+    -- The main grid should now show the preview, computed via ITS OWN
+    -- world_to_cell - i.e. landing exactly on (target_col, target_row).
+    assert(scene7.grid._preview_override_item == meat7,
+        "main grid should have a preview override set for the dragged item")
+    assert(scene7.grid._preview_override_col == target_col and scene7.grid._preview_override_row == target_row,
+        "main grid's preview should snap to ITS OWN coordinate system: expected ("
+            .. target_col .. "," .. target_row .. "), got ("
+            .. tostring(scene7.grid._preview_override_col) .. "," .. tostring(scene7.grid._preview_override_row) .. ")")
+
+    -- The panel's own grid must NOT still be showing a (wrong, stale)
+    -- preview of its own while the cursor is over the main grid.
+    assert(microwave7.panel.drag_preview_col == nil and microwave7.panel.drag_preview_row == nil,
+        "the panel's own grid should not have a stale preview while the cursor is over the main grid")
+
+    -- Move back over the panel's own grid: the override on the main grid
+    -- should clear, and the panel grid should resume tracking normally.
+    scene7:mouse_moved(px7 + 1, py7 + 1)
+    assert(scene7.grid._preview_override_item == nil,
+        "main grid's override should clear once the cursor moves back over the panel")
+    assert(microwave7.panel.drag_preview_col == 0 and microwave7.panel.drag_preview_row == 0,
+        "the panel grid should resume showing its own preview once the cursor is back over it")
+
+    scene7:mouse_released(px7 + 1, py7 + 1)
+    assert(scene7.grid._preview_override_item == nil and microwave7.panel._preview_override_item == nil,
+        "both grids' preview overrides should be cleared once the drag ends")
+
+    print("PASS: kitchen_scene: drop-preview for an item dragged out of a panel uses the grid it's actually hovering over")
+end
+
 print("ALL TESTS PASSED")
