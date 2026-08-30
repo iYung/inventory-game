@@ -17,10 +17,10 @@ handles raw meat -> Protein-tagged cooked meat, broccoli -> Healthy-tagged
 steamed broccoli, and potato -> Filling-tagged baked potato; the fryer turns
 potato into Greasy-tagged fries, and onion into Greasy-tagged blooming onion.
 A **pot** is a movable container in
-its own right: load it with water + raw meat (or water + onion), then place the
+its own right: load it with water + raw meat (or water + onion, or water + egg), then place the
 loaded pot itself inside the microwave's panel and press Cook to turn
-its contents into Protein-and-Hearty-tagged soup or Hearty-tagged onion soup,
-produced inside the pot's own panel without consuming the pot.
+its contents into Protein-and-Hearty-tagged soup, Hearty-tagged onion soup, or
+Protein-tagged boiled egg, produced inside the pot's own panel without consuming the pot.
 Two **gardens** sit on the kitchen floor as passive suppliers: the broccoli
 garden and the onion garden each hold 4 of their ingredient in a built-in
 panel; both panels automatically refill at the start of every new day.

@@ -95,6 +95,11 @@ local item_defs = {
                         requires  = { water = 1, onion = 1 },
                         produces  = { onion_soup = 1 },
                     },
+                    {
+                        container = "pot",
+                        requires  = { water = 1, egg = 1 },
+                        produces  = { boiled_egg = 1 },
+                    },
                 },
             },
         },
@@ -158,6 +163,13 @@ local item_defs = {
         footprint = { {0,0} },
         color = { 0.75, 0.55, 0.25, 1 },
         tags  = { "Hearty" },
+    },
+
+    boiled_egg = {
+        name = "Boiled Egg",
+        footprint = { { 0, 0 } },
+        color = { 0.95, 0.90, 0.75, 1 },
+        tags = { "Protein" },
     },
 
     chicken = {

@@ -121,4 +121,28 @@ do
     print("PASS: overnight: overnight_tick is a no-op on items without overnight_actions")
 end
 
+-- Test 7: water + egg in a pot microwaved produces a boiled_egg.
+do
+    local microwave = Item.new("microwave")
+    local pot       = Item.new("pot")
+    microwave.panel:place(pot, 0, 0)
+
+    pot.panel:place(Item.new("water"), 0, 0)
+    pot.panel:place(Item.new("egg"),   1, 0)
+
+    local started = microwave:start_action("Cook")
+    assert(started == true, "Cook should start with water+egg in pot")
+
+    microwave:update(3.0)  -- Cook duration is 3.0s
+
+    local boiled = count_type(pot.panel, "boiled_egg")
+    local water  = count_type(pot.panel, "water")
+    local eggs   = count_type(pot.panel, "egg")
+    assert(boiled == 1, "pot should contain 1 boiled_egg after cooking, got " .. boiled)
+    assert(water  == 0, "water should be consumed, got " .. water)
+    assert(eggs   == 0, "egg should be consumed, got " .. eggs)
+
+    print("PASS: boiled egg: water + egg in pot microwaved produces boiled_egg (Protein)")
+end
+
 print("ALL OVERNIGHT TESTS PASSED")
