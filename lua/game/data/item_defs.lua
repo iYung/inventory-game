@@ -23,12 +23,18 @@ local item_defs = {
         color = { 0.55, 0.36, 0.20, 1 },
     },
 
+    -- Never placed via Item.new/on a Grid - used only by ItemPanel's title
+    -- bar / def lookup for a merchant-kind Customer (see lua/game/customer.lua).
+    merchant = {
+        name = "Merchant",
+    },
+
     microwave = {
         name = "Microwave",
         footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },
         color = { 0.55, 0.55, 0.60, 1 },
         has_panel = true,
-        panel_cols = 2,
+        panel_cols = 1,
         panel_rows = 1,
         actions = {
             {

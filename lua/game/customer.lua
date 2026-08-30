@@ -10,6 +10,8 @@
 
 local Sprite = require("lua/core/sprite")
 local config = require("lua/game/config")
+local Grid   = require("lua/game/grid")
+local Item   = require("lua/game/item")
 
 local U  = config.U
 local CW = 2 * U -- customer body width
@@ -38,6 +40,20 @@ local LEG_COLOR           = { 0.12, 0.10, 0.09, 1 }
 local Customer = {}
 Customer.__index = Customer
 
+-- Places `item` into the first free cell of `panel` (row-major scan, same
+-- pattern as item.lua's private place_first_fit). Returns true if placed.
+local function place_first_fit(panel, item)
+    for row = 0, panel.rows - 1 do
+        for col = 0, panel.cols - 1 do
+            if panel:can_place(item, col, row) then
+                panel:place(item, col, row)
+                return true
+            end
+        end
+    end
+    return false
+end
+
 function Customer.new(target_x, exit_x, y)
     local self = setmetatable({}, Customer)
 
@@ -51,6 +67,10 @@ function Customer.new(target_x, exit_x, y)
     self.sprite = Sprite.new(0, 0, CW, CH)
     self.sprite.color   = DEFAULT_COLOR
     self.sprite.visible = false
+
+    self.kind            = "order"
+    self.panel           = nil
+    self.type_id         = nil
 
     self.name            = "Customer"
     self.requested_type  = nil
@@ -75,6 +95,18 @@ end
 -- cfg: { name, messages, after_messages, requested_type, walk_speed, color }
 function Customer:show(cfg)
     cfg = cfg or {}
+
+    self.kind = cfg.kind or "order"
+
+    self.panel    = nil
+    self.type_id  = nil
+    if self.kind == "merchant" then
+        self.type_id = "merchant"
+        self.panel   = Grid.new(config.MERCHANT_PANEL_COLS, config.MERCHANT_PANEL_ROWS, config.U, 0, 0)
+        for _, type_id in ipairs(cfg.stock or {}) do
+            place_first_fit(self.panel, Item.new(type_id))
+        end
+    end
 
     self.name            = cfg.name or "Customer"
     self.requested_type  = cfg.requested_type
@@ -171,13 +203,27 @@ function Customer:advance_after()
     end
 end
 
--- Failure path: wrong item (or explicit send-away). Skips straight to
--- walking_out, no after_messages shown, regardless of whether any exist.
-function Customer:dismiss()
-    self.state        = "walking_out"
+-- Failure path: wrong item (or explicit send-away). With no message, skips
+-- straight to walking_out as before (used for e.g. a merchant's Leave
+-- button, where "rejection" doesn't apply). With a message, shows it first
+-- using the same talking_after/typewriter mechanism serve() uses for its
+-- after_messages, so a wrong-item drop reads as a clear rejection instead
+-- of silently walking off indistinguishably from a successful serve.
+function Customer:dismiss(message)
+    if message then
+        self.after_messages  = { message }
+        self.after_msg_index = 1
+        self.done_after       = false
+        self.state            = "talking_after"
+        self._full_text       = message
+        self.reveal_index     = 0
+        self.reveal_t          = 0
+    else
+        self.done_after = true
+        self.state       = "walking_out"
+    end
     self.done_talking = true
-    self.done_after     = true
-    self.dismissed      = true
+    self.dismissed     = true
 end
 
 function Customer:arrived()

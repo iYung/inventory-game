@@ -4,8 +4,10 @@ A Love2D cooking-inventory game. Customers arrive one at a time up top requestin
 a food item; you drag and rotate ingredients and appliances around a grid
 inventory on the bottom half, run timed actions in containers like the
 microwave (double-click it to open its sub-inventory panel), and serve
-customers by dropping a matching item on them. Once everyone for the day is
-served, a "Next Day" button appears to advance.
+customers by dropping a matching item on them. One visitor per day is a
+merchant instead of a food order — click them to open their stock panel and
+drag free items into your grid, then click "Leave" to send them off. Once
+everyone for the day is served, a "Next Day" button appears to advance.
 
 ## Structure
 

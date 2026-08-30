@@ -8,6 +8,8 @@
 
 local Item      = require("lua/game/item")
 local ItemPanel = require("lua/game/item_panel")
+local Grid      = require("lua/game/grid")
+local config    = require("lua/game/config")
 
 -- Test 1: ItemPanel.new errors if item.panel is nil (not a container). -----
 
@@ -131,7 +133,10 @@ do
 end
 
 -- Test 6: mouse_pressed/moved/released forward into the panel grid when --
--- x,y fall inside the panel's screen bounds (drag an item within the panel).
+-- x,y fall inside the panel's screen bounds. The microwave's panel is a
+-- single cell (1x1), so there's no second in-panel cell to move an item
+-- to - this exercises the forwarding itself (start a drag, track it, drop
+-- it back on its own only cell) rather than an actual cell-to-cell move.
 
 do
     local microwave = Item.new("microwave")
@@ -145,13 +150,12 @@ do
     assert(microwave.panel.dragging == meat,
         "mouse_pressed inside the panel grid bounds should forward to panel:mouse_pressed and start a drag")
 
-    local tx, ty = microwave.panel:cell_to_world(1, 0)
-    panel:mouse_moved(tx + 1, ty + 1)
-    panel:mouse_released(tx + 1, ty + 1)
+    panel:mouse_moved(px + 2, py + 2)
+    panel:mouse_released(px + 2, py + 2)
 
     assert(microwave.panel.dragging == nil, "mouse_released should clear the panel's drag state")
-    assert(meat.cell_col == 1 and meat.cell_row == 0,
-        "dragging within the panel via ItemPanel forwarding should move the item to the new cell")
+    assert(meat.cell_col == 0 and meat.cell_row == 0,
+        "dropping back on the panel's only cell via ItemPanel forwarding should leave the item there")
 
     print("PASS: item_panel: mouse_pressed/moved/released forward into the panel grid")
 end
@@ -219,6 +223,117 @@ do
     assert(panel._dragging_panel == false, "pressing inside the grid should not start a panel drag")
 
     print("PASS: item_panel: the panel is draggable by its title bar")
+end
+
+-- Merchant-kind fake item ----------------------------------------------------
+-- Customer (a parallel task) isn't guaranteed to have its kind/panel/type_id
+-- fields yet, so these tests use a small fake table instead of require-ing
+-- lua/game/customer.lua - just the fields ItemPanel actually reads off
+-- `item`: .panel (a real Grid), .type_id (def/title lookup), .kind (merchant
+-- detection), .action_state (read defensively for is_action_enabled/draw,
+-- matching what an item with zero actions needs - an empty table is enough
+-- since a merchant's def has no `actions` to iterate).
+
+local function make_fake_merchant()
+    return {
+        kind         = "merchant",
+        type_id      = "merchant",
+        panel        = Grid.new(config.MERCHANT_PANEL_COLS, config.MERCHANT_PANEL_ROWS, config.U, 0, 0),
+        action_state = {},
+    }
+end
+
+-- Test 10: a merchant-kind item's panel has a valid "Leave" button rect. ----
+
+do
+    local merchant = make_fake_merchant()
+    local panel = ItemPanel.new(merchant)
+
+    local rect = panel.buttons["Leave"]
+    assert(rect, "merchant-kind item's panel should have a Leave button")
+    assert(type(rect.x) == "number" and type(rect.y) == "number"
+       and type(rect.w) == "number" and type(rect.h) == "number",
+        "Leave button rect should have numeric x/y/w/h")
+    assert(rect.w > 0 and rect.h > 0, "Leave button rect should have positive size")
+
+    print("PASS: item_panel: merchant-kind item's panel has a Leave button")
+end
+
+-- Test 11: clicking the Leave button sets both should_close and ------------
+-- should_leave.
+
+do
+    local merchant = make_fake_merchant()
+    local panel = ItemPanel.new(merchant)
+
+    local rect = panel.buttons["Leave"]
+    local cx, cy = rect.x + rect.w / 2, rect.y + rect.h / 2
+
+    assert(panel.should_close == false, "should_close should start false")
+    assert(panel.should_leave == false, "should_leave should start false")
+
+    local handled = panel:mouse_pressed(cx, cy)
+    assert(handled == true, "clicking the Leave button should be handled (consumed) by the panel")
+    assert(panel.should_close == true, "clicking Leave should set should_close")
+    assert(panel.should_leave == true, "clicking Leave should set should_leave")
+
+    print("PASS: item_panel: clicking Leave sets both should_close and should_leave")
+end
+
+-- Test 12: a non-merchant item's panel (the microwave) has NO Leave button, -
+-- and clicking where a Leave button would sit for a merchant does nothing.
+
+do
+    local microwave = Item.new("microwave")
+    local panel = ItemPanel.new(microwave)
+
+    assert(panel.buttons["Leave"] == nil,
+        "non-merchant item's panel should have no Leave button")
+
+    -- Compute where a Leave button would sit if this panel were merchant-kind
+    -- (the next slot in the same button row, after the existing Cook
+    -- button), and click there anyway - should be a no-op, not an error.
+    local cook = panel.buttons["Cook"]
+    local BUTTON_GAP = 8 -- matches item_panel.lua's internal BUTTON_GAP
+    local leave_x = cook.x + cook.w + BUTTON_GAP + cook.w / 2
+    local leave_y = cook.y + cook.h / 2
+
+    local handled = panel:mouse_pressed(leave_x, leave_y)
+    assert(panel.should_leave == false,
+        "clicking where Leave would be on a non-merchant panel should not set should_leave")
+
+    print("PASS: item_panel: non-merchant panel has no Leave button; clicking its would-be spot is a no-op")
+end
+
+-- Test 13: draw() does not error for a merchant-kind panel, including the --
+-- Leave button drawing path.
+
+do
+    local merchant = make_fake_merchant()
+    local panel = ItemPanel.new(merchant)
+    panel:draw() -- must not error, including the Leave button branch
+    print("PASS: item_panel: draw() does not error for a merchant-kind panel")
+end
+
+-- Test 14: _point_in_bg covers the whole backdrop, including dead space --
+-- that isn't the title bar, grid, or any button - used by KitchenScene so a
+-- click anywhere on a panel is claimed by it (panels are opaque windows).
+
+do
+    local microwave = Item.new("microwave")
+    local panel = ItemPanel.new(microwave)
+
+    assert(panel:_point_in_bg(panel.bg.x + 2, panel.bg.y + 2),
+        "a point just inside the backdrop's top-left corner should count as in-bg")
+    assert(panel:_point_in_bg(panel.bg.x + panel.bg.w - 2, panel.bg.y + panel.bg.h - 2),
+        "a point just inside the backdrop's bottom-right corner should count as in-bg")
+    assert(not panel:_point_in_bg(panel.bg.x - 5, panel.bg.y - 5),
+        "a point outside the backdrop entirely should not count as in-bg")
+    -- The title bar sits inside the backdrop, so a point on it is in-bg too.
+    assert(panel:_point_in_bg(panel.title_bar.x + 5, panel.title_bar.y + 5),
+        "a point on the title bar should also count as in-bg (it's part of the backdrop)")
+
+    print("PASS: item_panel: _point_in_bg covers the whole backdrop")
 end
 
 print("ALL TESTS PASSED")

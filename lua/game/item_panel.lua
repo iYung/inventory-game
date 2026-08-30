@@ -38,6 +38,10 @@ local TITLE_H       = 28
 local COLOR_DISABLED = { 0.35, 0.35, 0.35, 1 }
 local COLOR_CLOSE    = { 0.75, 0.25, 0.25, 1 }
 local COLOR_TITLE    = { 0.20, 0.20, 0.26, 1 }
+-- "Leave" (merchant-only) button: same warning-red as the close button, kept
+-- as its own constant so its meaning is self-documenting where it's used
+-- below, even though the color values are identical today.
+local COLOR_LEAVE    = COLOR_CLOSE
 
 local function point_in_rect(x, y, r)
     return x >= r.x and x < r.x + r.w and y >= r.y and y < r.y + r.h
@@ -55,14 +59,22 @@ function ItemPanel.new(item)
     self.item = item
     self.def  = item_defs[item.type_id]
     self.should_close    = false
+    self.should_leave    = false
     self._dragging_panel = false
 
     local panel = item.panel
     self.grid_w = panel.cols * panel.cell_size
     self.grid_h = panel.rows * panel.cell_size
 
+    -- Button row sizing: any def.actions plus one more slot for "Leave" when
+    -- this is a merchant-kind item. "Leave" is not a def.actions entry (a
+    -- merchant has no matching action def to look up) - it's additive to the
+    -- same row/centering math, kept generic so an item with both actions AND
+    -- kind == "merchant" would still get both (never happens today, but the
+    -- layout math doesn't assume otherwise).
     local actions = (self.def and self.def.actions) or {}
-    self._button_total_w = #actions * BUTTON_W + math.max(0, #actions - 1) * BUTTON_GAP
+    local button_count = #actions + ((item.kind == "merchant") and 1 or 0)
+    self._button_total_w = button_count * BUTTON_W + math.max(0, button_count - 1) * BUTTON_GAP
 
     -- Overall backdrop size: wide enough for the grid or the button row,
     -- whichever is wider; tall enough for title bar + grid + button row,
@@ -107,9 +119,21 @@ function ItemPanel:_layout(bg_x, bg_y)
     local actions = (self.def and self.def.actions) or {}
     local start_x = bg_x + (self.bg_w - self._button_total_w) / 2
     local by = self.grid_y + self.grid_h + BUTTON_GAP
-    for i, action in ipairs(actions) do
-        local bx = start_x + (i - 1) * (BUTTON_W + BUTTON_GAP)
+
+    local slot = 0
+    for _, action in ipairs(actions) do
+        local bx = start_x + slot * (BUTTON_W + BUTTON_GAP)
         self.buttons[action.name] = { x = bx, y = by, w = BUTTON_W, h = BUTTON_H }
+        slot = slot + 1
+    end
+
+    -- "Leave" occupies the next slot in the same row, when present. It is
+    -- NOT a def.actions entry - there's no action def to look it up by, it's
+    -- purely an ItemPanel-level button for merchant-kind items.
+    if self.item.kind == "merchant" then
+        local bx = start_x + slot * (BUTTON_W + BUTTON_GAP)
+        self.buttons["Leave"] = { x = bx, y = by, w = BUTTON_W, h = BUTTON_H }
+        slot = slot + 1
     end
 end
 
@@ -142,6 +166,16 @@ end
 
 function ItemPanel:_point_in_close_button(x, y)
     return point_in_rect(x, y, self.close_button)
+end
+
+-- Whether (x,y) lands anywhere on this panel's opaque backdrop (title bar,
+-- grid, buttons, or just dead space between them) - used by the scene to
+-- decide whether a click is claimed by this panel at all before checking
+-- what it's on lower in stacking order (another panel, or the game
+-- underneath). A panel is meant to read as a solid window; nothing should
+-- click "through" it.
+function ItemPanel:_point_in_bg(x, y)
+    return point_in_rect(x, y, self.bg)
 end
 
 function ItemPanel:_button_at(x, y)
@@ -190,6 +224,16 @@ function ItemPanel:mouse_pressed(x, y)
 
     if self:_point_in_grid(x, y) then
         self.item.panel:mouse_pressed(x, y)
+        return true
+    end
+
+    -- "Leave" (merchant-only, absent otherwise) ends the visit: sets both
+    -- the existing should_close flag (hides the panel like any other close)
+    -- and should_leave, which ItemPanel itself does nothing further with -
+    -- it's the caller's (KitchenScene's) job to act on it.
+    if self.buttons["Leave"] and point_in_rect(x, y, self.buttons["Leave"]) then
+        self.should_close = true
+        self.should_leave = true
         return true
     end
 
@@ -284,6 +328,16 @@ function ItemPanel:draw(skip_dragging)
             love.graphics.setColor(colors.button_text or { 1, 1, 1, 1 })
             love.graphics.print(action.name, rect.x + 6, rect.y + 6)
         end
+    end
+
+    -- "Leave" (merchant-only): drawn distinctly from action buttons - no
+    -- progress bar, since it's not tied to action_state.
+    local leave_rect = self.buttons["Leave"]
+    if leave_rect then
+        love.graphics.setColor(COLOR_LEAVE)
+        love.graphics.rectangle("fill", leave_rect.x, leave_rect.y, leave_rect.w, leave_rect.h)
+        love.graphics.setColor(colors.button_text or { 1, 1, 1, 1 })
+        love.graphics.print("Leave", leave_rect.x + 6, leave_rect.y + 6)
     end
 
     local cb = self.close_button

@@ -17,15 +17,34 @@ local function make_default_cfg()
     }
 end
 
--- Builds a queue of `total` customer configs.
+local function make_merchant_cfg()
+    return {
+        kind           = "merchant",
+        name           = "Merchant",
+        messages       = { "Fresh stock, take a look!" },
+        stock          = { "raw_meat", "raw_meat", "cooked_meat" },
+        walk_speed     = 80,
+    }
+end
+
+-- Builds a queue of `total` customer configs. Exactly one randomly-chosen
+-- slot is a merchant visit; every other slot is the default food-order
+-- config. Guarantees exactly one merchant per day, every day, regardless
+-- of `total` (even total == 1 — that single slot is always the merchant).
 function CustomerQueue.new(total)
     local self = setmetatable({}, CustomerQueue)
 
     self.total    = total
     self._index   = 0
     self._configs = {}
+
+    local merchant_slot = math.random(1, total)
     for i = 1, total do
-        self._configs[i] = make_default_cfg()
+        if i == merchant_slot then
+            self._configs[i] = make_merchant_cfg()
+        else
+            self._configs[i] = make_default_cfg()
+        end
     end
 
     return self

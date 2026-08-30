@@ -31,6 +31,8 @@ local canvas
 local manager
 
 function love.load()
+    math.randomseed(os.time())
+
     love.window.setIcon(love.image.newImageData("assets/images/icon.png"))
 
     canvas = love.graphics.newCanvas(LOGICAL_W, LOGICAL_H)
@@ -67,10 +69,15 @@ local function to_logical(x, y)
 end
 
 function love.mousepressed(x, y, button)
-    if button ~= 1 then return end
-    if manager.current and manager.current.mouse_pressed then
-        local lx, ly = to_logical(x, y)
-        manager.current:mouse_pressed(lx, ly)
+    local lx, ly = to_logical(x, y)
+    if button == 1 then
+        if manager.current and manager.current.mouse_pressed then
+            manager.current:mouse_pressed(lx, ly)
+        end
+    elseif button == 2 then
+        if manager.current and manager.current.mouse_right_pressed then
+            manager.current:mouse_right_pressed(lx, ly)
+        end
     end
 end
 

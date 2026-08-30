@@ -241,4 +241,60 @@ do
     print("PASS: grid: dragging keeps the item's sprite centered on the cursor")
 end
 
+-- Test 10: preview_override / clear_preview_override ---------------------
+
+do
+    local g = Grid.new(10, 6, CELL, 100, 200) -- non-zero origin, on purpose
+    local a = make_item({ ONE_BY_ONE })
+
+    -- Not dragging anything of its own: preview_override still works and
+    -- draw() must not error (uses the override branch since self.dragging
+    -- is nil here).
+    g:preview_override(a, 100 + CELL * 3 + 1, 200 + CELL * 2 + 1)
+    assert(g._preview_override_item == a, "preview_override should record the item")
+    assert(g._preview_override_col == 3 and g._preview_override_row == 2,
+        "preview_override should compute the cell via this grid's own world_to_cell")
+
+    g:draw() -- must not error with an override set but nothing actually dragging
+
+    g:clear_preview_override()
+    assert(g._preview_override_item == nil, "clear_preview_override should clear the override")
+
+    -- When this grid IS dragging its own item, draw() should prefer that
+    -- over any (stale) override rather than showing both/the wrong one.
+    g:place(a, 0, 0)
+    g:mouse_pressed(100 + 1, 200 + 1) -- picks up `a`
+    assert(g.dragging == a, "sanity check: should be dragging a")
+    local b = make_item({ ONE_BY_ONE })
+    g:preview_override(b, 100 + CELL * 5 + 1, 200 + 1) -- a different item's override
+    g:draw() -- must not error; self.dragging (a) takes priority over the override (b)
+    g:mouse_released(100 + 1, 200 + 1)
+
+    print("PASS: grid: preview_override/clear_preview_override let another grid's drag preview here")
+end
+
+-- Test 11: place_first_fit -------------------------------------------------
+
+do
+    local g = Grid.new(3, 1, CELL, 0, 0)
+
+    local a = make_item({ ONE_BY_ONE })
+    assert(g:place_first_fit(a), "should find a free cell in an empty grid")
+    assert(a.cell_col == 0 and a.cell_row == 0, "first-fit should pick the first cell, row-major")
+
+    local b = make_item({ ONE_BY_ONE })
+    assert(g:place_first_fit(b), "should find the next free cell")
+    assert(b.cell_col == 1 and b.cell_row == 0, "first-fit should skip the occupied cell")
+
+    local c = make_item({ ONE_BY_ONE })
+    assert(g:place_first_fit(c), "should find the last free cell")
+    assert(c.cell_col == 2 and c.cell_row == 0)
+
+    local d = make_item({ ONE_BY_ONE })
+    assert(not g:place_first_fit(d), "should return false when nothing fits, and not place it")
+    assert(d.cell_col == nil, "a failed first-fit must leave the item untouched")
+
+    print("PASS: grid: place_first_fit places at the first free cell, or returns false if none fit")
+end
+
 print("ALL TESTS PASSED")
