@@ -47,6 +47,11 @@ local function rotate_cells(cells)
     return rotated
 end
 
+-- Forward declaration so Item.new (below) can call fill_panel, which in
+-- turn calls Item.new recursively to create the fill items. The actual
+-- body is assigned further down once Item itself is defined.
+local fill_panel
+
 -- Construction -----------------------------------------------------------
 
 function Item.new(type_id)
@@ -74,6 +79,10 @@ function Item.new(type_id)
     if def.has_panel then
         local Grid = require("lua/game/grid")
         self.panel = Grid.new(def.panel_cols, def.panel_rows, config.U, 0, 0)
+    end
+
+    if def.daily_fill then
+        fill_panel(self.panel, def.daily_fill, def.panel_cols, def.panel_rows)
     end
 
     return self
@@ -264,6 +273,19 @@ local function place_first_fit(panel, item, cols, rows)
     return false
 end
 
+-- Fills `panel` with items specified by `daily_fill` (type_id -> count),
+-- placing each freshly created item using first-fit scan over cols x rows.
+-- Assigned here (not declared local) because the forward declaration at the
+-- top of the file lets Item.new reference it before this point.
+fill_panel = function(panel, daily_fill, cols, rows)
+    for type_id, count in pairs(daily_fill) do
+        for _ = 1, count do
+            local new_item = Item.new(type_id)
+            place_first_fit(panel, new_item, cols, rows)
+        end
+    end
+end
+
 local function complete_action(self, def, matches)
     for _, match in ipairs(matches) do
         local recipe      = match.recipe
@@ -323,6 +345,23 @@ function Item:draw()
     end
 
     self.sprite:draw()
+end
+
+-- Clears the panel and re-fills it from def.daily_fill. No-op when this
+-- item has no panel or no daily_fill.
+function Item:refill_daily()
+    if not self.panel then return end
+    local def = item_defs[self.type_id]
+    if not def.daily_fill then return end
+    -- Snapshot before removing to avoid mutating the live list mid-iteration.
+    local snapshot = {}
+    for _, it in ipairs(self.panel:items()) do
+        snapshot[#snapshot + 1] = it
+    end
+    for _, it in ipairs(snapshot) do
+        self.panel:remove(it)
+    end
+    fill_panel(self.panel, def.daily_fill, def.panel_cols, def.panel_rows)
 end
 
 Item.matching_recipes = matching_recipes

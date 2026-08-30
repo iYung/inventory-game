@@ -90,6 +90,11 @@ local item_defs = {
                         requires  = { water = 1, raw_meat = 1 },
                         produces  = { soup = 1 },
                     },
+                    {
+                        container = "pot",
+                        requires  = { water = 1, onion = 1 },
+                        produces  = { onion_soup = 1 },
+                    },
                 },
             },
         },
@@ -135,6 +140,46 @@ local item_defs = {
         tags = { "Protein", "Hearty" },
     },
 
+    onion = {
+        name  = "Onion",
+        footprint = { {0,0} },
+        color = { 0.90, 0.75, 0.40, 1 },
+    },
+
+    blooming_onion = {
+        name  = "Blooming Onion",
+        footprint = { {0,0} },
+        color = { 0.80, 0.60, 0.25, 1 },
+        tags  = { "Greasy" },
+    },
+
+    onion_soup = {
+        name  = "Onion Soup",
+        footprint = { {0,0} },
+        color = { 0.75, 0.55, 0.25, 1 },
+        tags  = { "Hearty" },
+    },
+
+    broccoli_garden = {
+        name      = "Broccoli Garden",
+        footprint = { {0,0}, {1,0}, {0,1}, {1,1} },
+        color     = { 0.20, 0.50, 0.15, 1 },
+        has_panel  = true,
+        panel_cols = 2,
+        panel_rows = 2,
+        daily_fill = { broccoli = 4 },
+    },
+
+    onion_garden = {
+        name      = "Onion Garden",
+        footprint = { {0,0}, {1,0}, {0,1}, {1,1} },
+        color     = { 0.65, 0.50, 0.20, 1 },
+        has_panel  = true,
+        panel_cols = 2,
+        panel_rows = 2,
+        daily_fill = { onion = 4 },
+    },
+
     fryer = {
         name = "Fryer",
         footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },
@@ -143,7 +188,14 @@ local item_defs = {
         panel_cols = 1,
         panel_rows = 1,
         actions = {
-            { name = "Fry", duration = 3.0, requires = { potato = 1 }, produces = { fries = 1 } },
+            {
+                name = "Fry",
+                duration = 3.0,
+                recipes = {
+                    { requires = { potato = 1 }, produces = { fries = 1 } },
+                    { requires = { onion = 1 },  produces = { blooming_onion = 1 } },
+                },
+            },
         },
     },
 

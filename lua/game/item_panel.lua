@@ -87,10 +87,13 @@ function ItemPanel.new(item)
     local button_count = #actions + extra_buttons
     self._button_total_w = button_count * BUTTON_W + math.max(0, button_count - 1) * BUTTON_GAP
 
-    -- Overall backdrop size: wide enough for the grid or the button row,
-    -- whichever is wider; tall enough for title bar + (reminder row, for
-    -- order-kind items) + grid + button row, each separated by MARGIN.
-    self.bg_w = math.max(self.grid_w, self._button_total_w) + MARGIN * 2
+    -- Overall backdrop size: wide enough for the grid or button row (plus
+    -- margins), or the title bar (name + close button), whichever is widest.
+    local title_text = (self.def and self.def.name) or item.type_id
+    local title_text_w = love.graphics.getFont():getWidth(title_text)
+    -- title_min_bg_w is a full bg_w: 8px left pad + text + gap + close + right gap
+    local title_min_bg_w = 8 + title_text_w + CLOSE_GAP + CLOSE_SIZE + CLOSE_GAP
+    self.bg_w = math.max(self.grid_w + MARGIN * 2, self._button_total_w + MARGIN * 2, title_min_bg_w)
     self.bg_h = TITLE_H + MARGIN + self.grid_h + BUTTON_GAP + BUTTON_H + MARGIN
     if item.kind == "order" then
         self.bg_h = self.bg_h + REMINDER_H
