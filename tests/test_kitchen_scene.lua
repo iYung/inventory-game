@@ -82,20 +82,16 @@ local served_before   = scene.day_state.customers_served
 -- Click through the greeting to open the order panel: fast_forward_until
 -- above ticks with dt = 1.0, which is enough for the single short greeting
 -- message's typewriter reveal to already be fully played out by the time
--- arrived() flips true (only done_talking, flipped explicitly by a click,
--- still gates it) - so the first click advances done_talking straight to
--- true, and the second click (now that done_talking is true) opens the
--- order panel instead of doing nothing. customer.x/y is the sprite's center
--- point, so it's guaranteed to land inside the customer's clickable body.
+-- arrived() flips true. One click advances done_talking to true AND
+-- immediately opens the order panel in the same event (no dead "standing
+-- there" click between dialogue and panel). customer.x/y is the sprite's
+-- center point, so it's guaranteed to land inside the customer's clickable body.
 local cx, cy = scene.customer.x, scene.customer.y
 assert(not scene.customer.done_talking, "sanity check: done_talking should still be false right after arriving")
 
 scene:mouse_pressed(cx, cy)
 assert(scene.customer.done_talking, "clicking through the (already fully revealed) greeting should flip done_talking true")
-assert(#scene.panels == 0, "sanity check: no panel should be open yet")
-
-scene:mouse_pressed(cx, cy)
-assert(#scene.panels == 1, "clicking again, with done_talking true, should open the order panel")
+assert(#scene.panels == 1, "the same click that finishes the greeting should immediately open the order panel")
 local order_panel = scene.panels[1]
 assert(order_panel.item == scene.customer, "the order panel should wrap the customer itself")
 
@@ -335,16 +331,14 @@ do
     local currency_before = scene4.day_state.currency
     local served_before   = scene4.day_state.customers_served
 
-    -- Click through the greeting to open the order panel: same 2-click
-    -- sequence as Test 1 (flip done_talking, then open). customer.x/y is
-    -- outside the microwave panel's default bounds (see Test 9's layout
-    -- reasoning below), so this click can't be swallowed by it.
+    -- Click through the greeting to open the order panel: one click finishes
+    -- the greeting and immediately opens the panel. customer.x/y is outside
+    -- the microwave panel's default bounds (see Test 9's layout reasoning
+    -- below), so this click can't be swallowed by it.
     local cx4, cy4 = scene4.customer.x, scene4.customer.y
     scene4:mouse_pressed(cx4, cy4)
     assert(scene4.customer.done_talking, "sanity check: done_talking should be true after one click")
-
-    scene4:mouse_pressed(cx4, cy4)
-    assert(#scene4.panels == 2, "second click, with done_talking true, should open the order panel alongside the microwave's")
+    assert(#scene4.panels == 2, "the same click that finishes the greeting should open the order panel alongside the microwave's")
     local order_panel4 = scene4.panels[2]
     assert(order_panel4.item == scene4.customer, "the order panel should wrap the customer itself")
 
@@ -849,17 +843,14 @@ do
     local currency_before = scene11.day_state.currency
     local served_before   = scene11.day_state.customers_served
 
-    -- Click through the greeting to open the order panel: same 2-click
-    -- sequence as Test 1 (flip done_talking, then open) - the short greeting
+    -- Click through the greeting to open the order panel: one click finishes
+    -- the greeting and immediately opens the panel. The short greeting
     -- message's typewriter reveal is already fully played out by the time
-    -- fast_forward_until (dt = 1.0 per step) observes arrived(), so the
-    -- first click flips done_talking straight to true.
+    -- fast_forward_until (dt = 1.0 per step) observes arrived().
     local cx11, cy11 = scene11.customer.x, scene11.customer.y
     scene11:mouse_pressed(cx11, cy11)
     assert(scene11.customer.done_talking, "sanity check: done_talking should be true after one click")
-
-    scene11:mouse_pressed(cx11, cy11)
-    assert(#scene11.panels == 1, "second click, with done_talking true, should open the order panel")
+    assert(#scene11.panels == 1, "the same click that finishes the greeting should immediately open the order panel")
     local order_panel11 = scene11.panels[1]
     assert(order_panel11.item == scene11.customer, "the order panel should wrap the customer itself")
 
@@ -1149,14 +1140,12 @@ do
     local currency_before = scene15.day_state.currency
     local served_before   = scene15.day_state.customers_served
 
-    -- Click through the greeting to open the order panel: same 2-click
-    -- sequence as Test 1/Test 4 (flip done_talking, then open).
+    -- Click through the greeting to open the order panel: one click finishes
+    -- the greeting and immediately opens the panel (same behaviour as Test 1/Test 4).
     local cx15, cy15 = scene15.customer.x, scene15.customer.y
     scene15:mouse_pressed(cx15, cy15)
     assert(scene15.customer.done_talking, "sanity check: done_talking should be true after one click")
-
-    scene15:mouse_pressed(cx15, cy15)
-    assert(#scene15.panels == 2, "second click, with done_talking true, should open the order panel alongside the microwave's")
+    assert(#scene15.panels == 2, "the same click that finishes the greeting should open the order panel alongside the microwave's")
     local order_panel15 = scene15.panels[2]
     assert(order_panel15.item == scene15.customer, "the order panel should wrap the customer itself")
 
@@ -1231,14 +1220,12 @@ do
         local currency_before = sceneN.day_state.currency
         local served_before   = sceneN.day_state.customers_served
 
-        -- Click through the greeting to open the order panel: same 2-click
-        -- sequence as Test 1/Test 11 (flip done_talking, then open).
+        -- Click through the greeting to open the order panel: one click
+        -- finishes the greeting and immediately opens the panel.
         local cxN, cyN = sceneN.customer.x, sceneN.customer.y
         sceneN:mouse_pressed(cxN, cyN)
         assert(sceneN.customer.done_talking, "sanity check: done_talking should be true after one click")
-
-        sceneN:mouse_pressed(cxN, cyN)
-        assert(#sceneN.panels == 1, "second click, with done_talking true, should open the order panel")
+        assert(#sceneN.panels == 1, "the same click that finishes the greeting should immediately open the order panel")
         local order_panelN = sceneN.panels[1]
         assert(order_panelN.item == sceneN.customer, "the order panel should wrap the customer itself")
 
