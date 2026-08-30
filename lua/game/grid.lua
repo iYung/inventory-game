@@ -314,19 +314,29 @@ function Grid:draw(skip_dragging)
         self.dragging:draw()
     end
 
-    -- Labels: item display name shown below the sprite while hovering or dragging.
+    -- Labels: item name + tags shown above the sprite while hovering or dragging.
+    -- Drawn above (not below) so panel buttons beneath the grid don't cover it.
     local function draw_label(item)
         if not item.label or item.label == "" then return end
         if not item.sprite then return end
         local font = love.graphics.getFont()
-        local tw = font:getWidth(item.label)
         local th = font:getHeight()
+        local tag_str = (item.tags and #item.tags > 0) and table.concat(item.tags, ", ") or nil
+        local nw = font:getWidth(item.label)
+        local tw = tag_str and font:getWidth(tag_str) or 0
+        local box_w = math.max(nw, tw) + 6
+        local lines  = tag_str and 2 or 1
+        local box_h  = th * lines + 4
         local lx = item.sprite.x + item.sprite.width / 2
-        local ly = item.sprite.y + item.sprite.height + 3
+        local ly = item.sprite.y - box_h - 3
         love.graphics.setColor(0, 0, 0, 0.55)
-        love.graphics.rectangle("fill", lx - tw / 2 - 3, ly - 1, tw + 6, th + 2)
+        love.graphics.rectangle("fill", lx - box_w / 2, ly, box_w, box_h)
         love.graphics.setColor(1, 1, 1, 0.95)
-        love.graphics.print(item.label, lx - tw / 2, ly)
+        love.graphics.print(item.label, lx - nw / 2, ly + 2)
+        if tag_str then
+            love.graphics.setColor(0.95, 0.85, 0.45, 0.95)
+            love.graphics.print(tag_str, lx - tw / 2, ly + th + 2)
+        end
     end
 
     if not self.dragging and self._hover_col and self._hover_row then
