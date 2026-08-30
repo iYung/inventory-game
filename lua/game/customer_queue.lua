@@ -58,7 +58,7 @@ local function make_merchant_cfg()
         kind           = "merchant",
         name           = "Merchant",
         messages       = { "Fresh stock, take a look!" },
-        stock          = { "raw_meat", "raw_meat", "broccoli" },
+        stock          = { "raw_meat", "raw_meat", "broccoli", "water", "potato" },
         walk_speed     = 80,
     }
 end

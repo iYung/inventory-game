@@ -4,13 +4,22 @@ A Love2D cooking-inventory game. Customers arrive one at a time up top
 requesting a food *tag/category* (e.g. "something with protein") rather than
 a specific item; you drag and rotate ingredients and appliances around a grid
 inventory on the bottom half, run timed actions in containers like the
-microwave (double-click it to open its sub-inventory panel — it can cook
-raw meat into Protein-tagged cooked meat, or steam broccoli into
-Healthy-tagged steamed broccoli), and serve customers by dropping any item
-carrying their requested tag on them. One visitor per day is a merchant
-instead of a food order — click them to open their stock panel and drag free
-items into your grid, then click "Leave" to send them off. Once everyone for
-the day is served, a "Next Day" button appears to advance.
+microwave and fryer (double-click a container to open its sub-inventory
+panel), and serve customers by dropping any item carrying their requested
+tag on them. Pressing a container's action button fires every recipe its
+panel's contents currently satisfy, not just one — so raw meat and broccoli
+dropped in together both cook from a single press. The microwave alone
+handles raw meat -> Protein-tagged cooked meat, broccoli -> Healthy-tagged
+steamed broccoli, and potato -> Filling-tagged baked potato; the fryer turns
+potato into Greasy-tagged fries. A **dutch oven** is a movable container in
+its own right: load it with potato + water + raw meat, then place the
+loaded dutch oven itself inside the microwave's panel and press Cook to turn
+its contents into Filling-and-Protein-tagged beef stew, produced inside the
+dutch oven's own panel without consuming the dutch oven. One visitor per day
+is a merchant instead of a food order — click them to open their stock panel
+and drag free items (including water and potato) into your grid, then click
+"Leave" to send them off. Once everyone for the day is served, a "Next Day"
+button appears to advance.
 
 ## Structure
 

@@ -80,6 +80,27 @@ function KitchenScene:on_enter()
         self.grid:place(broccoli, cell[1], cell[2])
     end
 
+    -- A fryer (2x2) and a dutch oven (2x1) so both new cooking methods are
+    -- reachable from the starting floor, plus a couple of raw potatoes to
+    -- feed them. Cells chosen clear of the microwave (0,0)-(1,1), meat
+    -- (2,0)/(3,0)/(4,0), and broccoli (2,1)/(3,1) footprints above, and of
+    -- (5,0)/(5,3) which tests/test_kitchen_scene.lua relies on being free
+    -- on the starting floor.
+    local fryer = Item.new("fryer")
+    assert(self.grid:can_place(fryer, 6, 0), "fryer starting cell should be free")
+    self.grid:place(fryer, 6, 0)
+
+    local dutch_oven = Item.new("dutch_oven")
+    assert(self.grid:can_place(dutch_oven, 8, 0), "dutch_oven starting cell should be free")
+    self.grid:place(dutch_oven, 8, 0)
+
+    local potato_cells = { { 2, 2 }, { 3, 2 } }
+    for _, cell in ipairs(potato_cells) do
+        local potato = Item.new("potato")
+        assert(self.grid:can_place(potato, cell[1], cell[2]), "potato starting cell should be free")
+        self.grid:place(potato, cell[1], cell[2])
+    end
+
     self.day_state = DayState.new()
     self.day_state:start_day(config.CUSTOMERS_PER_DAY)
     self.queue = CustomerQueue.new(config.CUSTOMERS_PER_DAY)
@@ -99,6 +120,7 @@ function KitchenScene:on_enter()
     self.panels = {}
 
     self._last_click_time = nil
+    self._last_click_grid = nil
     self._last_click_col  = nil
     self._last_click_row  = nil
 end
@@ -299,6 +321,57 @@ local function transfer_drag_first_fit(from_grid, to_grid, item)
     end
 end
 
+-- Checks (x,y) against `grid` for the double-click-to-open-panel
+-- gesture: if a has_panel item sits at that cell AND this is a second
+-- click within DOUBLE_CLICK_WINDOW on the same cell of the same grid,
+-- opens/focuses its panel and returns true (caller should stop, not
+-- fall through to that grid's normal drag-start handling). Otherwise
+-- records this click's bookkeeping and returns false.
+function KitchenScene:_try_double_click_open(grid, x, y)
+    local col, row = grid:world_to_cell(x, y)
+    local item      = grid:item_at(col, row)
+    local now        = love.timer.getTime()
+
+    if item then
+        local def = item_defs[item.type_id]
+        if def and def.has_panel then
+            local is_double_click = self._last_click_time
+                and (now - self._last_click_time) <= DOUBLE_CLICK_WINDOW
+                and self._last_click_grid == grid
+                and self._last_click_col == col
+                and self._last_click_row == row
+
+            if is_double_click then
+                self:_open_or_focus_panel(item)
+                self._last_click_time = nil
+                self._last_click_grid = nil
+                self._last_click_col  = nil
+                self._last_click_row  = nil
+                return true
+            end
+        end
+    end
+
+    self._last_click_time = now
+    self._last_click_grid = grid
+    self._last_click_col  = col
+    self._last_click_row  = row
+    return false
+end
+
+-- Opens/focuses the has_panel item on `grid` at world (x,y), if any - the
+-- shared helper behind right-click's one-click-to-open gesture. No
+-- timing/double-click logic (that's _try_double_click_open, used by
+-- mouse_pressed only).
+function KitchenScene:_open_container_at(grid, x, y)
+    local col, row = grid:world_to_cell(x, y)
+    local item      = grid:item_at(col, row)
+    if not item then return end
+    local def = item_defs[item.type_id]
+    if not (def and def.has_panel) then return end
+    self:_open_or_focus_panel(item)
+end
+
 -- Mouse / keyboard wiring --------------------------------------------------
 
 function KitchenScene:mouse_pressed(x, y)
@@ -310,6 +383,9 @@ function KitchenScene:mouse_pressed(x, y)
         local panel = self.panels[i]
         if panel:_point_in_bg(x, y) then
             self:_bring_to_front(panel)
+            if panel:_point_in_grid(x, y) then
+                if self:_try_double_click_open(panel.item.panel, x, y) then return end
+            end
             panel:mouse_pressed(x, y)
             -- "Leave" (merchant-only) sets should_close AND should_leave
             -- together on the same click; check should_leave first since
@@ -359,31 +435,7 @@ function KitchenScene:mouse_pressed(x, y)
     -- Double-click detection: a second press within DOUBLE_CLICK_WINDOW on
     -- the same cell of an item whose def has has_panel=true opens its panel
     -- (or brings an already-open one to front) instead of starting a drag.
-    local col, row = self.grid:world_to_cell(x, y)
-    local item      = self.grid:item_at(col, row)
-    local now        = love.timer.getTime()
-
-    if item then
-        local def = item_defs[item.type_id]
-        if def and def.has_panel then
-            local is_double_click = self._last_click_time
-                and (now - self._last_click_time) <= DOUBLE_CLICK_WINDOW
-                and self._last_click_col == col
-                and self._last_click_row == row
-
-            if is_double_click then
-                self:_open_or_focus_panel(item)
-                self._last_click_time = nil
-                self._last_click_col  = nil
-                self._last_click_row  = nil
-                return
-            end
-        end
-    end
-
-    self._last_click_time = now
-    self._last_click_col  = col
-    self._last_click_row  = row
+    if self:_try_double_click_open(self.grid, x, y) then return end
 
     self.grid:mouse_pressed(x, y)
 end
@@ -393,23 +445,17 @@ end
 -- Doesn't touch dragging, the customer, or Next Day - a right-click that
 -- misses a has_panel item is simply a no-op.
 function KitchenScene:mouse_right_pressed(x, y)
-    -- Panels are opaque windows; a right-click landing on one does nothing
-    -- (in particular, must not reach through to a main-grid item a panel
-    -- happens to be sitting over).
-    for _, panel in ipairs(self.panels) do
+    for i = #self.panels, 1, -1 do
+        local panel = self.panels[i]
         if panel:_point_in_bg(x, y) then
+            if panel:_point_in_grid(x, y) then
+                self:_open_container_at(panel.item.panel, x, y)
+            end
             return
         end
     end
 
-    local col, row = self.grid:world_to_cell(x, y)
-    local item      = self.grid:item_at(col, row)
-    if not item then return end
-
-    local def = item_defs[item.type_id]
-    if not (def and def.has_panel) then return end
-
-    self:_open_or_focus_panel(item)
+    self:_open_container_at(self.grid, x, y)
 end
 
 function KitchenScene:mouse_moved(x, y)
