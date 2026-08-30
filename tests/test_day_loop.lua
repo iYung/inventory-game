@@ -225,12 +225,12 @@ do
     assert(ds.customers_served == 0, "start_day should reset customers_served")
     assert(not ds:day_complete(), "day_complete() should be false right after start_day(3)")
 
-    ds:record_serve()
+    ds:record_serve("cooked_meat")
     assert(ds.customers_served == 1, "record_serve should increment customers_served")
     assert(ds.currency == 10, "record_serve should award currency")
     assert(not ds:day_complete(), "day_complete() should still be false after 1 of 3")
 
-    ds:record_serve()
+    ds:record_serve("cooked_meat")
     assert(ds.customers_served == 2, "record_serve should increment customers_served again")
     assert(ds.currency == 20, "currency should reflect only the 2 serves so far")
     assert(not ds:day_complete(), "day_complete() should still be false after 2 of 3")
@@ -252,6 +252,27 @@ do
     assert(not ds:day_complete(), "day_complete() should be false again after advance_day resets customers_served")
 
     print("PASS: day_state: start_day/record_serve/record_dismiss/day_complete/advance_day track day progress correctly")
+end
+
+-- Test 3: DayState.sold_items tallies served item types and resets on advance_day.
+do
+    local ds = DayState.new()
+    assert(type(ds.sold_items) == "table", "sold_items should be initialized as a table")
+
+    ds:start_day(4)
+    ds:record_serve("cooked_meat")
+    ds:record_serve("cooked_meat")
+    ds:record_serve("steamed_broccoli")
+    ds:record_dismiss()
+
+    assert(ds.sold_items["cooked_meat"] == 2, "sold_items should tally cooked_meat × 2")
+    assert(ds.sold_items["steamed_broccoli"] == 1, "sold_items should tally steamed_broccoli × 1")
+    assert(ds.sold_items["baked_potato"] == nil, "unsold items should not appear in sold_items")
+
+    ds:advance_day()
+    assert(next(ds.sold_items) == nil, "advance_day should clear sold_items")
+
+    print("PASS: day_state: sold_items tallies served types and clears on advance_day")
 end
 
 print("ALL TESTS PASSED")

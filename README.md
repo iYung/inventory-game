@@ -28,7 +28,8 @@ new day. One visitor per day
 is a merchant instead of a food order — click them to open their stock panel
 and drag free items (including water and potato) into your grid, then click
 "Leave" to send them off. Once everyone for the day is served, a "Next Day"
-button appears to advance.
+button appears. Clicking it shows a **Day Summary** overlay listing every item sold that day,
+total revenue, and customers served. Click "Start Day N+1 →" to advance.
 
 ## Structure
 
