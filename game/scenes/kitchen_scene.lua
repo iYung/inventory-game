@@ -81,7 +81,7 @@ function KitchenScene:on_enter()
         self.grid:place(broccoli, cell[1], cell[2])
     end
 
-    -- A fryer (2x2) and a dutch oven (2x1) so both new cooking methods are
+    -- A fryer (2x2) and a pot (2x1) so both new cooking methods are
     -- reachable from the starting floor, plus a couple of raw potatoes to
     -- feed them. Cells chosen clear of the microwave (0,0)-(1,1), meat
     -- (2,0)/(3,0)/(4,0), and broccoli (2,1)/(3,1) footprints above, and of
@@ -91,9 +91,9 @@ function KitchenScene:on_enter()
     assert(self.grid:can_place(fryer, 6, 0), "fryer starting cell should be free")
     self.grid:place(fryer, 6, 0)
 
-    local dutch_oven = Item.new("dutch_oven")
-    assert(self.grid:can_place(dutch_oven, 8, 0), "dutch_oven starting cell should be free")
-    self.grid:place(dutch_oven, 8, 0)
+    local pot = Item.new("pot")
+    assert(self.grid:can_place(pot, 8, 0), "pot starting cell should be free")
+    self.grid:place(pot, 8, 0)
 
     local potato_cells = { { 2, 2 }, { 3, 2 } }
     for _, cell in ipairs(potato_cells) do
