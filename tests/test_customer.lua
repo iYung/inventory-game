@@ -188,7 +188,7 @@ do
     c:show({
         name  = "Merchant",
         kind  = "merchant",
-        stock = { "raw_meat", "raw_meat", "cooked_meat" },
+        stock = { "raw_chicken", "raw_chicken", "baked_chicken" },
     })
 
     assert(c.kind == "merchant", "kind should be 'merchant'")
@@ -204,8 +204,8 @@ do
     for _, it in ipairs(items) do
         counts[it.type_id] = (counts[it.type_id] or 0) + 1
     end
-    assert(counts.raw_meat == 2, "panel should contain 2 raw_meat")
-    assert(counts.cooked_meat == 1, "panel should contain 1 cooked_meat")
+    assert(counts.raw_chicken == 2, "panel should contain 2 raw_chicken")
+    assert(counts.baked_chicken == 1, "panel should contain 1 baked_chicken")
 
     print("PASS: customer: show() with kind == 'merchant' populates panel/type_id with first-fit stock")
 end
@@ -284,7 +284,7 @@ do
     c:show({
         name  = "Merchant",
         kind  = "merchant",
-        stock = { "raw_meat" },
+        stock = { "raw_chicken" },
     })
     assert(c.panel ~= nil, "sanity check: panel should be set after merchant show()")
     assert(c.type_id == "merchant", "sanity check: type_id should be set after merchant show()")
@@ -298,7 +298,7 @@ do
     assert(c.panel ~= nil, "panel should be a fresh order panel on a subsequent non-merchant show()")
     assert(c.panel.cols == config.ORDER_PANEL_COLS, "reset panel cols should match config.ORDER_PANEL_COLS")
     assert(c.panel.rows == config.ORDER_PANEL_ROWS, "reset panel rows should match config.ORDER_PANEL_ROWS")
-    -- The merchant panel had raw_meat stock in it; an empty panel here
+    -- The merchant panel had raw_chicken stock in it; an empty panel here
     -- proves this is a genuinely new object, not the stale merchant one.
     assert(#c.panel:items() == 0, "reset panel should start empty, not carry over the merchant's stock")
     assert(c.type_id == "order_customer", "type_id should be 'order_customer' on a subsequent non-merchant show()")
@@ -308,7 +308,7 @@ do
     c:show({
         name  = "Merchant",
         kind  = "merchant",
-        stock = { "cooked_meat", "cooked_meat" },
+        stock = { "baked_chicken", "baked_chicken" },
     })
     assert(c.kind == "merchant", "kind should become 'merchant' again on a subsequent merchant show()")
     assert(c.panel ~= nil, "panel should be repopulated on a subsequent merchant show()")

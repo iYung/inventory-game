@@ -32,17 +32,24 @@
 -- tag request can never be satisfied by handing over a raw ingredient.
 
 local item_defs = {
-    raw_meat = {
-        name = "Raw Meat",
+    raw_chicken = {
+        name = "Raw Chicken",
         footprint = { { 0, 0 } },
         color = { 0.75, 0.25, 0.25, 1 },
     },
 
-    cooked_meat = {
-        name = "Cooked Meat",
+    baked_chicken = {
+        name = "Baked Chicken",
         footprint = { { 0, 0 } },
         color = { 0.55, 0.36, 0.20, 1 },
         tags = { "Protein" },
+    },
+
+    fried_chicken = {
+        name = "Fried Chicken",
+        footprint = { { 0, 0 } },
+        color = { 0.88, 0.65, 0.20, 1 },
+        tags = { "Greasy", "Protein" },
     },
 
     broccoli = {
@@ -82,12 +89,12 @@ local item_defs = {
                 name = "Cook",
                 duration = 3.0,
                 recipes = {
-                    { requires = { raw_meat = 1 }, produces = { cooked_meat = 1 } },
+                    { requires = { raw_chicken = 1 }, produces = { baked_chicken = 1 } },
                     { requires = { broccoli = 1 }, produces = { steamed_broccoli = 1 } },
                     { requires = { potato = 1 },   produces = { baked_potato = 1 } },
                     {
                         container = "pot",
-                        requires  = { water = 1, raw_meat = 1 },
+                        requires  = { water = 1, raw_chicken = 1 },
                         produces  = { soup = 1 },
                     },
                     {
@@ -209,7 +216,7 @@ local item_defs = {
                 name     = "Process",
                 duration = 1.0,
                 recipes  = {
-                    { requires = { chicken = 1 }, produces = { raw_meat = 1 } },
+                    { requires = { chicken = 1 }, produces = { raw_chicken = 1 } },
                 },
             },
         },
@@ -259,8 +266,9 @@ local item_defs = {
                 name = "Fry",
                 duration = 3.0,
                 recipes = {
-                    { requires = { potato = 1 }, produces = { fries = 1 } },
-                    { requires = { onion = 1 },  produces = { blooming_onion = 1 } },
+                    { requires = { potato = 1 },     produces = { fries = 1 } },
+                    { requires = { onion = 1 },      produces = { blooming_onion = 1 } },
+                    { requires = { raw_chicken = 1 }, produces = { fried_chicken = 1 } },
                 },
             },
         },

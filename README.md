@@ -13,11 +13,12 @@ which returns any item(s) in the grid to your floor inventory. Pressing a
 container's action button fires every recipe its
 panel's contents currently satisfy, not just one — so raw meat and broccoli
 dropped in together both cook from a single press. The microwave alone
-handles raw meat -> Protein-tagged cooked meat, broccoli -> Healthy-tagged
+handles raw chicken -> Protein-tagged baked chicken, broccoli -> Healthy-tagged
 steamed broccoli, and potato -> Filling-tagged baked potato; the fryer turns
-potato into Greasy-tagged fries, and onion into Greasy-tagged blooming onion.
+potato into Greasy-tagged fries, onion into Greasy-tagged blooming onion, and
+raw chicken into Greasy-and-Protein-tagged fried chicken.
 A **pot** is a movable container in
-its own right: load it with water + raw meat (or water + onion, or water + egg), then place the
+its own right: load it with water + raw chicken (or water + onion, or water + egg), then place the
 loaded pot itself inside the microwave's panel and press Cook to turn
 its contents into Protein-and-Hearty-tagged soup, Hearty-tagged onion soup, or
 Protein-tagged boiled egg, produced inside the pot's own panel without consuming the pot.
@@ -28,7 +29,7 @@ A **coop** (2×2) produces one egg per night for each chicken inside it —
 chickens are residents, not consumed. An **incubator** (1×1) takes one egg
 and hatches it into a chicken after two nights; removing the egg resets
 progress. A **meat machine** (2×2) has a "Process" button that converts a
-chicken into raw meat on demand. One visitor per day
+chicken into raw chicken on demand. One visitor per day
 is a merchant instead of a food order — click them to open their stock panel
 and drag free items (including water and potato) into your grid, then click
 "Leave" to send them off. Once everyone for the day is served, a "Next Day"

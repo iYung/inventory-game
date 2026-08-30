@@ -66,8 +66,8 @@ function KitchenScene:on_enter()
 
     local meat_cells = { { 2, 0 }, { 3, 0 }, { 4, 0 } }
     for _, cell in ipairs(meat_cells) do
-        local meat = Item.new("raw_meat")
-        assert(self.grid:can_place(meat, cell[1], cell[2]), "raw_meat starting cell should be free")
+        local meat = Item.new("raw_chicken")
+        assert(self.grid:can_place(meat, cell[1], cell[2]), "raw_chicken starting cell should be free")
         self.grid:place(meat, cell[1], cell[2])
     end
 
