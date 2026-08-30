@@ -223,6 +223,11 @@ function Grid:clear_preview_override()
     self._preview_override_row  = nil
 end
 
+function Grid:clear_hover()
+    self._hover_col = nil
+    self._hover_row = nil
+end
+
 -- Rotates the currently-dragged item in place. No validity check - validity
 -- is only enforced at drop time. Re-centers the sprite afterward since
 -- rotating can change its width/height.

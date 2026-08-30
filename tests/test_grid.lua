@@ -220,6 +220,21 @@ do
     print("PASS: grid: mouse_moved tracks hover cell unconditionally")
 end
 
+-- Test: clear_hover resets hover cell to nil ----------------------------
+
+do
+    local g = Grid.new(10, 6, CELL, 0, 0)
+
+    g:mouse_moved(3 * CELL + 1, 2 * CELL + 1)
+    assert(g._hover_col == 3 and g._hover_row == 2, "hover should be set after mouse_moved")
+
+    g:clear_hover()
+    assert(g._hover_col == nil and g._hover_row == nil,
+        "clear_hover should nil out _hover_col and _hover_row")
+
+    print("PASS: grid: clear_hover resets hover cell to nil")
+end
+
 -- Test 8: draw() does not error under the headless love.graphics stub ----
 
 do
