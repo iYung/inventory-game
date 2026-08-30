@@ -1,5 +1,5 @@
-local Scene    = require("lua/core/scene")
-local GameScene = require("game/scenes/game_scene")
+local Scene        = require("lua/core/scene")
+local KitchenScene = require("game/scenes/kitchen_scene")
 
 -- Test 1: Scene.new(w, h) passes dimensions to its camera
 do
@@ -17,14 +17,14 @@ do
     print("PASS: scene: Scene.new creates a drawer")
 end
 
--- Test 3: GameScene inherits drawer and camera from Scene
+-- Test 3: KitchenScene inherits drawer and camera from Scene
 do
-    local gs = GameScene.new()
-    assert(gs.drawer ~= nil,        "GameScene should have a drawer from Scene")
-    assert(gs.camera ~= nil,        "GameScene should have a camera from Scene")
-    assert(gs.camera._w == 1280,    "GameScene camera._w should be 1280")
-    assert(gs.camera._h == 720,     "GameScene camera._h should be 720")
-    print("PASS: scene: GameScene inherits drawer and camera from Scene")
+    local ks = KitchenScene.new()
+    assert(ks.drawer ~= nil,        "KitchenScene should have a drawer from Scene")
+    assert(ks.camera ~= nil,        "KitchenScene should have a camera from Scene")
+    assert(ks.camera._w == 1280,    "KitchenScene camera._w should be 1280")
+    assert(ks.camera._h == 720,     "KitchenScene camera._h should be 720")
+    print("PASS: scene: KitchenScene inherits drawer and camera from Scene")
 end
 
 print("ALL TESTS PASSED")

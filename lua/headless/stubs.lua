@@ -35,7 +35,20 @@ graphics_stub.pop              = noop
 graphics_stub.translate        = noop
 graphics_stub.scale            = noop
 graphics_stub.clear            = noop
-graphics_stub.getFont          = function() return {} end
+-- Stub font returned by love.graphics.getFont(). Needs to support the calls
+-- lua/game/customer.lua's draw_bubble() makes (getHeight/getWidth/getWrap)
+-- so headless draw() calls don't crash while a speech bubble is visible.
+local function make_stub_font()
+  return {
+    getHeight = function() return 14 end,
+    getWidth  = function(_, text) return text and (#text * 7) or 0 end,
+    getWrap   = function(_, text, wrap_limit)
+      text = text or ""
+      return math.min(#text * 7, wrap_limit or 0), { text }
+    end,
+  }
+end
+graphics_stub.getFont = function() return make_stub_font() end
 
 -- Global screen dimension query (not the stub-image version).
 graphics_stub.getDimensions = function() return 1280, 720 end
@@ -55,6 +68,10 @@ love.graphics = graphics_stub
 
 love.keyboard = love.keyboard or {}
 love.keyboard.isDown = function() return false end
+
+love.mouse = love.mouse or {}
+love.mouse.isDown      = function() return false end
+love.mouse.getPosition = function() return 0, 0 end
 
 love.window = love.window or {}
 love.window.getFullscreen = function() return false end
