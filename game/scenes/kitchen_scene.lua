@@ -2,9 +2,10 @@
 --
 -- Top-level scene for the cooking-inventory game: owns the main floor Grid,
 -- the day/customer loop (DayState + CustomerQueue), the single on-stage
--- Customer, and an optional open ItemPanel. Static scene (no camera
--- movement) split at config.SPLIT_Y into a top-half customer stage and a
--- bottom-half inventory grid.
+-- Customer, and any number of simultaneously open ItemPanels (self.panels,
+-- back-to-front order). Static scene (no camera movement) split at
+-- config.SPLIT_Y into a top-half customer stage and a bottom-half
+-- inventory grid.
 --
 -- See docs/design/cooking-inventory-game.md and
 -- docs/checklists/cooking-inventory-game.md (Wave 3 / Task F) for the
@@ -81,7 +82,9 @@ function KitchenScene:on_enter()
     self.customer = Customer.new(target_x, exit_x, y)
     self.customer:show(self.queue:next())
 
-    self.panel = nil
+    -- Any number of item panels can be open at once, ordered back-to-front
+    -- (self.panels[#self.panels] is topmost/most-recently-focused).
+    self.panels = {}
 
     self._last_click_time = nil
     self._last_click_col  = nil
@@ -115,6 +118,91 @@ function KitchenScene:_customer_hit(x, y)
     return x >= s.x and x <= s.x + s.width and y >= s.y and y <= s.y + s.height
 end
 
+-- Multi-panel bookkeeping ---------------------------------------------------
+--
+-- Any number of item panels (microwave, merchant stock, ...) can be open at
+-- once. self.panels is ordered back-to-front; the last entry draws on top
+-- and is hit-tested first. At most one Grid total (the main floor grid, or
+-- exactly one open panel's inner grid) ever has something mid-drag at a
+-- time - only one mouse, one drag - so the helpers below just need to find
+-- "the" dragging grid / "the" grid currently under the cursor among all of
+-- them, generalizing what used to be hardcoded as "self.grid vs. the one
+-- open panel's grid".
+
+-- The panel already open for `item` (an Item on the floor grid, or the
+-- merchant Customer), if any - used to avoid opening a duplicate.
+function KitchenScene:_panel_for(item)
+    for _, panel in ipairs(self.panels) do
+        if panel.item == item then return panel end
+    end
+    return nil
+end
+
+local PANEL_CASCADE_OFFSET = 28 -- px, so newly opened panels don't perfectly overlap
+
+function KitchenScene:_open_panel(panel)
+    -- Cascade each successively opened panel down-right a bit so they don't
+    -- all spawn stacked exactly on top of each other by default (still
+    -- freely repositionable by dragging their title bar).
+    local offset = PANEL_CASCADE_OFFSET * #self.panels
+    if offset > 0 then
+        panel:_layout(panel.bg.x + offset, panel.bg.y + offset)
+    end
+    table.insert(self.panels, panel)
+end
+
+function KitchenScene:_close_panel(panel)
+    for i, p in ipairs(self.panels) do
+        if p == panel then
+            table.remove(self.panels, i)
+            return
+        end
+    end
+end
+
+-- Moves an already-open panel to the front (end of the list = drawn last =
+-- on top, hit-tested first).
+function KitchenScene:_bring_to_front(panel)
+    self:_close_panel(panel)
+    table.insert(self.panels, panel)
+end
+
+-- self.grid plus every open panel's inner Grid, in the same back-to-front
+-- order as self.panels.
+function KitchenScene:_all_grids()
+    local grids = { self.grid }
+    for _, panel in ipairs(self.panels) do
+        grids[#grids + 1] = panel.item.panel
+    end
+    return grids
+end
+
+-- Whichever single grid (main floor, or an open panel's) currently has an
+-- item mid-drag, or nil if nothing is being dragged anywhere right now.
+function KitchenScene:_dragging_grid()
+    if self.grid.dragging then return self.grid end
+    for _, panel in ipairs(self.panels) do
+        if panel.item.panel.dragging then return panel.item.panel end
+    end
+    return nil
+end
+
+-- Whichever grid's cell area world position (x,y) is actually over right
+-- now: the topmost open panel whose OWN grid (not just its backdrop)
+-- contains the point, else the main floor grid by default (out-of-bounds
+-- drops there are simply rejected by can_place at drop time, same as
+-- always). Panels are checked topmost-first so an overlapping panel in
+-- front correctly wins over one (partially) behind it.
+function KitchenScene:_hover_grid(x, y)
+    for i = #self.panels, 1, -1 do
+        local panel = self.panels[i]
+        if panel:_point_in_grid(x, y) then
+            return panel.item.panel
+        end
+    end
+    return self.grid
+end
+
 -- Clears grid-drag bookkeeping without running Grid:mouse_released's normal
 -- place-back-on-the-grid logic (the item is being consumed, not dropped).
 local function clear_drag(grid, item)
@@ -145,23 +233,27 @@ end
 -- Mouse / keyboard wiring --------------------------------------------------
 
 function KitchenScene:mouse_pressed(x, y)
-    if self.panel then
-        local consumed = self.panel:mouse_pressed(x, y)
-        -- "Leave" (merchant-only) sets should_close AND should_leave together
-        -- on the same click; check should_leave first since it's about to be
-        -- nilled out by the should_close handling right below.
-        if self.panel.should_leave then
-            self.customer:dismiss()
-            self.day_state:record_dismiss()
-        end
-        if self.panel.should_close then
-            self.panel = nil
+    -- Panels are opaque windows, hit-tested topmost-first. A click landing
+    -- anywhere on an open panel's backdrop is claimed by it - even if it
+    -- misses every interactive element inside (dead space) - so it never
+    -- reaches whatever's behind it (another panel, or the game underneath).
+    for i = #self.panels, 1, -1 do
+        local panel = self.panels[i]
+        if panel:_point_in_bg(x, y) then
+            self:_bring_to_front(panel)
+            panel:mouse_pressed(x, y)
+            -- "Leave" (merchant-only) sets should_close AND should_leave
+            -- together on the same click; check should_leave first since
+            -- should_close is what actually removes the panel below.
+            if panel.should_leave then
+                self.customer:dismiss()
+                self.day_state:record_dismiss()
+            end
+            if panel.should_close then
+                self:_close_panel(panel)
+            end
             return
         end
-        if consumed then return end
-        -- Click missed the panel's own UI (close/grid/buttons): fall through
-        -- so items on the main floor grid stay draggable while the panel is
-        -- open (needed to drag ingredients into it in the first place).
     end
 
     if self.day_state:day_complete() and point_in_rect(x, y, NEXT_DAY_BTN) then
@@ -180,12 +272,16 @@ function KitchenScene:mouse_pressed(x, y)
     -- there showing their last line forever.
     if self.customer:active() and self:_customer_hit(x, y) then
         -- A merchant doesn't have dialogue to advance through past their
-        -- greeting - clicking their body opens their stock panel instead,
-        -- as long as one isn't already open (re-clicking the body while the
-        -- panel is up just falls through to the dialogue-advance logic
-        -- below, which is a harmless no-op for a merchant by then).
-        if self.customer.kind == "merchant" and self.customer:arrived() and self.panel == nil then
-            self.panel = ItemPanel.new(self.customer)
+        -- greeting - clicking their body opens their stock panel instead
+        -- (or brings it to front if it's already open, e.g. buried behind
+        -- another panel).
+        if self.customer.kind == "merchant" and self.customer:arrived() then
+            local existing = self:_panel_for(self.customer)
+            if existing then
+                self:_bring_to_front(existing)
+            else
+                self:_open_panel(ItemPanel.new(self.customer))
+            end
             return
         end
         if self.customer.state == "talking_after" then
@@ -198,7 +294,7 @@ function KitchenScene:mouse_pressed(x, y)
 
     -- Double-click detection: a second press within DOUBLE_CLICK_WINDOW on
     -- the same cell of an item whose def has has_panel=true opens its panel
-    -- instead of starting a drag.
+    -- (or brings an already-open one to front) instead of starting a drag.
     local col, row = self.grid:world_to_cell(x, y)
     local item      = self.grid:item_at(col, row)
     local now        = love.timer.getTime()
@@ -212,7 +308,12 @@ function KitchenScene:mouse_pressed(x, y)
                 and self._last_click_row == row
 
             if is_double_click then
-                self.panel = ItemPanel.new(item)
+                local existing = self:_panel_for(item)
+                if existing then
+                    self:_bring_to_front(existing)
+                else
+                    self:_open_panel(ItemPanel.new(item))
+                end
                 self._last_click_time = nil
                 self._last_click_col  = nil
                 self._last_click_row  = nil
@@ -229,75 +330,78 @@ function KitchenScene:mouse_pressed(x, y)
 end
 
 function KitchenScene:mouse_moved(x, y)
-    local pgrid = self.panel and self.panel.item.panel or nil
+    local owner = self:_dragging_grid()
 
-    if not (self.grid.dragging or (pgrid and pgrid.dragging)) then
-        -- No active drag: both grids' mouse_moved are no-ops, harmless to
-        -- forward to both unconditionally.
+    if not owner then
+        -- No active drag: every grid's mouse_moved is a no-op, harmless to
+        -- forward to all of them unconditionally.
         self.grid:mouse_moved(x, y)
-        if self.panel then self.panel:mouse_moved(x, y) end
+        for _, panel in ipairs(self.panels) do panel:mouse_moved(x, y) end
         return
     end
 
-    -- An item is being dragged, from either the main grid or an open
-    -- panel's inner grid. ItemPanel:mouse_moved's own forwarding keeps
-    -- tracking the drag regardless of cursor position (so a drag doesn't
-    -- get dropped mid-move once the cursor leaves the grid rect) - which
-    -- means it always recomputes the preview using THAT grid's own
-    -- coordinate system, even while the cursor is actually over the OTHER
-    -- grid. Bypass it here and drive both grids directly, so the preview
-    -- always uses whichever grid's coordinate system the cursor is
-    -- actually hovering over.
-    local over_panel = pgrid and self.panel:_point_in_grid(x, y)
+    -- Update the owning grid normally first - via its own world_to_cell,
+    -- this is what keeps the dragged item's sprite following the cursor no
+    -- matter which grid is actually being hovered right now (Item:draw()
+    -- defers to whatever position Grid:_position_dragging_sprite sets here,
+    -- for as long as item.grid.dragging == item).
+    owner:mouse_moved(x, y)
 
-    if self.grid.dragging then
-        if over_panel then
-            self.grid.drag_preview_col, self.grid.drag_preview_row = nil, nil
-            pgrid:preview_override(self.grid.dragging, x, y)
+    -- Then fix up which single grid's PREVIEW is actually shown: whichever
+    -- one the cursor is over, using ITS OWN coordinate system - not
+    -- necessarily the owner (ItemPanel:mouse_moved would otherwise keep
+    -- forwarding to the owner regardless of cursor position, which is what
+    -- made the preview snap to the wrong grid's cell alignment).
+    local hover = self:_hover_grid(x, y)
+    local item  = owner.dragging
+
+    for _, grid in ipairs(self:_all_grids()) do
+        if grid == owner then
+            if grid ~= hover then
+                grid.drag_preview_col, grid.drag_preview_row = nil, nil
+            end
+        elseif grid == hover then
+            grid:preview_override(item, x, y)
         else
-            self.grid:mouse_moved(x, y)
-            if pgrid then pgrid:clear_preview_override() end
-        end
-    else -- pgrid.dragging
-        if over_panel then
-            pgrid:mouse_moved(x, y)
-            self.grid:clear_preview_override()
-        else
-            pgrid.drag_preview_col, pgrid.drag_preview_row = nil, nil
-            self.grid:preview_override(pgrid.dragging, x, y)
+            grid:clear_preview_override()
         end
     end
 end
 
 function KitchenScene:mouse_released(x, y)
-    -- The panel itself being dragged by its title bar takes priority over
+    -- A panel being dragged by its own title bar takes priority over
     -- everything below, and must go through ItemPanel:mouse_released (not
-    -- the inner grid directly) since that's what clears _dragging_panel.
-    if self.panel and self.panel._dragging_panel then
-        self.panel:mouse_released(x, y)
+    -- some inner grid directly) since that's what clears _dragging_panel.
+    for _, panel in ipairs(self.panels) do
+        if panel._dragging_panel then
+            panel:mouse_released(x, y)
+            return
+        end
+    end
+
+    local owner = self:_dragging_grid()
+
+    -- Whatever's being dragged is about to be resolved one way or another
+    -- below; clear every grid's cross-grid preview override now so nothing
+    -- stale lingers into the next frame's draw before a new mouse_moved
+    -- would otherwise refresh it.
+    for _, grid in ipairs(self:_all_grids()) do
+        grid:clear_preview_override()
+    end
+
+    if not owner then
         return
     end
 
-    local pgrid = self.panel and self.panel.item.panel or nil
+    local item = owner.dragging
 
-    -- The drag (whichever grid it's really on) is about to be resolved one
-    -- way or another below; clear any cross-grid preview override now so a
-    -- stale one doesn't linger into the next frame's draw before any new
-    -- mouse_moved call would otherwise refresh it.
-    self.grid:clear_preview_override()
-    if pgrid then pgrid:clear_preview_override() end
-
-    -- Dropping a dragged item - from the main grid OR from an open panel
-    -- (e.g. cooked meat straight out of the microwave) - onto the waiting
-    -- customer serves or dismisses them, consuming the item either way,
-    -- instead of placing it back on whichever grid it came from.
-    local source_grid = self.grid.dragging and self.grid
-        or (pgrid and pgrid.dragging and pgrid)
-        or nil
-
-    if source_grid and self.customer:arrived() and self.customer.kind ~= "merchant" and self:_customer_hit(x, y) then
-        local item = source_grid.dragging
-        clear_drag(source_grid, item)
+    -- Dropping a dragged item - from the main grid or any open panel (e.g.
+    -- cooked meat straight out of the microwave, or stock straight out of
+    -- a merchant) - onto the waiting customer serves or dismisses them,
+    -- consuming the item either way, instead of placing it back wherever
+    -- it came from. Not applicable to a merchant (no order to fulfill).
+    if self.customer:arrived() and self.customer.kind ~= "merchant" and self:_customer_hit(x, y) then
+        clear_drag(owner, item)
 
         if item.type_id == self.customer.requested_type then
             self.customer:serve()
@@ -309,34 +413,21 @@ function KitchenScene:mouse_released(x, y)
         return
     end
 
-    -- Cross-grid transfer: a main-grid item dropped onto the open panel's
-    -- inner grid moves into it instead of snapping back to the floor.
-    if self.grid.dragging and pgrid and self.panel:_point_in_grid(x, y) then
-        transfer_drag(self.grid, pgrid, self.grid.dragging, x, y)
-        return
+    -- Otherwise: dropped somewhere on a grid (main floor, or any open
+    -- panel's) - transfer it there if that's a different grid than it
+    -- started on, or just let it resolve normally (place/snap-back) if
+    -- dropped back where it came from.
+    local hover = self:_hover_grid(x, y)
+    if hover ~= owner then
+        transfer_drag(owner, hover, item, x, y)
+    else
+        owner:mouse_released(x, y)
     end
-
-    -- Cross-grid transfer: an item dragged out of the panel and dropped
-    -- outside it moves back onto the main floor grid.
-    if pgrid and pgrid.dragging and not self.panel:_point_in_grid(x, y) then
-        transfer_drag(pgrid, self.grid, pgrid.dragging, x, y)
-        return
-    end
-
-    if pgrid and pgrid.dragging then
-        pgrid:mouse_released(x, y)
-        return
-    end
-
-    self.grid:mouse_released(x, y)
 end
 
 function KitchenScene:rotate_dragged()
-    if self.panel and self.panel.item.panel.dragging then
-        self.panel.item.panel:rotate_dragged()
-    elseif self.grid.dragging then
-        self.grid:rotate_dragged()
-    end
+    local owner = self:_dragging_grid()
+    if owner then owner:rotate_dragged() end
 end
 
 -- Draw ----------------------------------------------------------------------
@@ -377,14 +468,15 @@ function KitchenScene:draw()
     )
     love.graphics.print("$" .. self.day_state.currency, 16, 56)
 
-    if self.panel then
-        self.panel:draw(true)
+    -- Panels draw back-to-front (self.panels is already in that order), so
+    -- a panel later in the list correctly overlaps one earlier in it.
+    for _, panel in ipairs(self.panels) do
+        panel:draw(true)
     end
 
-    local dragging_item = self.grid.dragging
-        or (self.panel and self.panel.item.panel.dragging)
-    if dragging_item and dragging_item.draw then
-        dragging_item:draw()
+    local owner = self:_dragging_grid()
+    if owner and owner.dragging and owner.dragging.draw then
+        owner.dragging:draw()
     end
 
     self.camera:detach()

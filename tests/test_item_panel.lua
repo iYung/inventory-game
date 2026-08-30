@@ -313,4 +313,25 @@ do
     print("PASS: item_panel: draw() does not error for a merchant-kind panel")
 end
 
+-- Test 14: _point_in_bg covers the whole backdrop, including dead space --
+-- that isn't the title bar, grid, or any button - used by KitchenScene so a
+-- click anywhere on a panel is claimed by it (panels are opaque windows).
+
+do
+    local microwave = Item.new("microwave")
+    local panel = ItemPanel.new(microwave)
+
+    assert(panel:_point_in_bg(panel.bg.x + 2, panel.bg.y + 2),
+        "a point just inside the backdrop's top-left corner should count as in-bg")
+    assert(panel:_point_in_bg(panel.bg.x + panel.bg.w - 2, panel.bg.y + panel.bg.h - 2),
+        "a point just inside the backdrop's bottom-right corner should count as in-bg")
+    assert(not panel:_point_in_bg(panel.bg.x - 5, panel.bg.y - 5),
+        "a point outside the backdrop entirely should not count as in-bg")
+    -- The title bar sits inside the backdrop, so a point on it is in-bg too.
+    assert(panel:_point_in_bg(panel.title_bar.x + 5, panel.title_bar.y + 5),
+        "a point on the title bar should also count as in-bg (it's part of the backdrop)")
+
+    print("PASS: item_panel: _point_in_bg covers the whole backdrop")
+end
+
 print("ALL TESTS PASSED")

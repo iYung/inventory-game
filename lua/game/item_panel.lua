@@ -168,6 +168,16 @@ function ItemPanel:_point_in_close_button(x, y)
     return point_in_rect(x, y, self.close_button)
 end
 
+-- Whether (x,y) lands anywhere on this panel's opaque backdrop (title bar,
+-- grid, buttons, or just dead space between them) - used by the scene to
+-- decide whether a click is claimed by this panel at all before checking
+-- what it's on lower in stacking order (another panel, or the game
+-- underneath). A panel is meant to read as a solid window; nothing should
+-- click "through" it.
+function ItemPanel:_point_in_bg(x, y)
+    return point_in_rect(x, y, self.bg)
+end
+
 function ItemPanel:_button_at(x, y)
     for name, rect in pairs(self.buttons) do
         if x >= rect.x and x < rect.x + rect.w

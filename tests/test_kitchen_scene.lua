@@ -142,7 +142,7 @@ do
     end
     assert(microwave and meat2, "on_enter should have placed a microwave and raw_meat")
 
-    scene2.panel = ItemPanel.new(microwave)
+    scene2.panels = { ItemPanel.new(microwave) }
 
     -- Start dragging the meat straight from the main grid while the panel
     -- is open; this must work exactly like it would with no panel open.
@@ -206,24 +206,25 @@ do
     end
     assert(microwave3, "on_enter should have placed a microwave")
 
-    scene3.panel = ItemPanel.new(microwave3)
-    local tb = scene3.panel.title_bar
+    local panel3 = ItemPanel.new(microwave3)
+    scene3.panels = { panel3 }
+    local tb = panel3.title_bar
 
     scene3:mouse_pressed(tb.x + 10, tb.y + tb.h / 2)
-    assert(scene3.panel._dragging_panel == true, "pressing the title bar (via the scene) should start dragging the panel")
+    assert(panel3._dragging_panel == true, "pressing the title bar (via the scene) should start dragging the panel")
 
     scene3:mouse_moved(tb.x + 60, tb.y + 40)
-    assert(scene3.panel.grid_x ~= nil, "panel should have re-laid-out after the move")
+    assert(panel3.grid_x ~= nil, "panel should have re-laid-out after the move")
 
     scene3:mouse_released(tb.x + 60, tb.y + 40)
-    assert(scene3.panel._dragging_panel == false,
+    assert(panel3._dragging_panel == false,
         "releasing the mouse (via the scene) should stop the panel drag")
 
     -- It should really be stopped: further mouse_moved calls (as if the
     -- mouse kept moving after release) must not keep relocating the panel.
-    local gx_after_release = scene3.panel.grid_x
+    local gx_after_release = panel3.grid_x
     scene3:mouse_moved(tb.x + 500, tb.y + 500)
-    assert(scene3.panel.grid_x == gx_after_release,
+    assert(panel3.grid_x == gx_after_release,
         "the panel must not keep following the cursor after mouse_released")
 
     print("PASS: kitchen_scene: dragging the panel by its title bar actually stops on mouse_released")
@@ -256,7 +257,7 @@ do
     end
     assert(microwave4, "on_enter should have placed a microwave")
 
-    scene4.panel = ItemPanel.new(microwave4)
+    scene4.panels = { ItemPanel.new(microwave4) }
 
     -- Move a raw_meat item from the floor into the panel and cook it, the
     -- same way Test 2 already covers the transfer itself.
@@ -381,15 +382,16 @@ do
     scene6:mouse_released(ccx, ccy)
 
     assert(scene6.grid.dragging == nil, "drop should clear the grid's drag state either way")
-    assert(scene6.panel == nil, "dropping on a merchant's body should not open a panel")
+    assert(#scene6.panels == 0, "dropping on a merchant's body should not open a panel")
     assert(scene6.day_state.customers_served == served_before_drop,
         "dropping an item on a merchant's body should not trigger serve/dismiss")
     assert(meat6.grid == scene6.grid, "the dropped item should fall through to normal grid-drop handling")
 
     -- Steps 1-3: clicking the merchant's body opens their stock panel.
     scene6:mouse_pressed(scene6.customer.x, scene6.customer.y)
-    assert(scene6.panel ~= nil, "clicking the merchant's body should open their stock panel")
-    assert(scene6.panel.item == scene6.customer, "the panel should wrap the customer itself")
+    assert(#scene6.panels == 1, "clicking the merchant's body should open their stock panel")
+    local merchant_panel6 = scene6.panels[1]
+    assert(merchant_panel6.item == scene6.customer, "the panel should wrap the customer itself")
 
     -- Step 4: drag a stock item out of the merchant's panel onto the main
     -- floor grid, at a cell free per on_enter's starting layout (microwave
@@ -432,11 +434,11 @@ do
     local served_before_leave   = scene6.day_state.customers_served
     local currency_before_leave = scene6.day_state.currency
 
-    local leave = scene6.panel.buttons["Leave"]
+    local leave = merchant_panel6.buttons["Leave"]
     assert(leave, "merchant panel should have a Leave button")
     scene6:mouse_pressed(leave.x + leave.w / 2, leave.y + leave.h / 2)
 
-    assert(scene6.panel == nil, "clicking Leave should close the panel")
+    assert(#scene6.panels == 0, "clicking Leave should close the panel")
     assert(scene6.customer.state == "walking_out", "clicking Leave should send the merchant into walking_out")
     assert(scene6.day_state.customers_served == served_before_leave + 1,
         "merchant leaving should still increment customers_served")
@@ -479,7 +481,7 @@ do
     end
     assert(microwave7, "on_enter should have placed a microwave")
 
-    scene7.panel = ItemPanel.new(microwave7)
+    scene7.panels = { ItemPanel.new(microwave7) }
 
     -- Move a raw_meat item into the microwave's panel first (same pattern
     -- other tests in this file already use), so there's something in an
@@ -519,6 +521,14 @@ do
     assert(microwave7.panel.drag_preview_col == nil and microwave7.panel.drag_preview_row == nil,
         "the panel's own grid should not have a stale preview while the cursor is over the main grid")
 
+    -- The item's sprite must keep following the cursor here too, not just
+    -- while hovering the grid it was originally picked up from - the owner
+    -- grid still gets a normal mouse_moved() call every time regardless of
+    -- hover target, which is what drives Grid:_position_dragging_sprite.
+    assert(meat7.sprite.x == (gx7 + 1) - meat7.sprite.width / 2
+        and meat7.sprite.y == (gy7 + 1) - meat7.sprite.height / 2,
+        "dragged item's sprite should stay centered on the cursor even while hovering a different grid")
+
     -- Move back over the panel's own grid: the override on the main grid
     -- should clear, and the panel grid should resume tracking normally.
     scene7:mouse_moved(px7 + 1, py7 + 1)
@@ -532,6 +542,154 @@ do
         "both grids' preview overrides should be cleared once the drag ends")
 
     print("PASS: kitchen_scene: drop-preview for an item dragged out of a panel uses the grid it's actually hovering over")
+end
+
+-- Test 8: multiple panels can be open at once. Opening a second doesn't
+-- close/replace the first; re-triggering an already-open panel's opener
+-- doesn't duplicate it (brings it to front instead); clicking anywhere on
+-- an open panel's backdrop brings it to front; closing one panel doesn't
+-- affect another that's also open.
+
+do
+    local ItemPanel = require("lua/game/item_panel")
+
+    local ctx8 = runner.setup(function() return KitchenScene.new() end)
+    local scene8 = ctx8.sm.current
+
+    scene8.customer:show({
+        kind       = "merchant",
+        name       = "Merchant",
+        messages   = { "Fresh stock, take a look!" },
+        stock      = { "raw_meat" },
+        walk_speed = 1000,
+    })
+    runner.fast_forward_until(ctx8, function() return scene8.customer:arrived() end, 0)
+
+    local microwave8
+    for _, it in ipairs(scene8.grid:items()) do
+        if it.type_id == "microwave" then microwave8 = it end
+    end
+    assert(microwave8, "on_enter should have placed a microwave")
+
+    -- Open the merchant's panel first (nothing else open yet, so there's no
+    -- risk of an already-open panel's backdrop accidentally covering the
+    -- customer's clickable body and absorbing this click instead).
+    scene8:mouse_pressed(scene8.customer.x, scene8.customer.y)
+    assert(#scene8.panels == 1, "clicking the merchant should open their panel")
+    local panelB = scene8.panels[1]
+    assert(panelB.item == scene8.customer)
+
+    -- Now double-click the microwave (on the main floor grid, well below
+    -- the split line - never overlaps a panel, which always sits above it)
+    -- to open a second, different panel alongside the first.
+    local mx8, my8 = scene8.grid:cell_to_world(0, 0)
+    scene8:mouse_pressed(mx8 + 1, my8 + 1)
+    scene8:mouse_released(mx8 + 1, my8 + 1)
+    scene8:mouse_pressed(mx8 + 1, my8 + 1)
+    scene8:mouse_released(mx8 + 1, my8 + 1)
+    assert(#scene8.panels == 2, "opening a second panel should not close the first")
+    local panelA = scene8.panels[2]
+    assert(panelA.item == microwave8)
+    assert(scene8.panels[1] == panelB, "the merchant panel should still be open, now at the back")
+
+    -- Re-double-clicking the microwave must not open a duplicate panel - it
+    -- should bring the existing one to front instead. This click is still
+    -- on the main grid, unaffected by either panel's screen position.
+    scene8:mouse_pressed(mx8 + 1, my8 + 1)
+    scene8:mouse_released(mx8 + 1, my8 + 1)
+    scene8:mouse_pressed(mx8 + 1, my8 + 1)
+    scene8:mouse_released(mx8 + 1, my8 + 1)
+    assert(#scene8.panels == 2, "re-opening an already-open panel should not duplicate it")
+    assert(scene8.panels[2] == panelA, "re-triggering the microwave panel should keep/bring it to front")
+    assert(scene8.panels[1] == panelB)
+
+    -- Move the merchant panel (currently at the back) somewhere guaranteed
+    -- clear of the microwave panel's backdrop, so clicking it is
+    -- unambiguous regardless of either panel's exact default size/position.
+    panelB:_layout(20, 20)
+    assert(panelB.bg.x + panelB.bg.w < panelA.bg.x or panelB.bg.y + panelB.bg.h < panelA.bg.y,
+        "sanity check: repositioned merchant panel should not overlap the microwave panel's backdrop")
+
+    scene8:mouse_pressed(panelB.title_bar.x + 5, panelB.title_bar.y + 5)
+    assert(scene8.panels[2] == panelB, "clicking a panel's backdrop should bring it to front")
+    assert(scene8.panels[1] == panelA, "the other panel should now be at the back")
+
+    -- Closing one panel (the microwave's, via its X) must not affect the
+    -- other, still-open one.
+    scene8:mouse_pressed(panelA.close_button.x + panelA.close_button.w / 2,
+        panelA.close_button.y + panelA.close_button.h / 2)
+    assert(#scene8.panels == 1, "closing one panel should not close the other")
+    assert(scene8.panels[1] == panelB, "the remaining panel should be the merchant's")
+
+    print("PASS: kitchen_scene: multiple panels can be open at once, with dedup and bring-to-front")
+end
+
+-- Test 9: dragging an item directly between two open panels (not via the
+-- main floor grid at all) works, generalizing the same cross-grid transfer
+-- already covered for panel<->main-grid in Test 2.
+
+do
+    local ItemPanel = require("lua/game/item_panel")
+
+    local ctx9 = runner.setup(function() return KitchenScene.new() end)
+    local scene9 = ctx9.sm.current
+
+    scene9.customer:show({
+        kind       = "merchant",
+        name       = "Merchant",
+        messages   = { "Fresh stock, take a look!" },
+        stock      = { "raw_meat" },
+        walk_speed = 1000,
+    })
+    runner.fast_forward_until(ctx9, function() return scene9.customer:arrived() end, 0)
+
+    local microwave9
+    for _, it in ipairs(scene9.grid:items()) do
+        if it.type_id == "microwave" then microwave9 = it end
+    end
+    assert(microwave9, "on_enter should have placed a microwave")
+
+    local panelA9 = ItemPanel.new(microwave9)
+    local panelB9 = ItemPanel.new(scene9.customer)
+    -- Explicit, non-overlapping positions so every world position on screen
+    -- belongs unambiguously to exactly one of the two panels' grids.
+    panelA9:_layout(50, 50)
+    panelB9:_layout(800, 50)
+    scene9.panels = { panelA9, panelB9 }
+
+    local stock9
+    for _, it in ipairs(scene9.customer.panel:items()) do
+        stock9 = it
+        break
+    end
+    assert(stock9, "merchant's panel should contain stock")
+
+    -- Drag the merchant's stock item straight into the microwave's panel.
+    local sx9, sy9 = scene9.customer.panel:cell_to_world(stock9.cell_col, stock9.cell_row)
+    scene9:mouse_pressed(sx9 + 1, sy9 + 1)
+    assert(scene9.customer.panel.dragging == stock9, "should be dragging the stock item out of the merchant's panel")
+
+    local tx9, ty9 = microwave9.panel:cell_to_world(0, 0)
+    scene9:mouse_moved(tx9 + 1, ty9 + 1)
+    scene9:mouse_released(tx9 + 1, ty9 + 1)
+
+    assert(scene9.customer.panel.dragging == nil, "drop should clear the merchant panel's drag state")
+    assert(microwave9.panel.dragging == nil, "the microwave panel should not be left mid-drag either")
+    assert(stock9.grid == microwave9.panel, "item dragged between two open panels should land in the target panel")
+
+    local still_in_merchant_panel = false
+    for _, it in ipairs(scene9.customer.panel:items()) do
+        if it == stock9 then still_in_merchant_panel = true end
+    end
+    assert(not still_in_merchant_panel, "item should no longer be in the merchant's panel")
+
+    local in_microwave_panel = false
+    for _, it in ipairs(microwave9.panel:items()) do
+        if it == stock9 then in_microwave_panel = true end
+    end
+    assert(in_microwave_panel, "item should now be listed in the microwave's panel")
+
+    print("PASS: kitchen_scene: dragging an item directly between two open panels transfers it")
 end
 
 print("ALL TESTS PASSED")
