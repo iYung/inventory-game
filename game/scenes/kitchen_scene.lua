@@ -102,17 +102,17 @@ function KitchenScene:on_enter()
         self.grid:place(potato, cell[1], cell[2])
     end
 
-    -- A plant (broccoli source) and an onion plant, pre-filled via daily_fill.
-    -- plant at (0,3): occupies (0,3)-(2,3) - clear of all items above.
-    -- onion_plant at (4,2): occupies (4,2)-(6,2) - clear of potatoes at (2,2)/(3,2)
+    -- A broccoli garden and onion garden (2x2 each), pre-filled via daily_fill.
+    -- broccoli_garden at (0,3): occupies (0,3)-(1,4) - clear of all items above.
+    -- onion_garden at (4,2): occupies (4,2)-(5,3) - clear of potatoes at (2,2)/(3,2)
     -- and the fryer at (6,0)-(7,1).
-    local plant = Item.new("plant")
-    assert(self.grid:can_place(plant, 0, 3), "plant starting cell should be free")
-    self.grid:place(plant, 0, 3)
+    local broccoli_garden = Item.new("broccoli_garden")
+    assert(self.grid:can_place(broccoli_garden, 0, 3), "broccoli_garden starting cell should be free")
+    self.grid:place(broccoli_garden, 0, 3)
 
-    local onion_plant = Item.new("onion_plant")
-    assert(self.grid:can_place(onion_plant, 4, 2), "onion_plant starting cell should be free")
-    self.grid:place(onion_plant, 4, 2)
+    local onion_garden = Item.new("onion_garden")
+    assert(self.grid:can_place(onion_garden, 4, 2), "onion_garden starting cell should be free")
+    self.grid:place(onion_garden, 4, 2)
 
     self.day_state = DayState.new()
     self.day_state:start_day(config.CUSTOMERS_PER_DAY)

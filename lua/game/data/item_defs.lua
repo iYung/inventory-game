@@ -160,24 +160,24 @@ local item_defs = {
         tags  = { "Hearty" },
     },
 
-    plant = {
-        name      = "Plant",
-        footprint = { {0,0}, {1,0}, {2,0} },
+    broccoli_garden = {
+        name      = "Broccoli Garden",
+        footprint = { {0,0}, {1,0}, {0,1}, {1,1} },
         color     = { 0.20, 0.50, 0.15, 1 },
         has_panel  = true,
-        panel_cols = 3,
-        panel_rows = 1,
-        daily_fill = { broccoli = 3 },
+        panel_cols = 2,
+        panel_rows = 2,
+        daily_fill = { broccoli = 4 },
     },
 
-    onion_plant = {
-        name      = "Onion Plant",
-        footprint = { {0,0}, {1,0}, {2,0} },
+    onion_garden = {
+        name      = "Onion Garden",
+        footprint = { {0,0}, {1,0}, {0,1}, {1,1} },
         color     = { 0.65, 0.50, 0.20, 1 },
         has_panel  = true,
-        panel_cols = 3,
-        panel_rows = 1,
-        daily_fill = { onion = 3 },
+        panel_cols = 2,
+        panel_rows = 2,
+        daily_fill = { onion = 4 },
     },
 
     fryer = {

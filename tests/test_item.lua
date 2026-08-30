@@ -323,34 +323,34 @@ do
     print("PASS: item: potato -> baked_potato recipe works via the microwave's Cook button")
 end
 
--- Test 12: a newly created plant has its panel pre-filled with 3 broccoli.
+-- Test 12: a newly created broccoli_garden has its panel pre-filled with 4 broccoli.
 do
-    local plant = Item.new("plant")
-    assert(plant.panel ~= nil, "plant should have a panel")
-    local items = plant.panel:items()
-    assert(#items == 3, "plant panel should start with 3 items, got " .. #items)
+    local garden = Item.new("broccoli_garden")
+    assert(garden.panel ~= nil, "broccoli_garden should have a panel")
+    local items = garden.panel:items()
+    assert(#items == 4, "broccoli_garden panel should start with 4 items, got " .. #items)
     for i, it in ipairs(items) do
         assert(it.type_id == "broccoli",
-            "plant panel item " .. i .. " should be broccoli, got " .. tostring(it.type_id))
+            "broccoli_garden panel item " .. i .. " should be broccoli, got " .. tostring(it.type_id))
     end
-    print("PASS: item: newly created plant has 3 broccoli pre-filled in its panel")
+    print("PASS: item: newly created broccoli_garden has 4 broccoli pre-filled in its panel")
 end
 
--- Test 13: removing one broccoli and calling refill_daily() restores 3 broccoli.
+-- Test 13: removing one broccoli and calling refill_daily() restores 4 broccoli.
 do
-    local plant = Item.new("plant")
-    local items = plant.panel:items()
-    plant.panel:remove(items[1])
-    assert(#plant.panel:items() == 2, "plant panel should have 2 items after removing one")
+    local garden = Item.new("broccoli_garden")
+    local items = garden.panel:items()
+    garden.panel:remove(items[1])
+    assert(#garden.panel:items() == 3, "broccoli_garden panel should have 3 items after removing one")
 
-    plant:refill_daily()
-    local refilled = plant.panel:items()
-    assert(#refilled == 3, "plant panel should be back to 3 items after refill_daily(), got " .. #refilled)
+    garden:refill_daily()
+    local refilled = garden.panel:items()
+    assert(#refilled == 4, "broccoli_garden panel should be back to 4 items after refill_daily(), got " .. #refilled)
     for i, it in ipairs(refilled) do
         assert(it.type_id == "broccoli",
-            "plant panel item " .. i .. " should be broccoli after refill, got " .. tostring(it.type_id))
+            "broccoli_garden panel item " .. i .. " should be broccoli after refill, got " .. tostring(it.type_id))
     end
-    print("PASS: item: refill_daily() restores plant panel back to 3 broccoli after one is removed")
+    print("PASS: item: refill_daily() restores broccoli_garden panel back to 4 broccoli after one is removed")
 end
 
 -- Test 14: refill_daily() on an item without daily_fill (e.g. raw_meat) is a no-op.
