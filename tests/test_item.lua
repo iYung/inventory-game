@@ -1,5 +1,24 @@
 local Item = require("lua/game/item")
 
+-- Test 0: tags - raw/unprepared items carry none; prepared items do.
+do
+    local raw = Item.new("raw_meat")
+    assert(#raw.tags == 0, "raw_meat should carry no tags, got " .. #raw.tags)
+
+    local cooked = Item.new("cooked_meat")
+    assert(#cooked.tags == 1 and cooked.tags[1] == "Protein",
+        "cooked_meat should be tagged Protein")
+
+    local broccoli = Item.new("broccoli")
+    assert(#broccoli.tags == 0, "raw broccoli should carry no tags")
+
+    local steamed = Item.new("steamed_broccoli")
+    assert(#steamed.tags == 1 and steamed.tags[1] == "Healthy",
+        "steamed_broccoli should be tagged Healthy")
+
+    print("PASS: item: raw items carry no tags, prepared items carry their def's tags")
+end
+
 -- Test 1: rotate cycles through 4 states and returns to the original
 -- footprint on the 4th call.
 do

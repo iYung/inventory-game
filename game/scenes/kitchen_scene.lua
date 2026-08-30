@@ -68,6 +68,17 @@ function KitchenScene:on_enter()
         self.grid:place(meat, cell[1], cell[2])
     end
 
+    -- A couple of raw broccoli too, so the Steam recipe / Healthy tag is
+    -- actually reachable from the starting floor layout, not just via the
+    -- merchant. (2,1)/(3,1) sit just below the meat row - clear of the
+    -- microwave's (0,0)-(1,1) footprint and the meat at (2,0)/(3,0)/(4,0).
+    local broccoli_cells = { { 2, 1 }, { 3, 1 } }
+    for _, cell in ipairs(broccoli_cells) do
+        local broccoli = Item.new("broccoli")
+        assert(self.grid:can_place(broccoli, cell[1], cell[2]), "broccoli starting cell should be free")
+        self.grid:place(broccoli, cell[1], cell[2])
+    end
+
     self.day_state = DayState.new()
     self.day_state:start_day(config.CUSTOMERS_PER_DAY)
     self.queue = CustomerQueue.new(config.CUSTOMERS_PER_DAY)
@@ -108,6 +119,14 @@ end
 
 local function point_in_rect(x, y, r)
     return x >= r.x and x <= r.x + r.w and y >= r.y and y <= r.y + r.h
+end
+
+-- Whether `item` carries `tag` among its Item.tags.
+local function has_tag(item, tag)
+    for _, t in ipairs(item.tags) do
+        if t == tag then return true end
+    end
+    return false
 end
 
 -- Whether (x,y) lands on the customer's on-screen body.
@@ -466,7 +485,7 @@ function KitchenScene:mouse_released(x, y)
     if self.customer:arrived() and self.customer.kind ~= "merchant" and self:_customer_hit(x, y) then
         clear_drag(owner, item)
 
-        if item.type_id == self.customer.requested_type then
+        if has_tag(item, self.customer.requested_tag) then
             self.customer:serve()
             self.day_state:record_serve()
         else

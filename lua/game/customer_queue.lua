@@ -4,14 +4,50 @@
 -- shape expected by Customer:show(cfg) — see lua/game/customer.lua).
 -- MVP: every customer in the queue is identical.
 
+local item_defs = require("lua/game/data/item_defs")
+
 local CustomerQueue = {}
 CustomerQueue.__index = CustomerQueue
 
+-- Friendly per-tag greeting messages for food-order customers. Any tag not
+-- listed here falls back to a generic message (see message_for_tag below)
+-- so new tags don't require a change here to work correctly.
+local TAG_MESSAGES = {
+    Protein = "Could I get something with protein?",
+    Healthy = "Could I get something healthy?",
+}
+
+local function message_for_tag(tag)
+    return TAG_MESSAGES[tag] or ('Could I get something tagged "' .. tag .. '"?')
+end
+
+-- Collects every unique tag actually used anywhere in item_defs, sorted
+-- alphabetically for deterministic iteration order (pairs() order over
+-- item_defs is not guaranteed). Sorting only makes the SET's iteration
+-- order deterministic - the tag ultimately picked by make_default_cfg is
+-- still random via math.random.
+local function known_tags()
+    local seen, tags = {}, {}
+    for _, def in pairs(item_defs) do
+        for _, tag in ipairs(def.tags or {}) do
+            if not seen[tag] then
+                seen[tag] = true
+                tags[#tags + 1] = tag
+            end
+        end
+    end
+    table.sort(tags)
+    return tags
+end
+
 local function make_default_cfg()
+    local tags = known_tags()
+    local tag  = tags[math.random(1, #tags)]
+
     return {
         name            = "Customer",
-        requested_type  = "cooked_meat",
-        messages        = { "Could I get some cooked meat?" },
+        requested_tag   = tag,
+        messages        = { message_for_tag(tag) },
         after_messages  = { "Thanks, that's delicious!" },
         walk_speed      = 80,
     }
@@ -22,7 +58,7 @@ local function make_merchant_cfg()
         kind           = "merchant",
         name           = "Merchant",
         messages       = { "Fresh stock, take a look!" },
-        stock          = { "raw_meat", "raw_meat", "cooked_meat" },
+        stock          = { "raw_meat", "raw_meat", "cooked_meat", "broccoli" },
         walk_speed     = 80,
     }
 end

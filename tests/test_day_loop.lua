@@ -1,5 +1,34 @@
 local CustomerQueue = require("lua/game/customer_queue")
 local DayState      = require("lua/game/day_state")
+local item_defs     = require("lua/game/data/item_defs")
+
+-- Mirrors customer_queue.lua's own known_tags()/TAG_MESSAGES scan, kept
+-- separately here on purpose: assertions below check the real code's
+-- output against this independently-derived expectation rather than a
+-- hardcoded literal, so this test doesn't need updating if a tag is
+-- added/removed in item_defs later.
+local function known_tags()
+    local seen, tags = {}, {}
+    for _, def in pairs(item_defs) do
+        for _, tag in ipairs(def.tags or {}) do
+            if not seen[tag] then
+                seen[tag] = true
+                tags[#tags + 1] = tag
+            end
+        end
+    end
+    table.sort(tags)
+    return tags
+end
+
+local TAG_MESSAGES = {
+    Protein = "Could I get something with protein?",
+    Healthy = "Could I get something healthy?",
+}
+
+local function expected_message_for_tag(tag)
+    return TAG_MESSAGES[tag] or ('Could I get something tagged "' .. tag .. '"?')
+end
 
 -- Test 1: CustomerQueue exhausts after N next() calls, each returning a
 -- config table with the expected fields; has_next() flips false once
@@ -26,7 +55,17 @@ do
             assert(cfg.name == "Merchant", "merchant config should have name Merchant")
         else
             assert(cfg.name == "Customer", "order config should have a name field")
-            assert(cfg.requested_type == "cooked_meat", "order config should have requested_type field")
+
+            local tags = known_tags()
+            local found = false
+            for _, tag in ipairs(tags) do
+                if cfg.requested_tag == tag then found = true end
+            end
+            assert(found, "order config's requested_tag should be one of the tags present in item_defs")
+
+            assert(type(cfg.messages) == "table" and cfg.messages[1] == expected_message_for_tag(cfg.requested_tag),
+                "order config's messages[1] should match TAG_MESSAGES (or fallback) for its requested_tag")
+
             assert(type(cfg.after_messages) == "table" and #cfg.after_messages > 0, "order config should have non-empty after_messages")
         end
     end
@@ -71,9 +110,10 @@ do
                 end
                 assert(counts.raw_meat == 2, "merchant stock should contain exactly 2 raw_meat")
                 assert(counts.cooked_meat == 1, "merchant stock should contain exactly 1 cooked_meat")
+                assert(counts.broccoli and counts.broccoli >= 1, "merchant stock should contain broccoli")
                 local total_stock = 0
                 for _ in pairs(counts) do total_stock = total_stock + 1 end
-                assert(total_stock == 2, "merchant stock should only contain raw_meat and cooked_meat entries")
+                assert(total_stock == 3, "merchant stock should only contain raw_meat, cooked_meat, and broccoli entries")
             else
                 order_count = order_count + 1
                 assert(cfg.kind == nil or cfg.kind == "order",
@@ -118,6 +158,52 @@ do
         "merchant slot should vary across runs (saw " .. distinct .. " distinct index/indices over " .. trials .. " trials)")
 
     print("PASS: customer_queue: merchant slot position varies across multiple new() calls")
+end
+
+-- Test 1d: across many CustomerQueue.new() draws, every order config's
+-- requested_tag/messages invariant holds (requested_tag is always one of
+-- the tags actually present in item_defs, and messages[1] always matches
+-- TAG_MESSAGES/fallback for that tag), and the merchant config's stock
+-- always contains broccoli. Also confirms, since the tag pick is random
+-- per customer, that more than one distinct tag is actually observed over
+-- enough trials (rather than every draw coincidentally picking the same
+-- one) — same spirit as Test 1c's merchant-slot-varies check.
+do
+    local total  = 5
+    local trials = 50
+    local seen_tags = {}
+
+    for _ = 1, trials do
+        local q = CustomerQueue.new(total)
+        while q:has_next() do
+            local cfg = q:next()
+            if cfg.kind == "merchant" then
+                local has_broccoli = false
+                for _, item_type in ipairs(cfg.stock) do
+                    if item_type == "broccoli" then has_broccoli = true end
+                end
+                assert(has_broccoli, "merchant config's stock should contain broccoli")
+            else
+                local tags = known_tags()
+                local found = false
+                for _, tag in ipairs(tags) do
+                    if cfg.requested_tag == tag then found = true end
+                end
+                assert(found, "order config's requested_tag should always be one of the tags present in item_defs")
+                seen_tags[cfg.requested_tag] = true
+
+                assert(cfg.messages[1] == expected_message_for_tag(cfg.requested_tag),
+                    "order config's messages[1] should always match TAG_MESSAGES/fallback for its requested_tag")
+            end
+        end
+    end
+
+    local distinct = 0
+    for _ in pairs(seen_tags) do distinct = distinct + 1 end
+    assert(distinct > 1,
+        "requested_tag should vary across runs (saw " .. distinct .. " distinct tag(s) over " .. trials .. " trials)")
+
+    print("PASS: customer_queue: requested_tag/messages invariant holds and varies across many new() draws; merchant stock always has broccoli")
 end
 
 -- Test 2: DayState tracks day/customers_served/customers_total/currency

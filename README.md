@@ -1,13 +1,16 @@
 # love-exemplar
 
-A Love2D cooking-inventory game. Customers arrive one at a time up top requesting
-a food item; you drag and rotate ingredients and appliances around a grid
+A Love2D cooking-inventory game. Customers arrive one at a time up top
+requesting a food *tag/category* (e.g. "something with protein") rather than
+a specific item; you drag and rotate ingredients and appliances around a grid
 inventory on the bottom half, run timed actions in containers like the
-microwave (double-click it to open its sub-inventory panel), and serve
-customers by dropping a matching item on them. One visitor per day is a
-merchant instead of a food order — click them to open their stock panel and
-drag free items into your grid, then click "Leave" to send them off. Once
-everyone for the day is served, a "Next Day" button appears to advance.
+microwave (double-click it to open its sub-inventory panel — it can cook
+raw meat into Protein-tagged cooked meat, or steam broccoli into
+Healthy-tagged steamed broccoli), and serve customers by dropping any item
+carrying their requested tag on them. One visitor per day is a merchant
+instead of a food order — click them to open their stock panel and drag free
+items into your grid, then click "Leave" to send them off. Once everyone for
+the day is served, a "Next Day" button appears to advance.
 
 ## Structure
 
