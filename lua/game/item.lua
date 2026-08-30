@@ -61,6 +61,9 @@ function Item.new(type_id)
     self.cell_row      = nil
     self.grid           = nil
     self.action_state  = {}
+    -- Plain field, not a method like footprint() - tags don't depend on
+    -- rotation state, they never change after construction.
+    self.tags          = def.tags or {}
 
     local w, h = bounding_box(def.footprint)
     self.sprite = Sprite.new(0, 0, w * config.U, h * config.U)
@@ -125,11 +128,37 @@ local function count_panel_items(panel)
     return counts
 end
 
--- Validates `action.requires` against current panel contents; starts the
--- timer (self.action_state[name] = { running = true, elapsed = 0 }) and
--- returns true if satisfied. Returns false (no-op) if the action doesn't
--- exist, there is no panel, it's already running, or requirements aren't
--- met.
+-- An action's recipe list: action.recipes if present (a button that
+-- handles more than one ingredient, e.g. the microwave's "Cook" working
+-- for both raw meat and broccoli), else a single recipe built from the
+-- action's own flat requires/produces (a button with exactly one recipe
+-- doesn't need the wrapper). Either way, callers just get a list of
+-- { requires, produces } to try in order.
+local function action_recipes(action)
+    return action.recipes or { { requires = action.requires, produces = action.produces } }
+end
+
+-- Returns the first recipe in `action` whose `requires` is satisfied by
+-- `counts` (from count_panel_items), or nil if none match.
+local function matching_recipe(action, counts)
+    for _, recipe in ipairs(action_recipes(action)) do
+        local satisfied = true
+        for type_id, needed in pairs(recipe.requires or {}) do
+            if (counts[type_id] or 0) < needed then
+                satisfied = false
+                break
+            end
+        end
+        if satisfied then return recipe end
+    end
+    return nil
+end
+
+-- Finds a recipe on `action` satisfied by the panel's current contents;
+-- starts the timer (self.action_state[name] = { running = true, elapsed =
+-- 0, recipe = <the matched recipe> }) and returns true if one was found.
+-- Returns false (no-op) if the action doesn't exist, there is no panel,
+-- it's already running, or no recipe's requirements are met.
 function Item:start_action(name)
     local def = item_defs[self.type_id]
     local action = find_action(def, name)
@@ -143,14 +172,12 @@ function Item:start_action(name)
         return false
     end
 
-    local counts = count_panel_items(self.panel)
-    for type_id, needed in pairs(action.requires or {}) do
-        if (counts[type_id] or 0) < needed then
-            return false
-        end
+    local recipe = matching_recipe(action, count_panel_items(self.panel))
+    if not recipe then
+        return false
     end
 
-    self.action_state[name] = { running = true, elapsed = 0 }
+    self.action_state[name] = { running = true, elapsed = 0, recipe = recipe }
     return true
 end
 
@@ -192,12 +219,12 @@ local function place_first_fit(panel, item, cols, rows)
     return false
 end
 
-local function complete_action(self, def, action)
-    for type_id, count in pairs(action.requires or {}) do
+local function complete_action(self, def, recipe)
+    for type_id, count in pairs(recipe.requires or {}) do
         remove_matching(self.panel, type_id, count)
     end
 
-    for type_id, count in pairs(action.produces or {}) do
+    for type_id, count in pairs(recipe.produces or {}) do
         for _ = 1, count do
             local new_item = Item.new(type_id)
             place_first_fit(self.panel, new_item, def.panel_cols, def.panel_rows)
@@ -223,7 +250,7 @@ function Item:update(dt)
         if state and state.running then
             state.elapsed = state.elapsed + dt
             if state.elapsed >= action.duration then
-                complete_action(self, def, action)
+                complete_action(self, def, state.recipe)
                 self.action_state[action.name] = nil
             end
         end

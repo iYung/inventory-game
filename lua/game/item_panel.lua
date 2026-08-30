@@ -159,6 +159,15 @@ local function count_panel_items(panel)
     return counts
 end
 
+-- An action's recipe list: action.recipes if present (a button that
+-- handles more than one ingredient, e.g. the microwave's "Cook" working
+-- for both raw meat and broccoli), else a single recipe built from the
+-- action's own flat requires. Mirrors lua/game/item.lua's identical
+-- helper (read-only here too, same duplication reasoning as above).
+local function action_recipes(action)
+    return action.recipes or { { requires = action.requires, produces = action.produces } }
+end
+
 function ItemPanel:_point_in_grid(x, y)
     return x >= self.grid_x and x < self.grid_x + self.grid_w
        and y >= self.grid_y and y < self.grid_y + self.grid_h
@@ -200,13 +209,18 @@ function ItemPanel:is_action_enabled(name)
     end
 
     local counts = count_panel_items(self.item.panel)
-    for type_id, needed in pairs(action.requires or {}) do
-        if (counts[type_id] or 0) < needed then
-            return false
+    for _, recipe in ipairs(action_recipes(action)) do
+        local satisfied = true
+        for type_id, needed in pairs(recipe.requires or {}) do
+            if (counts[type_id] or 0) < needed then
+                satisfied = false
+                break
+            end
         end
+        if satisfied then return true end
     end
 
-    return true
+    return false
 end
 
 -- Input forwarding ------------------------------------------------------

@@ -9,24 +9,30 @@
 -- food-order customer. Tests below that need a deterministic food-order
 -- customer force one directly via Customer:show(order_cfg(...)) rather than
 -- relying on whichever config CustomerQueue randomly drew first — see
--- order_cfg() just below. (The MVP default order config always requests
--- "cooked_meat", but on_enter() only pre-places "raw_meat" on the grid —
--- cooking it requires running the microwave's timed action first — so
--- order_cfg() is overridable per test, e.g. Test 1 below asks for
--- "raw_meat" directly to test the serve/consume mechanism itself without
--- also driving the cook timer; that pipeline is covered separately by
+-- order_cfg() just below. (The default order config now requests the
+-- "Protein" tag, which only "cooked_meat" carries — raw items carry no tags
+-- at all and can never satisfy any tag request, by design; see
+-- lua/game/data/item_defs.lua. on_enter() only pre-places raw ingredients
+-- on the grid, so a test that wants a Protein-tagged item without driving
+-- the microwave's cook timer places a fresh cooked_meat Item directly on
+-- the grid instead — see the first test below. The cook-it-yourself
+-- pipeline through this scene is covered by Test 4 further down; the
+-- Item/ItemPanel action-timer mechanism itself is covered separately by
 -- tests/test_item.lua / tests/test_item_panel.lua.)
 
 local runner        = require("lua/headless/runner")
 local KitchenScene   = require("game/scenes/kitchen_scene")
+local Item           = require("lua/game/item")
 
 -- A deterministic food-order (kind == "order", i.e. kind omitted) customer
 -- config, with any fields overridden. Mirrors customer_queue.lua's
--- make_default_cfg() shape.
+-- make_default_cfg() shape. Defaults to requesting the "Protein" tag (the
+-- tag "cooked_meat" carries) since that's the tag this file's tests most
+-- often want; individual tests override requested_tag as needed.
 local function order_cfg(overrides)
     local cfg = {
         name            = "Test Customer",
-        requested_type  = "cooked_meat",
+        requested_tag   = "Protein",
         messages        = { "Could I get some food?" },
         after_messages  = { "Thanks, that's delicious!" },
         walk_speed      = 80,
@@ -43,11 +49,10 @@ end)
 
 local scene = ctx.sm.current
 
--- Force a known food-order config (requesting raw_meat, so the drag-a-raw-
--- meat-item-off-the-floor serve below doesn't need to drive the cook timer)
--- regardless of what CustomerQueue's random merchant-slot pick queued up
--- first for this day.
-scene.customer:show(order_cfg({ requested_type = "raw_meat" }))
+-- Force a known food-order config (default order_cfg() now requests the
+-- "Protein" tag) regardless of what CustomerQueue's random merchant-slot
+-- pick queued up first for this day.
+scene.customer:show(order_cfg())
 
 -- Tick (dt = 1.0 per step) until the first customer has walked in and is
 -- waiting.
@@ -56,27 +61,26 @@ runner.fast_forward_until(ctx, function()
 end, 0)
 
 assert(scene.customer:arrived(), "customer should be waiting after fast-forwarding")
-assert(scene.customer.requested_type == "raw_meat", "sanity check: forced order config should request raw_meat")
+assert(scene.customer.requested_tag == "Protein", "sanity check: forced order config should request Protein")
 
--- Find the raw_meat item placed at on_enter and its world position.
-local meat
-for _, it in ipairs(scene.grid:items()) do
-    if it.type_id == "raw_meat" then
-        meat = it
-        break
-    end
-end
-assert(meat, "on_enter should have placed a raw_meat item on the grid")
+-- Place a fresh cooked_meat item (tagged "Protein", see item_defs.lua)
+-- directly on a free grid cell, rather than driving the microwave's cook
+-- timer here - that pipeline is exercised end-to-end through this scene by
+-- Test 4 below, and the Item-level timer mechanism itself is covered by
+-- tests/test_item.lua / tests/test_item_panel.lua.
+local cooked = Item.new("cooked_meat")
+assert(scene.grid:can_place(cooked, 5, 0), "(5,0) should be free for the test's cooked_meat item")
+scene.grid:place(cooked, 5, 0)
 
-local mx, my = scene.grid:cell_to_world(meat.cell_col, meat.cell_row)
+local mx, my = scene.grid:cell_to_world(cooked.cell_col, cooked.cell_row)
 mx, my = mx + 1, my + 1 -- a point safely inside the item's cell
 
 local currency_before = scene.day_state.currency
 local served_before   = scene.day_state.customers_served
 
--- Start the drag on the raw_meat item.
+-- Start the drag on the cooked_meat item.
 scene:mouse_pressed(mx, my)
-assert(scene.grid.dragging == meat, "mouse_pressed on the meat's cell should start dragging it")
+assert(scene.grid.dragging == cooked, "mouse_pressed on the cooked_meat's cell should start dragging it")
 
 -- Drag it onto the customer (customer.x/y is the sprite's center point, so
 -- it's guaranteed to land inside the customer's clickable body).
@@ -86,18 +90,18 @@ scene:mouse_released(cx, cy)
 
 assert(scene.grid.dragging == nil, "dropping onto the customer should clear the grid's drag state")
 assert(scene.day_state.currency == currency_before + 10,
-    "currency should increase by 10 on a matching-item serve, got " .. tostring(scene.day_state.currency))
+    "currency should increase by 10 on a matching-tag serve, got " .. tostring(scene.day_state.currency))
 assert(scene.day_state.customers_served == served_before + 1,
     "customers_served should increment by 1")
 
 local still_on_grid = false
 for _, it in ipairs(scene.grid:items()) do
-    if it == meat then still_on_grid = true end
+    if it == cooked then still_on_grid = true end
 end
-assert(not still_on_grid, "the served raw_meat item should be removed from the grid")
-assert(meat.grid == nil, "the served item's grid reference should be cleared")
+assert(not still_on_grid, "the served cooked_meat item should be removed from the grid")
+assert(cooked.grid == nil, "the served item's grid reference should be cleared")
 
-print("PASS: kitchen_scene: dragging a matching item onto the waiting customer serves them and consumes the item")
+print("PASS: kitchen_scene: dragging an item carrying the requested tag onto the waiting customer serves them and consumes the item")
 
 -- Regression test: a served customer must actually be able to move on.
 -- Customer:serve() enters "talking_after" to show the thank-you message;
@@ -243,13 +247,14 @@ do
     local scene4 = ctx4.sm.current
 
     -- Force a deterministic food-order customer (requesting the default
-    -- "cooked_meat") regardless of whatever CustomerQueue's random
-    -- merchant-slot pick queued up first for this day.
+    -- "Protein" tag, which only cooked_meat carries) regardless of whatever
+    -- CustomerQueue's random merchant-slot pick queued up first for this
+    -- day.
     scene4.customer:show(order_cfg())
 
     runner.fast_forward_until(ctx4, function() return scene4.customer:arrived() end, 0)
-    assert(scene4.customer.requested_type == "cooked_meat",
-        "sanity check: the forced order customer request should be cooked_meat")
+    assert(scene4.customer.requested_tag == "Protein",
+        "sanity check: the forced order customer request should be Protein")
 
     local microwave4
     for _, it in ipairs(scene4.grid:items()) do
@@ -756,9 +761,9 @@ do
     local ctx11 = runner.setup(function() return KitchenScene.new() end)
     local scene11 = ctx11.sm.current
 
-    scene11.customer:show(order_cfg()) -- default request: cooked_meat
+    scene11.customer:show(order_cfg()) -- default request: Protein
     runner.fast_forward_until(ctx11, function() return scene11.customer:arrived() end, 0)
-    assert(scene11.customer.requested_type == "cooked_meat", "sanity check: forced customer wants cooked_meat")
+    assert(scene11.customer.requested_tag == "Protein", "sanity check: forced customer wants Protein")
 
     local meat11
     for _, it in ipairs(scene11.grid:items()) do
@@ -933,6 +938,142 @@ do
         "the snapped-back item should return to exactly its original cell")
 
     print("PASS: kitchen_scene: dragging an item onto the microwave inserts it into the panel if there's room, else snaps back")
+end
+
+-- Test 15: the broccoli/Cook/steamed_broccoli pipeline works end-to-end
+-- through this scene too, mirroring Test 4's meat/Cook/cooked_meat pipeline
+-- but for the "Healthy" tag - proves the has_tag match-check isn't
+-- special-cased to Protein/cooked_meat, and that the single "Cook" button
+-- auto-matches broccoli's recipe just like it does raw meat's.
+
+do
+    local ItemPanel = require("lua/game/item_panel")
+
+    local ctx15 = runner.setup(function() return KitchenScene.new() end)
+    local scene15 = ctx15.sm.current
+
+    -- Force a deterministic food-order customer requesting "Healthy" (the
+    -- tag only steamed_broccoli carries) regardless of whatever
+    -- CustomerQueue's random merchant-slot pick queued up first for this
+    -- day.
+    scene15.customer:show(order_cfg({
+        requested_tag = "Healthy",
+        messages      = { "Could I get something healthy?" },
+    }))
+    runner.fast_forward_until(ctx15, function() return scene15.customer:arrived() end, 0)
+    assert(scene15.customer.requested_tag == "Healthy",
+        "sanity check: the forced order customer request should be Healthy")
+
+    local microwave15
+    for _, it in ipairs(scene15.grid:items()) do
+        if it.type_id == "microwave" then microwave15 = it end
+    end
+    assert(microwave15, "on_enter should have placed a microwave")
+
+    scene15.panels = { ItemPanel.new(microwave15) }
+
+    -- Move a raw broccoli item from the floor into the panel and steam it,
+    -- the same way Test 2/Test 4 already cover the transfer itself.
+    local broccoli15
+    for _, it in ipairs(scene15.grid:items()) do
+        if it.type_id == "broccoli" then broccoli15 = it end
+    end
+    assert(broccoli15, "on_enter should have placed raw broccoli")
+
+    local bx, by = scene15.grid:cell_to_world(broccoli15.cell_col, broccoli15.cell_row)
+    scene15:mouse_pressed(bx + 1, by + 1)
+    local px, py = microwave15.panel:cell_to_world(0, 0)
+    scene15:mouse_moved(px + 1, py + 1)
+    scene15:mouse_released(px + 1, py + 1)
+    assert(broccoli15.grid == microwave15.panel, "sanity check: broccoli should now be in the panel")
+
+    assert(microwave15:start_action("Cook"), "should be able to start cooking with broccoli in the panel")
+    microwave15:update(3.5) -- past the 3.0s duration
+
+    -- Cooking replaces the broccoli item with a brand new steamed_broccoli
+    -- Item in the freed cell (see lua/game/item.lua's complete_action)
+    -- rather than mutating broccoli15 in place, so look the result up fresh.
+    local steamed15
+    for _, it in ipairs(microwave15.panel:items()) do
+        if it.type_id == "steamed_broccoli" then steamed15 = it end
+    end
+    assert(steamed15, "sanity check: panel should contain a steamed_broccoli item after steaming")
+
+    local currency_before = scene15.day_state.currency
+    local served_before   = scene15.day_state.customers_served
+
+    -- Drag the now-steamed item straight from the panel onto the customer.
+    local smx, smy = microwave15.panel:cell_to_world(steamed15.cell_col, steamed15.cell_row)
+    scene15:mouse_pressed(smx + 1, smy + 1)
+    assert(microwave15.panel.dragging == steamed15, "should be dragging the steamed item out of the panel")
+
+    local cx15, cy15 = scene15.customer.x, scene15.customer.y
+    scene15:mouse_moved(cx15, cy15)
+    scene15:mouse_released(cx15, cy15)
+
+    assert(microwave15.panel.dragging == nil, "dropping onto the customer should clear the panel grid's drag state")
+    assert(scene15.day_state.currency == currency_before + 10,
+        "currency should increase by 10 when serving a Healthy-tagged item for a Healthy request")
+    assert(scene15.day_state.customers_served == served_before + 1,
+        "customers_served should increment when serving directly from the panel")
+    assert(not scene15.customer.dismissed, "the customer should be served, not dismissed")
+
+    local still_in_panel = false
+    for _, it in ipairs(microwave15.panel:items()) do
+        if it == steamed15 then still_in_panel = true end
+    end
+    assert(not still_in_panel, "the served item should be removed from the panel")
+
+    print("PASS: kitchen_scene: the broccoli/Cook/steamed_broccoli pipeline serves a Healthy-tag request end-to-end")
+end
+
+-- Test 16: dropping a RAW item (no tags at all) directly on a customer is
+-- always rejected, regardless of what tag they're requesting. This falls
+-- straight out of has_tag's empty-tags-list check with no special-casing
+-- needed in kitchen_scene.lua itself - this test just proves it holds for
+-- both raw items and both tags currently in play.
+
+do
+    local function assert_raw_drop_rejected(raw_type_id, tag)
+        local ctxN = runner.setup(function() return KitchenScene.new() end)
+        local sceneN = ctxN.sm.current
+
+        sceneN.customer:show(order_cfg({ requested_tag = tag }))
+        runner.fast_forward_until(ctxN, function() return sceneN.customer:arrived() end, 0)
+        assert(sceneN.customer.requested_tag == tag, "sanity check: forced customer wants " .. tag)
+
+        local raw_item
+        for _, it in ipairs(sceneN.grid:items()) do
+            if it.type_id == raw_type_id then raw_item = it end
+        end
+        assert(raw_item, "on_enter should have placed " .. raw_type_id)
+        assert(#raw_item.tags == 0, "sanity check: " .. raw_type_id .. " should carry no tags")
+
+        local currency_before = sceneN.day_state.currency
+        local served_before   = sceneN.day_state.customers_served
+
+        local rx, ry = sceneN.grid:cell_to_world(raw_item.cell_col, raw_item.cell_row)
+        sceneN:mouse_pressed(rx + 1, ry + 1)
+        sceneN:mouse_moved(sceneN.customer.x, sceneN.customer.y)
+        sceneN:mouse_released(sceneN.customer.x, sceneN.customer.y)
+
+        assert(sceneN.day_state.currency == currency_before,
+            "dropping raw " .. raw_type_id .. " must never award currency, even when requesting " .. tag)
+        assert(sceneN.day_state.customers_served == served_before + 1,
+            "the visit should still count toward the day even though it was rejected")
+        assert(sceneN.customer.dismissed,
+            "dropping raw " .. raw_type_id .. " on a customer requesting " .. tag .. " should always be dismissed")
+    end
+
+    -- Cross-product: each raw item against each tag currently in play, so
+    -- this doesn't just prove "raw_meat never satisfies Protein" (which
+    -- could coincidentally hold for the wrong reason) but the general rule.
+    assert_raw_drop_rejected("raw_meat", "Protein")
+    assert_raw_drop_rejected("raw_meat", "Healthy")
+    assert_raw_drop_rejected("broccoli", "Healthy")
+    assert_raw_drop_rejected("broccoli", "Protein")
+
+    print("PASS: kitchen_scene: dropping any raw (untagged) item on a customer is always rejected, regardless of the requested tag")
 end
 
 print("ALL TESTS PASSED")

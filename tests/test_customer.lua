@@ -11,11 +11,11 @@ do
         name            = "Test Customer",
         messages        = { "Could I get some cooked meat?" },
         after_messages  = { "Thanks so much!" },
-        requested_type  = "cooked_meat",
+        requested_tag   = "Protein",
         walk_speed      = 1000,
     })
     assert(c.state == "walking_in", "show() should start walking_in")
-    assert(c.requested_type == "cooked_meat", "requested_type should be stored")
+    assert(c.requested_tag == "Protein", "requested_tag should be stored")
     assert(c.name == "Test Customer", "name should be stored")
     assert(not c.done_talking, "done_talking should be false with pre-messages present")
     assert(not c:bubble_visible(), "bubble should not be visible yet while still walking in")
@@ -69,7 +69,7 @@ do
         name           = "Wrong Item Customer",
         messages       = { "I wanted cooked meat!" },
         after_messages = { "Thanks so much!" }, -- present, but must be skipped
-        requested_type = "cooked_meat",
+        requested_tag  = "Protein",
         walk_speed     = 1000,
     })
 
@@ -108,7 +108,7 @@ do
     c:show({
         name           = "Wrong Item Customer",
         messages       = { "I wanted cooked meat!" },
-        requested_type = "cooked_meat",
+        requested_tag  = "Protein",
         walk_speed     = 1000,
     })
 
@@ -219,7 +219,7 @@ do
         name            = "Test Customer",
         messages        = { "Could I get some cooked meat?" },
         after_messages  = { "Thanks so much!" },
-        requested_type  = "cooked_meat",
+        requested_tag   = "Protein",
         walk_speed      = 1000,
     })
 
@@ -250,7 +250,7 @@ do
     c:show({
         name            = "Test Customer",
         messages        = { "Could I get some cooked meat?" },
-        requested_type  = "cooked_meat",
+        requested_tag   = "Protein",
     })
     assert(c.kind == "order", "kind should reset to 'order' on a subsequent non-merchant show()")
     assert(c.panel == nil, "panel should reset to nil on a subsequent non-merchant show()")

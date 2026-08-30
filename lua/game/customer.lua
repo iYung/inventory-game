@@ -73,7 +73,7 @@ function Customer.new(target_x, exit_x, y)
     self.type_id         = nil
 
     self.name            = "Customer"
-    self.requested_type  = nil
+    self.requested_tag   = nil
     self.messages        = {}
     self.msg_index       = 1
     self.done_talking    = true
@@ -92,7 +92,7 @@ function Customer.new(target_x, exit_x, y)
 end
 
 -- Resets and starts the customer walking in with a new order.
--- cfg: { name, messages, after_messages, requested_type, walk_speed, color }
+-- cfg: { name, messages, after_messages, requested_tag, walk_speed, color }
 function Customer:show(cfg)
     cfg = cfg or {}
 
@@ -109,7 +109,7 @@ function Customer:show(cfg)
     end
 
     self.name            = cfg.name or "Customer"
-    self.requested_type  = cfg.requested_type
+    self.requested_tag   = cfg.requested_tag
     self.messages        = cfg.messages or {}
     self.msg_index       = 1
     self.done_talking    = #self.messages == 0

@@ -47,6 +47,21 @@ do
     print("PASS: item_panel: is_action_enabled is true once a matching item is placed")
 end
 
+-- Test 3b: is_action_enabled("Cook") is also true for broccoli - the
+-- single Cook button matches whichever of its recipes the panel satisfies.
+
+do
+    local microwave = Item.new("microwave")
+    local panel = ItemPanel.new(microwave)
+
+    local broccoli = Item.new("broccoli")
+    microwave.panel:place(broccoli, 0, 0)
+
+    assert(panel:is_action_enabled("Cook") == true,
+        "Cook should be enabled with broccoli in the panel too, not just raw_meat")
+    print("PASS: item_panel: is_action_enabled is true for any of Cook's recipes, not just the first")
+end
+
 -- Test 4: clicking the enabled button (via mouse_pressed at the button's --
 -- rect coordinates) starts the timer; is_action_enabled then reports false
 -- because the action is running (re-clicking mid-cook shouldn't re-trigger).
