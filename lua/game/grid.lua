@@ -125,6 +125,21 @@ function Grid:place(item, col, row)
     table.insert(self._items, item)
 end
 
+-- Places `item` at the first free cell it fits at (row-major scan: row 0
+-- left-to-right, then row 1, ...), if any. Returns true and places it, or
+-- returns false (leaving the grid untouched) if nothing fits.
+function Grid:place_first_fit(item)
+    for row = 0, self.rows - 1 do
+        for col = 0, self.cols - 1 do
+            if self:can_place(item, col, row) then
+                self:place(item, col, row)
+                return true
+            end
+        end
+    end
+    return false
+end
+
 -- Fully removes `item` from this grid (list + item.grid reference).
 function Grid:remove(item)
     self:_unlist(item)

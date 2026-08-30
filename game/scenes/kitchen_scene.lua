@@ -176,6 +176,18 @@ function KitchenScene:_bring_to_front(panel)
     table.insert(self.panels, panel)
 end
 
+-- Opens `item`'s panel, or brings its already-open one to front - the
+-- shared "show me this item's inventory" action behind a double-click, a
+-- right-click, and clicking a merchant.
+function KitchenScene:_open_or_focus_panel(item)
+    local existing = self:_panel_for(item)
+    if existing then
+        self:_bring_to_front(existing)
+    else
+        self:_open_panel(ItemPanel.new(item))
+    end
+end
+
 -- self.grid plus every open panel's inner Grid, in the same back-to-front
 -- order as self.panels.
 function KitchenScene:_all_grids()
@@ -212,6 +224,20 @@ function KitchenScene:_hover_grid(x, y)
     return self.grid
 end
 
+-- The has_panel item sitting on the main floor grid at world (x,y), if
+-- any - used so dropping an ingredient directly onto e.g. the microwave
+-- inserts it into the microwave's own panel (first-fit) instead of just
+-- failing to place on the main grid (which the microwave already occupies)
+-- and snapping back.
+function KitchenScene:_container_at(x, y)
+    local col, row = self.grid:world_to_cell(x, y)
+    local target = self.grid:item_at(col, row)
+    if target and target.panel then
+        return target
+    end
+    return nil
+end
+
 -- Clears grid-drag bookkeeping without running Grid:mouse_released's normal
 -- place-back-on-the-grid logic (the item is being consumed, not dropped).
 local function clear_drag(grid, item)
@@ -235,6 +261,20 @@ local function transfer_drag(from_grid, to_grid, item, x, y)
     if to_grid:can_place(item, col, row) then
         to_grid:place(item, col, row)
     else
+        from_grid:place(item, orig_col, orig_row)
+    end
+end
+
+-- Same idea as transfer_drag, but for dropping an item straight onto a
+-- container sitting on the main floor grid (e.g. dragging raw meat onto the
+-- microwave itself) rather than onto an open panel: there's no cursor cell
+-- inside to_grid to target (its origin is only meaningful once its
+-- ItemPanel is actually open), so it goes into the first free cell instead.
+local function transfer_drag_first_fit(from_grid, to_grid, item)
+    local orig_col, orig_row = from_grid.drag_orig_col, from_grid.drag_orig_row
+    clear_drag(from_grid, item)
+
+    if not to_grid:place_first_fit(item) then
         from_grid:place(item, orig_col, orig_row)
     end
 end
@@ -285,12 +325,7 @@ function KitchenScene:mouse_pressed(x, y)
         -- (or brings it to front if it's already open, e.g. buried behind
         -- another panel).
         if self.customer.kind == "merchant" and self.customer:arrived() then
-            local existing = self:_panel_for(self.customer)
-            if existing then
-                self:_bring_to_front(existing)
-            else
-                self:_open_panel(ItemPanel.new(self.customer))
-            end
+            self:_open_or_focus_panel(self.customer)
             return
         end
         if self.customer.state == "talking_after" then
@@ -317,12 +352,7 @@ function KitchenScene:mouse_pressed(x, y)
                 and self._last_click_row == row
 
             if is_double_click then
-                local existing = self:_panel_for(item)
-                if existing then
-                    self:_bring_to_front(existing)
-                else
-                    self:_open_panel(ItemPanel.new(item))
-                end
+                self:_open_or_focus_panel(item)
                 self._last_click_time = nil
                 self._last_click_col  = nil
                 self._last_click_row  = nil
@@ -336,6 +366,30 @@ function KitchenScene:mouse_pressed(x, y)
     self._last_click_row  = row
 
     self.grid:mouse_pressed(x, y)
+end
+
+-- Right-click: a one-click shortcut for the double-click-to-open-panel
+-- gesture above, on the same targets (a main-grid item with has_panel).
+-- Doesn't touch dragging, the customer, or Next Day - a right-click that
+-- misses a has_panel item is simply a no-op.
+function KitchenScene:mouse_right_pressed(x, y)
+    -- Panels are opaque windows; a right-click landing on one does nothing
+    -- (in particular, must not reach through to a main-grid item a panel
+    -- happens to be sitting over).
+    for _, panel in ipairs(self.panels) do
+        if panel:_point_in_bg(x, y) then
+            return
+        end
+    end
+
+    local col, row = self.grid:world_to_cell(x, y)
+    local item      = self.grid:item_at(col, row)
+    if not item then return end
+
+    local def = item_defs[item.type_id]
+    if not (def and def.has_panel) then return end
+
+    self:_open_or_focus_panel(item)
 end
 
 function KitchenScene:mouse_moved(x, y)
@@ -426,11 +480,26 @@ function KitchenScene:mouse_released(x, y)
         return
     end
 
+    local hover = self:_hover_grid(x, y)
+
+    -- Dropped directly onto a has_panel item's own footprint on the main
+    -- floor grid (e.g. raw meat dropped right on the microwave): insert it
+    -- into that item's panel (first-fit) instead of failing to place on
+    -- the main grid there (which the container already occupies) and
+    -- snapping back. Not applicable when already dragging out of that same
+    -- panel (nothing to do) or dragging the container onto itself.
+    if hover == self.grid then
+        local container = self:_container_at(x, y)
+        if container and container ~= item and container.panel ~= owner then
+            transfer_drag_first_fit(owner, container.panel, item)
+            return
+        end
+    end
+
     -- Otherwise: dropped somewhere on a grid (main floor, or any open
     -- panel's) - transfer it there if that's a different grid than it
     -- started on, or just let it resolve normally (place/snap-back) if
     -- dropped back where it came from.
-    local hover = self:_hover_grid(x, y)
     if hover ~= owner then
         transfer_drag(owner, hover, item, x, y)
     else

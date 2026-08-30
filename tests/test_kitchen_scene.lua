@@ -829,4 +829,110 @@ do
     print("PASS: kitchen_scene: the microwave is 2x2 on the floor grid but has a 1x1 internal panel")
 end
 
+-- Test 13: right-click is a one-click shortcut for double-click-to-open-
+-- panel, on the same targets; it's a no-op on plain items and doesn't
+-- reach through an already-open panel's backdrop.
+
+do
+    local ctx13 = runner.setup(function() return KitchenScene.new() end)
+    local scene13 = ctx13.sm.current
+
+    local microwave13, meat13
+    for _, it in ipairs(scene13.grid:items()) do
+        if it.type_id == "microwave" then microwave13 = it end
+        if it.type_id == "raw_meat" and not meat13 then meat13 = it end
+    end
+    assert(microwave13 and meat13, "on_enter should have placed a microwave and raw_meat")
+
+    -- Right-clicking a plain item (no has_panel) does nothing.
+    local mx13, my13 = scene13.grid:cell_to_world(meat13.cell_col, meat13.cell_row)
+    scene13:mouse_right_pressed(mx13 + 1, my13 + 1)
+    assert(#scene13.panels == 0, "right-clicking a plain item should not open anything")
+
+    -- Right-clicking the microwave opens its panel in one click.
+    local wx13, wy13 = scene13.grid:cell_to_world(0, 0)
+    scene13:mouse_right_pressed(wx13 + 1, wy13 + 1)
+    assert(#scene13.panels == 1, "right-clicking a has_panel item should open its panel")
+    local panel13 = scene13.panels[1]
+    assert(panel13.item == microwave13)
+
+    -- Right-clicking it again brings it to front rather than duplicating -
+    -- open a second (merchant) panel first so there's something to reorder.
+    scene13.customer:show({
+        kind = "merchant", name = "Merchant",
+        messages = { "Fresh stock, take a look!" },
+        stock = { "raw_meat" }, walk_speed = 1000,
+    })
+    runner.fast_forward_until(ctx13, function() return scene13.customer:arrived() end, 0)
+    scene13:mouse_pressed(scene13.customer.x, scene13.customer.y)
+    assert(#scene13.panels == 2, "sanity check: merchant panel should now also be open")
+    assert(scene13.panels[2].item == scene13.customer, "sanity check: merchant panel should be on top")
+
+    scene13:mouse_right_pressed(wx13 + 1, wy13 + 1)
+    assert(#scene13.panels == 2, "right-clicking an already-open panel's item should not duplicate it")
+    assert(scene13.panels[2] == panel13, "right-click should bring the microwave panel back to front")
+
+    -- Right-clicking on top of an open panel's backdrop does nothing (must
+    -- not reach through to a main-grid item underneath).
+    local panels_before = #scene13.panels
+    scene13:mouse_right_pressed(panel13.title_bar.x + 5, panel13.title_bar.y + 5)
+    assert(#scene13.panels == panels_before, "right-clicking a panel's own backdrop should be a no-op")
+
+    print("PASS: kitchen_scene: right-click opens/focuses a has_panel item's panel like double-click does")
+end
+
+-- Test 14: dragging an item directly onto the microwave's own floor cells
+-- inserts it into the microwave's panel (first-fit) if there's room,
+-- without needing to open the panel first; if there's no room, it snaps
+-- back instead of being lost.
+
+do
+    local ctx14 = runner.setup(function() return KitchenScene.new() end)
+    local scene14 = ctx14.sm.current
+
+    local microwave14, meatA, meatB
+    for _, it in ipairs(scene14.grid:items()) do
+        if it.type_id == "microwave" then microwave14 = it end
+        if it.type_id == "raw_meat" then
+            if not meatA then meatA = it elseif not meatB then meatB = it end
+        end
+    end
+    assert(microwave14 and meatA and meatB, "on_enter should have placed a microwave and multiple raw_meat")
+
+    -- Drag the first raw_meat onto the microwave's own cell (not via its
+    -- panel - it isn't even open).
+    local mxA, myA = scene14.grid:cell_to_world(meatA.cell_col, meatA.cell_row)
+    scene14:mouse_pressed(mxA + 1, myA + 1)
+    assert(scene14.grid.dragging == meatA)
+
+    local wx14, wy14 = scene14.grid:cell_to_world(0, 0) -- microwave's top-left cell
+    scene14:mouse_moved(wx14 + 1, wy14 + 1)
+    scene14:mouse_released(wx14 + 1, wy14 + 1)
+
+    assert(scene14.grid.dragging == nil, "drop should clear the main grid's drag state")
+    assert(#scene14.panels == 0, "dropping onto the microwave should not itself open its panel")
+    assert(meatA.grid == microwave14.panel, "item dropped on the microwave should land in its panel")
+
+    local still_on_main_grid = false
+    for _, it in ipairs(scene14.grid:items()) do
+        if it == meatA then still_on_main_grid = true end
+    end
+    assert(not still_on_main_grid, "the inserted item should be gone from the main grid")
+
+    -- The microwave's panel is 1x1 and now full - a second item dropped on
+    -- it the same way must not be lost; it should snap back to its
+    -- original cell on the main grid instead.
+    local mxB, myB = scene14.grid:cell_to_world(meatB.cell_col, meatB.cell_row)
+    local orig_col, orig_row = meatB.cell_col, meatB.cell_row
+    scene14:mouse_pressed(mxB + 1, myB + 1)
+    scene14:mouse_moved(wx14 + 1, wy14 + 1)
+    scene14:mouse_released(wx14 + 1, wy14 + 1)
+
+    assert(meatB.grid == scene14.grid, "with no room in the panel, the item should snap back to the main grid")
+    assert(meatB.cell_col == orig_col and meatB.cell_row == orig_row,
+        "the snapped-back item should return to exactly its original cell")
+
+    print("PASS: kitchen_scene: dragging an item onto the microwave inserts it into the panel if there's room, else snaps back")
+end
+
 print("ALL TESTS PASSED")

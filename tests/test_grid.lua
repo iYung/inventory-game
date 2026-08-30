@@ -273,4 +273,28 @@ do
     print("PASS: grid: preview_override/clear_preview_override let another grid's drag preview here")
 end
 
+-- Test 11: place_first_fit -------------------------------------------------
+
+do
+    local g = Grid.new(3, 1, CELL, 0, 0)
+
+    local a = make_item({ ONE_BY_ONE })
+    assert(g:place_first_fit(a), "should find a free cell in an empty grid")
+    assert(a.cell_col == 0 and a.cell_row == 0, "first-fit should pick the first cell, row-major")
+
+    local b = make_item({ ONE_BY_ONE })
+    assert(g:place_first_fit(b), "should find the next free cell")
+    assert(b.cell_col == 1 and b.cell_row == 0, "first-fit should skip the occupied cell")
+
+    local c = make_item({ ONE_BY_ONE })
+    assert(g:place_first_fit(c), "should find the last free cell")
+    assert(c.cell_col == 2 and c.cell_row == 0)
+
+    local d = make_item({ ONE_BY_ONE })
+    assert(not g:place_first_fit(d), "should return false when nothing fits, and not place it")
+    assert(d.cell_col == nil, "a failed first-fit must leave the item untouched")
+
+    print("PASS: grid: place_first_fit places at the first free cell, or returns false if none fit")
+end
+
 print("ALL TESTS PASSED")
