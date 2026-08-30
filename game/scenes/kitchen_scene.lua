@@ -256,7 +256,10 @@ function KitchenScene:_hover_grid(x, y)
             return panel.item.panel
         end
     end
-    return self.grid
+    if self.grid:_point_in_bounds(x, y) then
+        return self.grid
+    end
+    return nil
 end
 
 -- The has_panel item sitting on the main floor grid at world (x,y), if
@@ -565,7 +568,7 @@ function KitchenScene:mouse_released(x, y)
     -- panel's) - transfer it there if that's a different grid than it
     -- started on, or just let it resolve normally (place/snap-back) if
     -- dropped back where it came from.
-    if hover ~= owner then
+    if hover ~= nil and hover ~= owner then
         transfer_drag(owner, hover, item, x, y)
     else
         owner:mouse_released(x, y)

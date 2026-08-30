@@ -1386,4 +1386,128 @@ do
     print("PASS: kitchen_scene: right-clicking dead backdrop space on an open panel is still a no-op")
 end
 
+-- Test 18: _hover_grid returns nil when the cursor is outside all grids.
+-- Regression guard for the fix that makes `_hover_grid` check actual
+-- grid bounds before falling back to `self.grid`, so the drop-preview
+-- outline is suppressed while the cursor is in the customer stage area.
+
+do
+    local config = require("lua/game/config")
+
+    local ctx18 = runner.setup(function() return KitchenScene.new() end)
+    local scene18 = ctx18.sm.current
+
+    -- A point well above SPLIT_Y is definitely in the stage area, never the
+    -- floor grid (which starts at SPLIT_Y + 12).
+    local stage_x = config.SCREEN_W / 2
+    local stage_y = config.SPLIT_Y / 2
+
+    assert(scene18:_hover_grid(stage_x, stage_y) == nil,
+        "_hover_grid should return nil for a point in the customer stage area (above the floor grid)")
+
+    -- A point in the dead space to the left of the grid (grid starts at
+    -- GRID_ORIGIN_X, which is centered; left edge is well inside the screen).
+    local left_of_grid = config.GRID_ORIGIN_X - 10
+    local grid_mid_y   = config.GRID_ORIGIN_Y + config.GRID_ROWS * config.U / 2
+    assert(scene18:_hover_grid(left_of_grid, grid_mid_y) == nil,
+        "_hover_grid should return nil for a point to the left of the floor grid")
+
+    -- A point squarely inside the floor grid must still return self.grid.
+    local in_grid_x = config.GRID_ORIGIN_X + config.U
+    local in_grid_y = config.GRID_ORIGIN_Y + config.U
+    assert(scene18:_hover_grid(in_grid_x, in_grid_y) == scene18.grid,
+        "_hover_grid should still return self.grid for a point inside the floor grid")
+
+    print("PASS: kitchen_scene: _hover_grid returns nil for points outside all grids, self.grid for points inside it")
+end
+
+-- Test 19: the drop-preview is gated on can_place - it is suppressed when
+-- hovering over an occupied or out-of-bounds cell, even though the preview
+-- col/row ARE tracked internally while the cursor is over the grid. The
+-- can_place guard was added to Grid:draw to make the preview only appear
+-- where a successful drop is actually possible.
+
+do
+    local ctx19 = runner.setup(function() return KitchenScene.new() end)
+    local scene19 = ctx19.sm.current
+
+    -- The microwave occupies (0,0)-(1,1) on the main grid. Drag a meat item,
+    -- then hover over the microwave's cell: can_place should be false there,
+    -- so the draw guard suppresses the preview. Verify the state that drives
+    -- the draw decision.
+    local meat19
+    for _, it in ipairs(scene19.grid:items()) do
+        if it.type_id == "raw_meat" then meat19 = it end
+    end
+    assert(meat19, "on_enter should have placed raw_meat")
+
+    local mx19, my19 = scene19.grid:cell_to_world(meat19.cell_col, meat19.cell_row)
+    scene19:mouse_pressed(mx19 + 1, my19 + 1)
+    assert(scene19.grid.dragging == meat19, "sanity check: should be dragging meat")
+
+    -- Move over the microwave's cell (0,0) - occupied by a different item.
+    local microwave_wx, microwave_wy = scene19.grid:cell_to_world(0, 0)
+    scene19:mouse_moved(microwave_wx + 1, microwave_wy + 1)
+
+    -- The preview col/row are set (cursor is over the grid), but can_place
+    -- returns false (cell is occupied by the microwave), so Grid:draw would
+    -- not render the outline.
+    assert(scene19.grid.drag_preview_col ~= nil,
+        "preview col should be tracked while cursor is over the grid")
+    local pc, pr = scene19.grid.drag_preview_col, scene19.grid.drag_preview_row
+    assert(not scene19.grid:can_place(meat19, pc, pr),
+        "can_place should be false at an occupied cell, so the draw guard suppresses the preview")
+
+    -- Hover over a free cell: can_place should now be true, preview shows.
+    local free_wx, free_wy = scene19.grid:cell_to_world(5, 3)
+    scene19:mouse_moved(free_wx + 1, free_wy + 1)
+    local pc2, pr2 = scene19.grid.drag_preview_col, scene19.grid.drag_preview_row
+    assert(scene19.grid:can_place(meat19, pc2, pr2),
+        "can_place should be true at a free cell, so the draw guard would render the preview")
+
+    scene19:mouse_released(free_wx + 1, free_wy + 1)
+
+    print("PASS: kitchen_scene: drop-preview is gated on can_place - suppressed at occupied cells, shown at free cells")
+end
+
+-- Test 20: releasing a drag outside all grids (cursor in the stage area)
+-- snaps the item back to its original cell. Regression guard for the nil-
+-- hover fix in mouse_released: with hover == nil, the code must not crash
+-- or lose the item; it must snap back just like a failed can_place drop.
+
+do
+    local config = require("lua/game/config")
+
+    local ctx20 = runner.setup(function() return KitchenScene.new() end)
+    local scene20 = ctx20.sm.current
+
+    local meat20
+    for _, it in ipairs(scene20.grid:items()) do
+        if it.type_id == "raw_meat" then meat20 = it end
+    end
+    assert(meat20, "on_enter should have placed raw_meat")
+
+    local orig_col, orig_row = meat20.cell_col, meat20.cell_row
+    local mx20, my20 = scene20.grid:cell_to_world(orig_col, orig_row)
+
+    scene20:mouse_pressed(mx20 + 1, my20 + 1)
+    assert(scene20.grid.dragging == meat20, "sanity check: should be dragging the meat")
+
+    -- Release in the stage area (above SPLIT_Y), which is outside all grids.
+    local release_x = config.SCREEN_W / 2
+    local release_y = config.SPLIT_Y / 2
+    assert(scene20:_hover_grid(release_x, release_y) == nil,
+        "sanity check: release point should be outside all grids")
+
+    scene20:mouse_released(release_x, release_y)
+
+    assert(scene20.grid.dragging == nil, "drag state should be cleared after release outside all grids")
+    assert(meat20.grid == scene20.grid, "item should snap back to the main grid after release outside all grids")
+    assert(meat20.cell_col == orig_col and meat20.cell_row == orig_row,
+        "item should snap back to its original cell, got ("
+            .. tostring(meat20.cell_col) .. "," .. tostring(meat20.cell_row) .. ")")
+
+    print("PASS: kitchen_scene: releasing a drag outside all grids snaps the item back to its original cell")
+end
+
 print("ALL TESTS PASSED")
