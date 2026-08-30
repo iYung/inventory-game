@@ -22,6 +22,7 @@ local CustomerQueue   = require("lua/game/customer_queue")
 local DayState        = require("lua/game/day_state")
 
 local DOUBLE_CLICK_WINDOW = 0.35
+local SKIP_MESSAGE = "Maybe next time!"
 
 local NEXT_DAY_BTN = {
     x = config.SCREEN_W - 170,
@@ -142,14 +143,6 @@ end
 
 local function point_in_rect(x, y, r)
     return x >= r.x and x <= r.x + r.w and y >= r.y and y <= r.y + r.h
-end
-
--- Whether `item` carries `tag` among its Item.tags.
-local function has_tag(item, tag)
-    for _, t in ipairs(item.tags) do
-        if t == tag then return true end
-    end
-    return false
 end
 
 -- Whether (x,y) lands on the customer's on-screen body.
@@ -394,6 +387,24 @@ function KitchenScene:mouse_pressed(x, y)
                 self.customer:dismiss()
                 self.day_state:record_dismiss()
             end
+            if panel.should_serve then
+                local served_item = panel.item.panel:items()[1]
+                panel.item.panel:remove(served_item)
+                self.customer:serve()
+                self.day_state:record_serve()
+            end
+            if panel.should_skip then
+                local items = {}
+                for _, it in ipairs(panel.item.panel:items()) do
+                    items[#items + 1] = it
+                end
+                for _, it in ipairs(items) do
+                    panel.item.panel:remove(it)
+                    self.grid:place_first_fit(it)
+                end
+                self.customer:dismiss(SKIP_MESSAGE)
+                self.day_state:record_dismiss()
+            end
             if panel.should_close then
                 self:_close_panel(panel)
             end
@@ -424,10 +435,20 @@ function KitchenScene:mouse_pressed(x, y)
             self:_open_or_focus_panel(self.customer)
             return
         end
+        if self.customer.kind == "order" and self.customer:arrived() and self.customer.done_talking then
+            self:_open_or_focus_panel(self.customer)
+            return
+        end
         if self.customer.state == "talking_after" then
             self.customer:advance_after()
         elseif self.customer:arrived() then
             self.customer:advance()
+            -- If advancing just finished the last greeting line, open the
+            -- order panel immediately instead of making the player click again
+            -- through a silent "customer stands there" state.
+            if self.customer.kind == "order" and self.customer.done_talking then
+                self:_open_or_focus_panel(self.customer)
+            end
         end
         return
     end
@@ -523,28 +544,6 @@ function KitchenScene:mouse_released(x, y)
     end
 
     local item = owner.dragging
-
-    -- Dropping a dragged item - from the main grid or any open panel (e.g.
-    -- cooked meat straight out of the microwave, or stock straight out of
-    -- a merchant) - onto the waiting customer serves or dismisses them,
-    -- consuming the item either way, instead of placing it back wherever
-    -- it came from. Not applicable to a merchant (no order to fulfill).
-    if self.customer:arrived() and self.customer.kind ~= "merchant" and self:_customer_hit(x, y) then
-        clear_drag(owner, item)
-
-        if has_tag(item, self.customer.requested_tag) then
-            self.customer:serve()
-            self.day_state:record_serve()
-        else
-            -- A message here (unlike the merchant Leave case below, which
-            -- passes none) makes a wrong-item drop read as a clear
-            -- rejection instead of the customer just silently walking off
-            -- indistinguishably from a successful serve.
-            self.customer:dismiss("Sorry, that's not what I ordered!")
-            self.day_state:record_dismiss()
-        end
-        return
-    end
 
     local hover = self:_hover_grid(x, y)
 

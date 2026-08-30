@@ -64,6 +64,12 @@ local item_defs = {
         name = "Merchant",
     },
 
+    -- Never placed via Item.new/on a Grid - used only by ItemPanel's title
+    -- bar / def lookup for an order-kind Customer (see lua/game/customer.lua).
+    order_customer = {
+        name = "Customer",
+    },
+
     microwave = {
         name = "Microwave",
         footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },

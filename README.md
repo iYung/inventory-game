@@ -5,8 +5,12 @@ requesting a food *tag/category* (e.g. "something with protein") rather than
 a specific item; you drag and rotate ingredients and appliances around a grid
 inventory on the bottom half, run timed actions in containers like the
 microwave and fryer (double-click a container to open its sub-inventory
-panel), and serve customers by dropping any item carrying their requested
-tag on them. Pressing a container's action button fires every recipe its
+panel), and serve customers by clicking a waiting order customer to open
+their order panel, dragging the item carrying their requested tag into its
+3x3 grid, and pressing **Serve** (enabled only once the grid holds exactly
+one matching item) — or press **Skip** to send them away empty-handed,
+which returns any item(s) in the grid to your floor inventory. Pressing a
+container's action button fires every recipe its
 panel's contents currently satisfy, not just one — so raw meat and broccoli
 dropped in together both cook from a single press. The microwave alone
 handles raw meat -> Protein-tagged cooked meat, broccoli -> Healthy-tagged

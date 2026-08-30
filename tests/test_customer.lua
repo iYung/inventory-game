@@ -1,5 +1,6 @@
 local Customer      = require("lua/game/customer")
 local CustomerQueue = require("lua/game/customer_queue")
+local config        = require("lua/game/config")
 
 -- Test 1: full state walk — idle -> walking_in -> waiting -> serve ->
 -- talking_after -> walking_out -> idle.
@@ -243,9 +244,11 @@ do
     print("PASS: customer: the real merchant stock list fully fits in the merchant panel, nothing silently dropped")
 end
 
--- Test 5: show() with cfg.kind omitted (a normal order-customer config)
--- leaves panel/type_id nil - regression guard against merchant fields
--- leaking into ordinary order customers.
+-- Test 5: show() with cfg.kind omitted (a normal order-customer config) now
+-- gets a fresh empty order panel (config.ORDER_PANEL_COLS x ROWS) and
+-- type_id == "order_customer" - order-kind customers get their own popup
+-- ItemPanel (the order panel) the same way merchants get a stock panel, per
+-- kitchen_scene.lua's click-to-open-order-panel flow.
 do
     local target_x, exit_x, y = 500, 100, 200
     local c = Customer.new(target_x, exit_x, y)
@@ -259,17 +262,21 @@ do
     })
 
     assert(c.kind == "order", "kind should default to 'order' when omitted")
-    assert(c.panel == nil, "panel should be nil for a non-merchant customer")
-    assert(c.type_id == nil, "type_id should be nil for a non-merchant customer")
+    assert(c.panel ~= nil, "panel should be populated for an order customer")
+    assert(c.panel.cols == config.ORDER_PANEL_COLS, "panel cols should match config.ORDER_PANEL_COLS")
+    assert(c.panel.rows == config.ORDER_PANEL_ROWS, "panel rows should match config.ORDER_PANEL_ROWS")
+    assert(#c.panel:items() == 0, "a freshly shown order customer's panel should start empty")
+    assert(c.type_id == "order_customer", "type_id should be 'order_customer' for an order customer")
 
-    print("PASS: customer: show() with kind omitted leaves panel/type_id nil (regression guard)")
+    print("PASS: customer: show() with kind omitted gets a fresh empty order panel")
 end
 
--- Test 6: a reused Customer instance correctly resets panel/type_id when
--- show() is called again without kind == "merchant" - guards against a
--- stale panel/type_id from a previous merchant visit leaking into a later
--- order-customer visit on the same object (Customer instances are reused
--- across a day, per kitchen_scene.lua's existing pattern).
+-- Test 6: a reused Customer instance correctly resets panel/type_id to a
+-- fresh order panel when show() is called again without kind == "merchant"
+-- - guards against a stale panel/type_id (or stock) from a previous
+-- merchant visit leaking into a later order-customer visit on the same
+-- object (Customer instances are reused across a day, per
+-- kitchen_scene.lua's existing pattern).
 do
     local target_x, exit_x, y = 500, 100, 200
     local c = Customer.new(target_x, exit_x, y)
@@ -288,8 +295,13 @@ do
         requested_tag   = "Protein",
     })
     assert(c.kind == "order", "kind should reset to 'order' on a subsequent non-merchant show()")
-    assert(c.panel == nil, "panel should reset to nil on a subsequent non-merchant show()")
-    assert(c.type_id == nil, "type_id should reset to nil on a subsequent non-merchant show()")
+    assert(c.panel ~= nil, "panel should be a fresh order panel on a subsequent non-merchant show()")
+    assert(c.panel.cols == config.ORDER_PANEL_COLS, "reset panel cols should match config.ORDER_PANEL_COLS")
+    assert(c.panel.rows == config.ORDER_PANEL_ROWS, "reset panel rows should match config.ORDER_PANEL_ROWS")
+    -- The merchant panel had raw_meat stock in it; an empty panel here
+    -- proves this is a genuinely new object, not the stale merchant one.
+    assert(#c.panel:items() == 0, "reset panel should start empty, not carry over the merchant's stock")
+    assert(c.type_id == "order_customer", "type_id should be 'order_customer' on a subsequent non-merchant show()")
 
     -- And the reverse direction: order -> merchant should also populate
     -- fresh fields correctly (not just reset from merchant -> order).

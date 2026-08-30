@@ -120,6 +120,16 @@ local function find_action(def, name)
     return nil
 end
 
+-- Returns true iff `tag` appears in item.tags, false otherwise.
+local function has_tag(item, tag)
+    for _, t in ipairs(item.tags) do
+        if t == tag then
+            return true
+        end
+    end
+    return false
+end
+
 -- Counts how many items of each type_id currently sit in `panel`.
 local function count_panel_items(panel)
     local counts = {}
@@ -316,5 +326,6 @@ function Item:draw()
 end
 
 Item.matching_recipes = matching_recipes
+Item.has_tag = has_tag
 
 return Item
