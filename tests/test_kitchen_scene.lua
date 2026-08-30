@@ -920,7 +920,7 @@ end
 
 -- Test 12: the microwave itself still occupies a 2x2 area on the main
 -- floor grid, but its own internal cooking panel is a separate 2x1 shape
--- (grown from 1x1 to fit the dutch oven's 2x1 footprint) - the item's
+-- (grown from 1x1 to fit the pot's 2x1 footprint) - the item's
 -- footprint and its inner inventory size are unrelated.
 
 do
@@ -943,8 +943,8 @@ do
     local probe = Item.new("raw_meat")
     assert(not scene12.grid:can_place(probe, 1, 0), "(1,0) should still be occupied by the microwave's footprint")
 
-    -- Its own cooking panel, though, is 2x1 (grown from 1x1 so the dutch
-    -- oven's 2x1 footprint fits inside it).
+    -- Its own cooking panel, though, is 2x1 (grown from 1x1 so the pot's
+    -- 2x1 footprint fits inside it).
     assert(microwave12.panel.cols == 2 and microwave12.panel.rows == 1,
         "microwave's internal panel should be 2x1, got " .. microwave12.panel.cols .. "x" .. microwave12.panel.rows)
 
@@ -1281,7 +1281,7 @@ end
 
 -- Test 17: double-click and right-click to open a container's panel also
 -- work on an item sitting INSIDE an already-open panel's own grid - the
--- dutch-oven-in-microwave scenario from docs/design/cooking-methods.md.
+-- pot-in-microwave scenario from docs/design/cooking-methods.md.
 -- Also a regression check that right-clicking dead backdrop space (e.g. a
 -- panel's title bar) is still a no-op, unaffected by that generalization.
 
@@ -1299,15 +1299,15 @@ do
 
     scene17.panels = { ItemPanel.new(microwave17) }
 
-    -- Place a dutch oven directly into the OPEN microwave panel (it fits:
-    -- the microwave's panel is 2 cols wide, the dutch oven's footprint is
+    -- Place a pot directly into the OPEN microwave panel (it fits:
+    -- the microwave's panel is 2 cols wide, the pot's footprint is
     -- 2x1) - no need to drive it through a drag for this test.
-    local dutch_oven17 = Item.new("dutch_oven")
-    assert(microwave17.panel:can_place(dutch_oven17, 0, 0),
-        "dutch oven should fit in the microwave's 2-wide panel")
-    microwave17.panel:place(dutch_oven17, 0, 0)
+    local pot17 = Item.new("pot")
+    assert(microwave17.panel:can_place(pot17, 0, 0),
+        "pot should fit in the microwave's 2-wide panel")
+    microwave17.panel:place(pot17, 0, 0)
 
-    -- Double-click the dutch oven's cell within the open microwave panel.
+    -- Double-click the pot's cell within the open microwave panel.
     local dx17, dy17 = microwave17.panel:cell_to_world(0, 0)
     dx17, dy17 = dx17 + 1, dy17 + 1
 
@@ -1318,10 +1318,10 @@ do
 
     assert(#scene17.panels == 2,
         "double-clicking a has_panel item inside an open panel should open a second panel")
-    assert(scene17.panels[2].item == dutch_oven17,
-        "the newly opened (topmost) panel should wrap the dutch oven")
+    assert(scene17.panels[2].item == pot17,
+        "the newly opened (topmost) panel should wrap the pot")
 
-    print("PASS: kitchen_scene: double-clicking a dutch oven sitting inside an already-open microwave panel opens its own panel")
+    print("PASS: kitchen_scene: double-clicking a pot sitting inside an already-open microwave panel opens its own panel")
 end
 
 do
@@ -1338,12 +1338,12 @@ do
 
     scene17b.panels = { ItemPanel.new(microwave17b) }
 
-    local dutch_oven17b = Item.new("dutch_oven")
-    assert(microwave17b.panel:can_place(dutch_oven17b, 0, 0),
-        "dutch oven should fit in the microwave's 2-wide panel")
-    microwave17b.panel:place(dutch_oven17b, 0, 0)
+    local pot17b = Item.new("pot")
+    assert(microwave17b.panel:can_place(pot17b, 0, 0),
+        "pot should fit in the microwave's 2-wide panel")
+    microwave17b.panel:place(pot17b, 0, 0)
 
-    -- Right-click the dutch oven's cell within the open microwave panel:
+    -- Right-click the pot's cell within the open microwave panel:
     -- should open its panel in one click.
     local dx17b, dy17b = microwave17b.panel:cell_to_world(0, 0)
     dx17b, dy17b = dx17b + 1, dy17b + 1
@@ -1352,10 +1352,10 @@ do
 
     assert(#scene17b.panels == 2,
         "right-clicking a has_panel item inside an open panel should open its panel in one click")
-    assert(scene17b.panels[2].item == dutch_oven17b,
-        "the newly opened (topmost) panel should wrap the dutch oven")
+    assert(scene17b.panels[2].item == pot17b,
+        "the newly opened (topmost) panel should wrap the pot")
 
-    print("PASS: kitchen_scene: right-clicking a dutch oven sitting inside an already-open microwave panel opens its panel in one click")
+    print("PASS: kitchen_scene: right-clicking a pot sitting inside an already-open microwave panel opens its panel in one click")
 end
 
 do

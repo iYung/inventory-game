@@ -15,11 +15,11 @@ panel's contents currently satisfy, not just one — so raw meat and broccoli
 dropped in together both cook from a single press. The microwave alone
 handles raw meat -> Protein-tagged cooked meat, broccoli -> Healthy-tagged
 steamed broccoli, and potato -> Filling-tagged baked potato; the fryer turns
-potato into Greasy-tagged fries. A **dutch oven** is a movable container in
-its own right: load it with potato + water + raw meat, then place the
-loaded dutch oven itself inside the microwave's panel and press Cook to turn
-its contents into Filling-and-Protein-tagged beef stew, produced inside the
-dutch oven's own panel without consuming the dutch oven. One visitor per day
+potato into Greasy-tagged fries. A **pot** is a movable container in
+its own right: load it with water + raw meat, then place the
+loaded pot itself inside the microwave's panel and press Cook to turn
+its contents into Protein-and-Hearty-tagged soup, produced inside the
+pot's own panel without consuming the pot. One visitor per day
 is a merchant instead of a food order — click them to open their stock panel
 and drag free items (including water and potato) into your grid, then click
 "Leave" to send them off. Once everyone for the day is served, a "Next Day"

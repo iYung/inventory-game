@@ -86,9 +86,9 @@ local item_defs = {
                     { requires = { broccoli = 1 }, produces = { steamed_broccoli = 1 } },
                     { requires = { potato = 1 },   produces = { baked_potato = 1 } },
                     {
-                        container = "dutch_oven",
-                        requires  = { potato = 1, water = 1, raw_meat = 1 },
-                        produces  = { beef_stew = 1 },
+                        container = "pot",
+                        requires  = { water = 1, raw_meat = 1 },
+                        produces  = { soup = 1 },
                     },
                 },
             },
@@ -128,6 +128,13 @@ local item_defs = {
         tags = { "Filling", "Protein" },
     },
 
+    soup = {
+        name = "Soup",
+        footprint = { { 0, 0 } },
+        color = { 0.70, 0.50, 0.30, 1 },
+        tags = { "Protein", "Hearty" },
+    },
+
     fryer = {
         name = "Fryer",
         footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },
@@ -140,15 +147,15 @@ local item_defs = {
         },
     },
 
-    dutch_oven = {
-        name = "Dutch Oven",
+    pot = {
+        name = "Pot",
         footprint = { { 0, 0 }, { 1, 0 } },
         color = { 0.25, 0.25, 0.30, 1 },
         has_panel = true,
         panel_cols = 3,
         panel_rows = 1,
-        -- No `actions` field: the dutch oven is never clicked/cooked
-        -- directly - see the microwave's `container` recipe above.
+        -- No `actions` field: the pot is never clicked/cooked directly -
+        -- see the microwave's `container` recipe above.
     },
 }
 
