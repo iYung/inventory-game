@@ -35,6 +35,10 @@ function Sprite:draw()
         love.graphics.rectangle("fill", 0, 0, self.width, self.height)
     end
     if self.shader then love.graphics.setShader() end
+    if self.border_color then
+        love.graphics.setColor(self.border_color)
+        love.graphics.rectangle("line", 0, 0, self.width, self.height)
+    end
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.pop()
 end

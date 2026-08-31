@@ -90,6 +90,7 @@ function Item.new(type_id)
     local icon = load_icon(type_id)
     if icon then
         self.sprite.image = icon
+        self.sprite.border_color = def.color
         self.sprite.color = { 1, 1, 1, 1 }  -- don't tint the PNG
     end
 
