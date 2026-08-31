@@ -155,6 +155,8 @@ function KitchenScene:on_enter()
     assert(self.grid:can_place(container, 0, 3), "container starting cell should be free")
     self.grid:place(container, 0, 3)
 
+    self._scene_bg = love.graphics.newImage("assets/images/scene/bg.png")
+
     self.day_state = DayState.new()
     self.day_state:start_day(config.CUSTOMERS_PER_DAY)
     self.queue = CustomerQueue.new(config.CUSTOMERS_PER_DAY)
@@ -165,7 +167,7 @@ function KitchenScene:on_enter()
     -- walking_in moves left-to-right, like wip's customers do.
     local target_x = config.SCREEN_W / 2
     local exit_x    = -150
-    local y         = config.SPLIT_Y / 2
+    local y         = 228  -- feet at the wooden sill (sill_y=300, sprite center = 300 - CH/2)
     self.customer = Customer.new(target_x, exit_x, y)
     self.customer:show(self.queue:next())
 
@@ -719,7 +721,11 @@ function KitchenScene:draw()
 
     local colors = config.COLORS or {}
 
-    if colors.stage_bg then
+    -- Scene background: sky, treeline, street, wooden food-cart frame
+    if self._scene_bg then
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.draw(self._scene_bg, 0, 0)
+    elseif colors.stage_bg then
         love.graphics.setColor(colors.stage_bg)
         love.graphics.rectangle("fill", 0, 0, config.SCREEN_W, config.SPLIT_Y)
     end

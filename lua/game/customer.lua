@@ -25,8 +25,8 @@ local function load_icon(type_id)
 end
 
 local U  = config.U
-local CW = 2 * U -- customer body width
-local CH = 4 * U -- customer body height
+local CW = 96  -- 48 px sprite drawn at 2x
+local CH = 144 -- 72 px sprite drawn at 2x
 
 local REVEAL_SPEED = 40 -- characters per second
 local PAD          = 10
@@ -78,6 +78,7 @@ function Customer.new(target_x, exit_x, y)
     self.sprite = Sprite.new(0, 0, CW, CH)
     self.sprite.color   = DEFAULT_COLOR
     self.sprite.visible = false
+    self.sprite.no_bg   = true  -- drawn on the scene background, not a grid cell
 
     self.kind            = "order"
     self.panel           = nil
