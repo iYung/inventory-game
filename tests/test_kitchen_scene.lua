@@ -1708,4 +1708,39 @@ do
     print("PASS: kitchen_scene: lower panel inner grid hover is suppressed when a higher panel covers the cursor")
 end
 
+-- Test 25: on_enter places a coffee_machine on the floor and pre-stocks the
+-- container with two roasted_coffee_bean items.
+do
+    local ctx25 = runner.setup(function() return KitchenScene.new() end)
+    local scene25 = ctx25.sm.current
+
+    local coffee_machine25
+    local container25
+    for _, it in ipairs(scene25.grid:items()) do
+        if it.type_id == "coffee_machine" then coffee_machine25 = it end
+        if it.type_id == "container"      then container25      = it end
+    end
+
+    assert(coffee_machine25, "on_enter should have placed a coffee_machine on the floor grid")
+    assert(coffee_machine25.cell_col == 6 and coffee_machine25.cell_row == 2,
+        "coffee_machine should start at (6,2)")
+
+    assert(container25, "on_enter should have placed a container on the floor grid")
+
+    local bean_count = 0
+    local has_milking_center = false
+    local has_cheese_cave    = false
+    for _, it in ipairs(container25.panel:items()) do
+        if it.type_id == "roasted_coffee_bean" then bean_count = bean_count + 1 end
+        if it.type_id == "milking_center"       then has_milking_center = true end
+        if it.type_id == "cheese_cave"          then has_cheese_cave    = true end
+    end
+    assert(bean_count == 2,
+        "container should start with 2 roasted_coffee_bean items, got " .. bean_count)
+    assert(has_milking_center, "container should start with a milking_center")
+    assert(has_cheese_cave,    "container should start with a cheese_cave")
+
+    print("PASS: kitchen_scene: on_enter places coffee_machine at (6,2) and pre-stocks container with milking_center, cheese_cave, and 2 roasted_coffee_beans")
+end
+
 print("ALL TESTS PASSED")

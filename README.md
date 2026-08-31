@@ -34,8 +34,8 @@ Two **gardens** (3×3 each) sit on the kitchen floor. Each garden has a 3×3
 panel where you can place onions and broccoli; every night, each occupied
 cell spreads to its orthogonal empty neighbors so your supply grows
 automatically overnight.
-A **coffee machine** (2×2) has a 2×2 panel; load it with one water and one roasted coffee bean, then press **Run** (3 s) to brew Caffeine-and-Bitter-tagged black coffee.
-A **container** (2×2) has a 6×6 internal storage panel — purely passive, no actions. Use it to organize items on the floor grid.
+A **coffee machine** (2×2) has a 2×2 panel; load it with one water and one roasted coffee bean, then press **Run** (3 s) to brew Caffeine-and-Bitter-tagged black coffee. One coffee machine starts on the floor at grid cell (6,2).
+A **container** (2×2) has a 6×6 internal storage panel — purely passive, no actions. Use it to organize items on the floor grid. The starting container comes pre-stocked with two roasted coffee beans so the coffee workflow is accessible from day one.
 A **barn** (3×3) has a 6×6 panel for housing cows — for every 2 cows inside,
 one new cow is born overnight (cows are never consumed). A **milking center**
 (3×3) has a 4×3 panel; place cows inside and every night it produces 2 milk
