@@ -1,4 +1,4 @@
-# love-exemplar
+# inventory-game
 
 A Love2D cooking-inventory game. Customers arrive one at a time up top
 requesting a food *tag/category* (e.g. "something with protein") rather than
