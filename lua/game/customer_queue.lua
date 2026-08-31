@@ -9,23 +9,9 @@ local item_defs = require("lua/game/data/item_defs")
 local CustomerQueue = {}
 CustomerQueue.__index = CustomerQueue
 
--- Friendly per-tag greeting messages for food-order customers. Any tag not
--- listed here falls back to a generic message (see message_for_tag below)
--- so new tags don't require a change here to work correctly.
-local TAG_MESSAGES = {
-    Protein = "Could I get something with protein?",
-    Healthy = "Could I get something healthy?",
-}
-
-local function message_for_tag(tag)
-    return TAG_MESSAGES[tag] or ('Could I get something tagged "' .. tag .. '"?')
-end
-
 -- Collects every unique tag actually used anywhere in item_defs, sorted
 -- alphabetically for deterministic iteration order (pairs() order over
--- item_defs is not guaranteed). Sorting only makes the SET's iteration
--- order deterministic - the tag ultimately picked by make_default_cfg is
--- still random via math.random.
+-- item_defs is not guaranteed).
 local function known_tags()
     local seen, tags = {}, {}
     for _, def in pairs(item_defs) do
@@ -40,16 +26,71 @@ local function known_tags()
     return tags
 end
 
+-- Fisher-Yates shuffle (in place).
+local function shuffle(t)
+    for i = #t, 2, -1 do
+        local j = math.random(1, i)
+        t[i], t[j] = t[j], t[i]
+    end
+end
+
+-- Assigns known tags into three tiers with no overlap. Shuffles the pool
+-- then takes 1-2 for loved, 1-2 for liked, 1 for disliked (capped by what
+-- remains). Tags not assigned to any tier are neutral (not shown).
+local function assign_traits()
+    local pool = known_tags()
+    shuffle(pool)
+    local idx = 1
+
+    local loved, liked, disliked = {}, {}, {}
+
+    local n_loved = math.random(1, math.min(2, #pool))
+    for _ = 1, n_loved do
+        loved[#loved + 1] = pool[idx]; idx = idx + 1
+    end
+
+    if idx <= #pool then
+        local n_liked = math.random(1, math.min(2, #pool - idx + 1))
+        for _ = 1, n_liked do
+            liked[#liked + 1] = pool[idx]; idx = idx + 1
+        end
+    end
+
+    if idx <= #pool then
+        disliked[1] = pool[idx]
+    end
+
+    return loved, liked, disliked
+end
+
+-- Builds a one-line message summarising the customer's preferences from
+-- their loved/liked/disliked tiers.
+local function message_for_traits(loved, liked, disliked)
+    local parts = {}
+    if #loved > 0 then
+        parts[#parts + 1] = "I'd love some " .. table.concat(loved, " or ") .. "!"
+    end
+    if #liked > 0 then
+        parts[#parts + 1] = table.concat(liked, " and ") .. " works for me."
+    end
+    if #disliked > 0 then
+        parts[#parts + 1] = "Not a fan of " .. table.concat(disliked, " or ") .. "."
+    end
+    if #parts == 0 then return "I'll take anything!" end
+    return table.concat(parts, " ")
+end
+
 local function make_default_cfg()
-    local tags = known_tags()
-    local tag  = tags[math.random(1, #tags)]
+    local loved, liked, disliked = assign_traits()
 
     return {
-        name            = "Customer",
-        requested_tag   = tag,
-        messages        = { message_for_tag(tag) },
-        after_messages  = { "Thanks, that's delicious!" },
-        walk_speed      = 80,
+        name           = "Customer",
+        loved_tags     = loved,
+        liked_tags     = liked,
+        disliked_tags  = disliked,
+        messages       = { message_for_traits(loved, liked, disliked) },
+        after_messages = { "Thanks, that's delicious!" },
+        walk_speed     = 80,
     }
 end
 

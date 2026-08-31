@@ -85,7 +85,9 @@ function Customer.new(target_x, exit_x, y)
     self.type_id         = nil
 
     self.name            = "Customer"
-    self.requested_tag   = nil
+    self.loved_tags      = {}
+    self.liked_tags      = {}
+    self.disliked_tags   = {}
     self.messages        = {}
     self.msg_index       = 1
     self.done_talking    = true
@@ -124,7 +126,9 @@ function Customer:show(cfg)
     end
 
     self.name            = cfg.name or "Customer"
-    self.requested_tag   = cfg.requested_tag
+    self.loved_tags      = cfg.loved_tags    or {}
+    self.liked_tags      = cfg.liked_tags    or {}
+    self.disliked_tags   = cfg.disliked_tags or {}
     self.messages        = cfg.messages or {}
     self.msg_index       = 1
     self.done_talking    = #self.messages == 0

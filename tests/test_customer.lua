@@ -10,14 +10,18 @@ do
     assert(c.state == "idle", "new customer should start idle")
 
     c:show({
-        name            = "Test Customer",
-        messages        = { "Could I get some cooked meat?" },
-        after_messages  = { "Thanks so much!" },
-        requested_tag   = "Protein",
-        walk_speed      = 1000,
+        name           = "Test Customer",
+        messages       = { "Could I get some cooked meat?" },
+        after_messages = { "Thanks so much!" },
+        loved_tags     = { "Protein" },
+        liked_tags     = { "Healthy" },
+        disliked_tags  = { "Greasy" },
+        walk_speed     = 1000,
     })
     assert(c.state == "walking_in", "show() should start walking_in")
-    assert(c.requested_tag == "Protein", "requested_tag should be stored")
+    assert(#c.loved_tags == 1 and c.loved_tags[1] == "Protein", "loved_tags should be stored")
+    assert(#c.liked_tags == 1 and c.liked_tags[1] == "Healthy", "liked_tags should be stored")
+    assert(#c.disliked_tags == 1 and c.disliked_tags[1] == "Greasy", "disliked_tags should be stored")
     assert(c.name == "Test Customer", "name should be stored")
     assert(not c.done_talking, "done_talking should be false with pre-messages present")
     assert(not c:bubble_visible(), "bubble should not be visible yet while still walking in")
@@ -71,7 +75,7 @@ do
         name           = "Wrong Item Customer",
         messages       = { "I wanted cooked meat!" },
         after_messages = { "Thanks so much!" }, -- present, but must be skipped
-        requested_tag  = "Protein",
+        loved_tags     = { "Protein" },
         walk_speed     = 1000,
     })
 
@@ -110,7 +114,7 @@ do
     c:show({
         name           = "Wrong Item Customer",
         messages       = { "I wanted cooked meat!" },
-        requested_tag  = "Protein",
+        loved_tags     = { "Protein" },
         walk_speed     = 1000,
     })
 
@@ -254,11 +258,11 @@ do
     local c = Customer.new(target_x, exit_x, y)
 
     c:show({
-        name            = "Test Customer",
-        messages        = { "Could I get some cooked meat?" },
-        after_messages  = { "Thanks so much!" },
-        requested_tag   = "Protein",
-        walk_speed      = 1000,
+        name           = "Test Customer",
+        messages       = { "Could I get some cooked meat?" },
+        after_messages = { "Thanks so much!" },
+        loved_tags     = { "Protein" },
+        walk_speed     = 1000,
     })
 
     assert(c.kind == "order", "kind should default to 'order' when omitted")
@@ -290,9 +294,9 @@ do
     assert(c.type_id == "merchant", "sanity check: type_id should be set after merchant show()")
 
     c:show({
-        name            = "Test Customer",
-        messages        = { "Could I get some cooked meat?" },
-        requested_tag   = "Protein",
+        name       = "Test Customer",
+        messages   = { "Could I get some cooked meat?" },
+        loved_tags = { "Protein" },
     })
     assert(c.kind == "order", "kind should reset to 'order' on a subsequent non-merchant show()")
     assert(c.panel ~= nil, "panel should be a fresh order panel on a subsequent non-merchant show()")

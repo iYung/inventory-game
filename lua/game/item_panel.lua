@@ -35,7 +35,7 @@ local PROGRESS_H    = 6
 local CLOSE_SIZE    = 22
 local CLOSE_GAP     = 6
 local TITLE_H       = 28
-local REMINDER_H    = 24  -- order-kind only: reminder-text row between title bar and grid
+local REMINDER_H    = 58  -- order-kind only: three trait-tier rows between title bar and grid
 
 local COLOR_DISABLED = { 0.35, 0.35, 0.35, 1 }
 local COLOR_CLOSE    = { 0.75, 0.25, 0.25, 1 }
@@ -47,6 +47,14 @@ local COLOR_LEAVE    = COLOR_CLOSE
 
 local function point_in_rect(x, y, r)
     return x >= r.x and x < r.x + r.w and y >= r.y and y < r.y + r.h
+end
+
+-- Returns true iff item carries any tag from the given list.
+local function item_has_any_tag(item, tags)
+    for _, t in ipairs(tags) do
+        if Item.has_tag(item, t) then return true end
+    end
+    return false
 end
 
 -- Construction ---------------------------------------------------------------
@@ -221,14 +229,10 @@ function ItemPanel:is_action_enabled(name)
 end
 
 -- Whether "Serve" is currently clickable: order-kind only, exactly one item
--- sitting in the panel, and it carries the tag the customer requested.
+-- sitting in the panel. Any food can be served regardless of trait tags.
 function ItemPanel:_serve_enabled()
     if self.item.kind ~= "order" then return false end
-
-    local items = self.item.panel:items()
-    if #items ~= 1 then return false end
-
-    return Item.has_tag(items[1], self.item.requested_tag)
+    return #self.item.panel:items() == 1
 end
 
 -- Input forwarding ------------------------------------------------------
@@ -363,11 +367,42 @@ function ItemPanel:draw(skip_dragging)
     love.graphics.print((self.def and self.def.name) or self.item.type_id, tb.x + 8, tb.y + 6)
 
     if self.item.kind == "order" then
-        love.graphics.setColor(colors.button_text or { 1, 1, 1, 1 })
-        love.graphics.print(
-            "Order: " .. tostring(self.item.requested_tag),
-            self.bg.x + MARGIN, tb.y + TITLE_H + (REMINDER_H - love.graphics.getFont():getHeight()) / 2
-        )
+        -- Three trait-tier rows. When exactly one item is in the panel,
+        -- highlight tiers whose tags the food matches; dim when no match;
+        -- neutral gray when the panel is empty.
+        local font_h   = love.graphics.getFont():getHeight()
+        local row_gap  = (REMINDER_H - font_h * 3) / 4
+        local base_y   = tb.y + TITLE_H + row_gap
+
+        local panel_items = self.item.panel:items()
+        local food        = (#panel_items == 1) and panel_items[1] or nil
+
+        local COLOR_NEUTRAL  = { 0.60, 0.60, 0.65, 1 }
+        local COLOR_LOVED    = { 1.00, 0.85, 0.20, 1 }  -- gold
+        local COLOR_LIKED    = { 0.30, 0.85, 0.40, 1 }  -- green
+        local COLOR_DISLIKED = { 0.90, 0.30, 0.30, 1 }  -- red
+        local COLOR_DIM      = { 0.35, 0.35, 0.38, 1 }
+
+        local tiers = {
+            { label = "\xe2\x99\xa5 Loved",   tags = self.item.loved_tags,    hit = COLOR_LOVED,    miss = COLOR_DIM },
+            { label = "\xe2\x9c\x93 Liked",   tags = self.item.liked_tags,    hit = COLOR_LIKED,    miss = COLOR_DIM },
+            { label = "\xe2\x9c\x97 Disliked", tags = self.item.disliked_tags, hit = COLOR_DISLIKED, miss = COLOR_DIM },
+        }
+
+        for i, tier in ipairs(tiers) do
+            local tag_text = #tier.tags > 0 and table.concat(tier.tags, ", ") or "(none)"
+            local row_y    = base_y + (i - 1) * (font_h + row_gap)
+            local color
+            if food == nil then
+                color = COLOR_NEUTRAL
+            elseif item_has_any_tag(food, tier.tags) then
+                color = tier.hit
+            else
+                color = tier.miss
+            end
+            love.graphics.setColor(color)
+            love.graphics.print(tier.label .. ": " .. tag_text, self.bg.x + MARGIN, row_y)
+        end
     end
 
     self.item.panel:draw(skip_dragging)

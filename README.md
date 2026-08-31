@@ -1,14 +1,16 @@
 # love-exemplar
 
 A Love2D cooking-inventory game. Customers arrive one at a time up top
-requesting a food *tag/category* (e.g. "something with protein") rather than
-a specific item; you drag and rotate ingredients and appliances around a grid
-inventory on the bottom half, run timed actions in containers like the
-microwave and fryer (double-click a container to open its sub-inventory
-panel), and serve customers by clicking a waiting order customer to open
-their order panel, dragging the item carrying their requested tag into its
-3x3 grid, and pressing **Serve** (enabled only once the grid holds exactly
-one matching item) — or press **Skip** to send them away empty-handed,
+with a three-tier preference profile — **Loved**, **Liked**, and **Disliked**
+tags (e.g. "I'd love some Protein! Healthy works for me. Not a fan of Greasy.").
+You drag and rotate ingredients and appliances around a grid inventory (15×9
+cells) on the bottom half, run timed actions in containers like the microwave
+and fryer (double-click a container to open its sub-inventory panel), and serve
+customers by clicking a waiting order customer to open their order panel —
+which shows the three trait tiers with color-coded highlights for whatever food
+is currently inside — then dragging any item into its 3×3 grid and pressing
+**Serve** (enabled once the grid holds exactly one item, regardless of tags) —
+or press **Skip** to send them away empty-handed,
 which returns any item(s) in the grid to your floor inventory. Pressing a
 container's action button fires every recipe its
 panel's contents currently satisfy, not just one — so raw chicken and potato

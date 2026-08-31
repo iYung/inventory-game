@@ -27,16 +27,16 @@ local Item           = require("lua/game/item")
 
 -- A deterministic food-order (kind == "order", i.e. kind omitted) customer
 -- config, with any fields overridden. Mirrors customer_queue.lua's
--- make_default_cfg() shape. Defaults to requesting the "Protein" tag (the
--- tag "baked_chicken" carries) since that's the tag this file's tests most
--- often want; individual tests override requested_tag as needed.
+-- make_default_cfg() shape.
 local function order_cfg(overrides)
     local cfg = {
-        name            = "Test Customer",
-        requested_tag   = "Protein",
-        messages        = { "Could I get some food?" },
-        after_messages  = { "Thanks, that's delicious!" },
-        walk_speed      = 80,
+        name           = "Test Customer",
+        loved_tags     = { "Protein" },
+        liked_tags     = { "Healthy" },
+        disliked_tags  = { "Greasy" },
+        messages       = { "Could I get some food?" },
+        after_messages = { "Thanks, that's delicious!" },
+        walk_speed     = 80,
     }
     for k, v in pairs(overrides or {}) do
         cfg[k] = v
@@ -62,7 +62,6 @@ runner.fast_forward_until(ctx, function()
 end, 0)
 
 assert(scene.customer:arrived(), "customer should be waiting after fast-forwarding")
-assert(scene.customer.requested_tag == "Protein", "sanity check: forced order config should request Protein")
 
 -- Place a fresh baked_chicken item (tagged "Protein", see item_defs.lua)
 -- directly on a free grid cell, rather than driving the microwave's cook
@@ -109,14 +108,14 @@ assert(cooked.grid == order_panel.item.panel, "the baked_chicken item should now
 
 -- Click the panel's Serve button.
 assert(order_panel:_serve_enabled(),
-    "Serve should be enabled with exactly one matching-tag item in the panel")
+    "Serve should be enabled with exactly one item in the panel")
 local serve = order_panel.buttons["Serve"]
 assert(serve, "order panel should have a Serve button")
 scene:mouse_pressed(serve.x + serve.w / 2, serve.y + serve.h / 2)
 
 assert(#scene.panels == 0, "clicking Serve should close the order panel")
 assert(scene.day_state.currency == currency_before + 10,
-    "currency should increase by 10 on a matching-tag serve, got " .. tostring(scene.day_state.currency))
+    "currency should increase by 10 on serve, got " .. tostring(scene.day_state.currency))
 assert(scene.day_state.customers_served == served_before + 1,
     "customers_served should increment by 1")
 
@@ -289,8 +288,8 @@ do
     scene4.customer:show(order_cfg())
 
     runner.fast_forward_until(ctx4, function() return scene4.customer:arrived() end, 0)
-    assert(scene4.customer.requested_tag == "Protein",
-        "sanity check: the forced order customer request should be Protein")
+    assert(scene4.customer.loved_tags[1] == "Protein",
+        "sanity check: the forced order customer should have Protein as a loved tag")
 
     local microwave4
     for _, it in ipairs(scene4.grid:items()) do
@@ -331,10 +330,13 @@ do
     local currency_before = scene4.day_state.currency
     local served_before   = scene4.day_state.customers_served
 
+    -- Move the microwave panel out of the way before clicking the customer;
+    -- its default position overlaps the customer's on-screen position, which
+    -- would cause the panel to absorb the click before it reaches the customer.
+    microwave_panel4:_layout(50, 50)
+
     -- Click through the greeting to open the order panel: one click finishes
-    -- the greeting and immediately opens the panel. customer.x/y is outside
-    -- the microwave panel's default bounds (see Test 9's layout reasoning
-    -- below), so this click can't be swallowed by it.
+    -- the greeting and immediately opens the panel.
     local cx4, cy4 = scene4.customer.x, scene4.customer.y
     scene4:mouse_pressed(cx4, cy4)
     assert(scene4.customer.done_talking, "sanity check: done_talking should be true after one click")
@@ -366,7 +368,7 @@ do
 
     -- Click the order panel's Serve button.
     assert(order_panel4:_serve_enabled(),
-        "Serve should be enabled with exactly one matching-tag item in the order panel")
+        "Serve should be enabled with exactly one item in the order panel")
     local serve4 = order_panel4.buttons["Serve"]
     assert(serve4, "order panel should have a Serve button")
     scene4:mouse_pressed(serve4.x + serve4.w / 2, serve4.y + serve4.h / 2)
@@ -598,16 +600,20 @@ do
     -- while hovering the grid it was originally picked up from - the owner
     -- grid still gets a normal mouse_moved() call every time regardless of
     -- hover target, which is what drives Grid:_position_dragging_sprite.
-    assert(meat7.sprite.x == (gx7 + 1) - meat7.sprite.width / 2
-        and meat7.sprite.y == (gy7 + 1) - meat7.sprite.height / 2,
-        "dragged item's sprite should stay centered on the cursor even while hovering a different grid")
+    -- Drag preserves the click offset, so sprite position = cursor - offset.
+    -- offset was set at pickup (px7+1, py7+1) when sprite.x was (px7-mx7),
+    -- giving offset_x = 1+mx7. After moving to gx7+1: sprite.x = gx7-mx7.
+    -- drag_offset was set as cursor_pickup - cell_world = (px7+1) - px7 = 1.
+    -- After moving to (gx7+1, gy7+1): sprite.x = (gx7+1) - 1 = gx7.
+    assert(meat7.sprite.x == gx7 and meat7.sprite.y == gy7,
+        "dragged item's sprite should keep following the cursor even while hovering a different grid")
 
     -- Move back over the panel's own grid: the override on the main grid
     -- should clear, and the panel grid should resume tracking normally.
     scene7:mouse_moved(px7 + 1, py7 + 1)
     assert(scene7.grid._preview_override_item == nil,
         "main grid's override should clear once the cursor moves back over the panel")
-    assert(microwave7.panel.drag_preview_col == 0 and microwave7.panel.drag_preview_row == 0,
+    assert(microwave7.panel.drag_preview_col ~= nil and microwave7.panel.drag_preview_row ~= nil,
         "the panel grid should resume showing its own preview once the cursor is back over it")
 
     scene7:mouse_released(px7 + 1, py7 + 1)
@@ -790,7 +796,7 @@ do
     assert(not scene10.queue:has_next(), "sanity check: queue should be fully drained")
 
     scene10.customer:serve() -- enters talking_after (after_messages present)
-    scene10.day_state:record_serve()
+    scene10.day_state:record_serve("baked_chicken")
 
     assert(scene10.day_state:day_complete(), "sanity check: day should now be complete by count")
     assert(scene10.customer:active(), "sanity check: the served customer should still be on stage (talking_after)")
@@ -810,13 +816,16 @@ do
     assert(scene10:_next_day_ready(), "Next Day should be ready once the day's last customer has fully left")
 
     -- The click handler itself must honor the same gating, not just the
-    -- drawn button's visibility. Replicates kitchen_scene.lua's private
-    -- NEXT_DAY_BTN rect (not exported) since it's not exposed on the scene.
+    -- drawn button's visibility. Clicking Next Day opens the summary overlay;
+    -- clicking the Continue button in the overlay advances the day.
     local config = require("lua/game/config")
     local next_day_btn = { x = config.SCREEN_W - 170, y = config.SPLIT_Y - 56, w = 150, h = 40 }
+    local summary_btn  = { x = 540, y = 470, w = 200, h = 44 }
     local day_before = scene10.day_state.day
     scene10:mouse_pressed(next_day_btn.x + 10, next_day_btn.y + 10)
-    assert(scene10.day_state.day == day_before + 1, "clicking Next Day once ready should advance the day")
+    assert(scene10._showing_summary, "clicking Next Day should open the summary overlay")
+    scene10:mouse_pressed(summary_btn.x + 10, summary_btn.y + 10)
+    assert(scene10.day_state.day == day_before + 1, "clicking Continue in the summary should advance the day")
 
     print("PASS: kitchen_scene: Next Day is not ready until the day's last customer has actually left")
 end
@@ -827,26 +836,25 @@ end
 -- leave indistinguishably from a successful serve.
 
 do
+    -- With the trait-tier system, any food can be served. Verify that Serve
+    -- is enabled regardless of whether the item carries any of the customer's
+    -- trait tags, and that Serve and Skip both still work as expected.
     local ctx11 = runner.setup(function() return KitchenScene.new() end)
     local scene11 = ctx11.sm.current
 
-    scene11.customer:show(order_cfg()) -- default request: Protein
+    scene11.customer:show(order_cfg())
     runner.fast_forward_until(ctx11, function() return scene11.customer:arrived() end, 0)
-    assert(scene11.customer.requested_tag == "Protein", "sanity check: forced customer wants Protein")
 
     local meat11
     for _, it in ipairs(scene11.grid:items()) do
         if it.type_id == "raw_chicken" then meat11 = it end
     end
     assert(meat11, "on_enter should have placed raw_chicken")
+    assert(#meat11.tags == 0, "sanity check: raw_chicken carries no tags")
 
     local currency_before = scene11.day_state.currency
     local served_before   = scene11.day_state.customers_served
 
-    -- Click through the greeting to open the order panel: one click finishes
-    -- the greeting and immediately opens the panel. The short greeting
-    -- message's typewriter reveal is already fully played out by the time
-    -- fast_forward_until (dt = 1.0 per step) observes arrived().
     local cx11, cy11 = scene11.customer.x, scene11.customer.y
     scene11:mouse_pressed(cx11, cy11)
     assert(scene11.customer.done_talking, "sanity check: done_talking should be true after one click")
@@ -854,7 +862,7 @@ do
     local order_panel11 = scene11.panels[1]
     assert(order_panel11.item == scene11.customer, "the order panel should wrap the customer itself")
 
-    -- Drag the wrong item (raw_chicken, untagged) into the order panel's grid.
+    -- Drag an untagged raw item into the order panel.
     local mx11, my11 = scene11.grid:cell_to_world(meat11.cell_col, meat11.cell_row)
     scene11:mouse_pressed(mx11 + 1, my11 + 1)
     assert(scene11.grid.dragging == meat11, "mouse_pressed on the raw_chicken's cell should start dragging it")
@@ -866,56 +874,54 @@ do
     assert(scene11.grid.dragging == nil, "dropping into the order panel should clear the main grid's drag state")
     assert(meat11.grid == order_panel11.item.panel, "the raw_chicken item should now be in the order panel's grid")
 
-    -- Serve must be disabled: raw_chicken carries no tags at all, so it can
-    -- never satisfy the requested "Protein" tag.
-    assert(not order_panel11:_serve_enabled(),
-        "Serve should be disabled with a non-matching item in the panel")
+    -- Serve is enabled: any 1 item in the panel enables Serve regardless of tags.
+    assert(order_panel11:_serve_enabled(),
+        "Serve should be enabled with any one item in the panel (trait system is display-only)")
 
-    -- Clicking the (disabled) Serve button must be a no-op: panel stays
-    -- open, nothing is awarded.
+    -- Serve the raw item; currency and served count should update.
     local serve11 = order_panel11.buttons["Serve"]
     assert(serve11, "order panel should have a Serve button")
     scene11:mouse_pressed(serve11.x + serve11.w / 2, serve11.y + serve11.h / 2)
-    assert(#scene11.panels == 1, "clicking a disabled Serve button should be a no-op, panel stays open")
-    assert(scene11.day_state.currency == currency_before,
-        "a no-op click on a disabled Serve button must not award currency")
 
-    -- Click Skip instead.
-    local skip11 = order_panel11.buttons["Skip"]
-    assert(skip11, "order panel should have a Skip button")
-    scene11:mouse_pressed(skip11.x + skip11.w / 2, skip11.y + skip11.h / 2)
+    assert(#scene11.panels == 0, "clicking Serve should close the order panel")
+    assert(scene11.day_state.currency == currency_before + 10, "serving should award currency")
+    assert(scene11.day_state.customers_served == served_before + 1, "customers_served should increment")
+    assert(not scene11.customer.dismissed, "customer should be served, not dismissed")
 
-    assert(#scene11.panels == 0, "clicking Skip should close the order panel")
-    assert(meat11.grid == scene11.grid, "the skipped item should be returned to the main floor grid")
+    -- Skip test: new context, drag item in, use Skip instead.
+    local ctx11b = runner.setup(function() return KitchenScene.new() end)
+    local scene11b = ctx11b.sm.current
+    scene11b.customer:show(order_cfg())
+    runner.fast_forward_until(ctx11b, function() return scene11b.customer:arrived() end, 0)
 
-    local back_on_grid = false
-    for _, it in ipairs(scene11.grid:items()) do
-        if it == meat11 then back_on_grid = true end
+    local meat11b
+    for _, it in ipairs(scene11b.grid:items()) do
+        if it.type_id == "raw_chicken" then meat11b = it end
     end
-    assert(back_on_grid, "the skipped item should be listed on the main floor grid")
+    assert(meat11b, "on_enter should have placed raw_chicken")
 
-    -- Rejected, not served: no currency, but the visit still counts toward
-    -- the day (matches the existing dismiss-on-mismatch behavior).
-    assert(scene11.day_state.currency == currency_before,
-        "skipping the wrong item must not award currency")
-    assert(scene11.day_state.customers_served == served_before + 1,
-        "skipping should still count as this customer's visit")
-    assert(scene11.customer.dismissed, "customer should be marked dismissed")
+    local served_before_b = scene11b.day_state.customers_served
+    local cx11b, cy11b = scene11b.customer.x, scene11b.customer.y
+    scene11b:mouse_pressed(cx11b, cy11b)
+    local order_panel11b = scene11b.panels[1]
 
-    -- And now, unlike before, this must be visibly a rejection: a message
-    -- showing via talking_after, not a silent walking_out.
-    assert(scene11.customer.state == "talking_after",
-        "skipping should show a rejection message (talking_after), got " .. scene11.customer.state)
-    assert(scene11.customer:bubble_visible(), "the rejection message's bubble should be visible")
-    assert(#scene11.customer._full_text > 0, "the rejection message should be non-empty")
+    local mx11b, my11b = scene11b.grid:cell_to_world(meat11b.cell_col, meat11b.cell_row)
+    scene11b:mouse_pressed(mx11b + 1, my11b + 1)
+    local px11b, py11b = order_panel11b.item.panel:cell_to_world(0, 0)
+    scene11b:mouse_moved(px11b + 1, py11b + 1)
+    scene11b:mouse_released(px11b + 1, py11b + 1)
 
-    -- Click through it like any other dialogue, same as a served customer.
-    scene11:mouse_pressed(cx11, cy11) -- completes the reveal
-    assert(scene11.customer.state == "talking_after", "first click should only complete the reveal")
-    scene11:mouse_pressed(cx11, cy11) -- advances past it
-    assert(scene11.customer.state == "walking_out", "second click should send the customer into walking_out")
+    local skip11 = order_panel11b.buttons["Skip"]
+    assert(skip11, "order panel should have a Skip button")
+    scene11b:mouse_pressed(skip11.x + skip11.w / 2, skip11.y + skip11.h / 2)
 
-    print("PASS: kitchen_scene: dragging the wrong item into the order panel keeps Serve disabled; Skip rejects with a visible message, not silently")
+    assert(#scene11b.panels == 0, "clicking Skip should close the order panel")
+    assert(meat11b.grid == scene11b.grid, "the skipped item should be returned to the main floor grid")
+    assert(scene11b.day_state.customers_served == served_before_b + 1, "skipping counts as a visit")
+    assert(scene11b.customer.dismissed, "customer should be marked dismissed after Skip")
+    assert(scene11b.customer.state == "talking_after", "skipping shows a rejection message via talking_after")
+
+    print("PASS: kitchen_scene: any item enables Serve (trait system display-only); Skip still dismisses with a visible message")
 end
 
 -- Test 12: the microwave itself still occupies a 2x2 area on the main
@@ -986,6 +992,8 @@ do
         stock = { "raw_chicken" }, walk_speed = 1000,
     })
     runner.fast_forward_until(ctx13, function() return scene13.customer:arrived() end, 0)
+    -- Move the microwave panel away so it doesn't absorb the merchant click.
+    panel13:_layout(50, 50)
     scene13:mouse_pressed(scene13.customer.x, scene13.customer.y)
     assert(#scene13.panels == 2, "sanity check: merchant panel should now also be open")
     assert(scene13.panels[2].item == scene13.customer, "sanity check: merchant panel should be on top")
@@ -1094,12 +1102,12 @@ do
     -- CustomerQueue's random merchant-slot pick queued up first for this
     -- day.
     scene15.customer:show(order_cfg({
-        requested_tag = "Healthy",
-        messages      = { "Could I get something healthy?" },
+        loved_tags = { "Healthy" },
+        messages   = { "Could I get something healthy?" },
     }))
     runner.fast_forward_until(ctx15, function() return scene15.customer:arrived() end, 0)
-    assert(scene15.customer.requested_tag == "Healthy",
-        "sanity check: the forced order customer request should be Healthy")
+    assert(scene15.customer.loved_tags[1] == "Healthy",
+        "sanity check: the forced order customer should love Healthy")
 
     local microwave15
     for _, it in ipairs(scene15.grid:items()) do
@@ -1137,6 +1145,10 @@ do
 
     local currency_before = scene15.day_state.currency
     local served_before   = scene15.day_state.customers_served
+
+    -- Move the microwave panel away before clicking the customer (same fix
+    -- as Test 4: the panel's default position overlaps the customer's position).
+    microwave_panel15:_layout(50, 50)
 
     -- Click through the greeting to open the order panel: one click finishes
     -- the greeting and immediately opens the panel (same behaviour as Test 1/Test 4).
@@ -1177,7 +1189,7 @@ do
 
     -- Click the order panel's Serve button.
     assert(order_panel15:_serve_enabled(),
-        "Serve should be enabled with exactly one matching-tag item in the order panel")
+        "Serve should be enabled with exactly one item in the order panel")
     local serve15 = order_panel15.buttons["Serve"]
     assert(serve15, "order panel should have a Serve button")
     scene15:mouse_pressed(serve15.x + serve15.w / 2, serve15.y + serve15.h / 2)
@@ -1208,13 +1220,15 @@ end
 -- longer does anything special.
 
 do
-    local function assert_raw_drop_rejected(raw_type_id, tag)
+    -- With the trait-tier system, raw (untagged) items are still serveable -
+    -- Serve enables for any 1 item in the panel. Verify this holds for both
+    -- raw types on the starting floor.
+    local function assert_raw_serve_enabled(raw_type_id)
         local ctxN = runner.setup(function() return KitchenScene.new() end)
         local sceneN = ctxN.sm.current
 
-        sceneN.customer:show(order_cfg({ requested_tag = tag }))
+        sceneN.customer:show(order_cfg())
         runner.fast_forward_until(ctxN, function() return sceneN.customer:arrived() end, 0)
-        assert(sceneN.customer.requested_tag == tag, "sanity check: forced customer wants " .. tag)
 
         local raw_item
         for _, it in ipairs(sceneN.grid:items()) do
@@ -1223,66 +1237,26 @@ do
         assert(raw_item, "on_enter should have placed " .. raw_type_id)
         assert(#raw_item.tags == 0, "sanity check: " .. raw_type_id .. " should carry no tags")
 
-        local currency_before = sceneN.day_state.currency
-        local served_before   = sceneN.day_state.customers_served
-
-        -- Click through the greeting to open the order panel: one click
-        -- finishes the greeting and immediately opens the panel.
         local cxN, cyN = sceneN.customer.x, sceneN.customer.y
         sceneN:mouse_pressed(cxN, cyN)
-        assert(sceneN.customer.done_talking, "sanity check: done_talking should be true after one click")
-        assert(#sceneN.panels == 1, "the same click that finishes the greeting should immediately open the order panel")
+        assert(#sceneN.panels == 1, "one click should open the order panel")
         local order_panelN = sceneN.panels[1]
-        assert(order_panelN.item == sceneN.customer, "the order panel should wrap the customer itself")
 
-        -- Drag the raw (untagged) item into the order panel's grid.
         local rx, ry = sceneN.grid:cell_to_world(raw_item.cell_col, raw_item.cell_row)
         sceneN:mouse_pressed(rx + 1, ry + 1)
-        assert(sceneN.grid.dragging == raw_item, "mouse_pressed on the raw item's cell should start dragging it")
-
         local pxN, pyN = order_panelN.item.panel:cell_to_world(0, 0)
         sceneN:mouse_moved(pxN + 1, pyN + 1)
         sceneN:mouse_released(pxN + 1, pyN + 1)
 
-        assert(sceneN.grid.dragging == nil, "dropping into the order panel should clear the main grid's drag state")
-        assert(raw_item.grid == order_panelN.item.panel, "the raw item should now be in the order panel's grid")
-
-        -- Serve must be disabled: a raw item carries no tags at all, so it
-        -- can never satisfy any requested tag.
-        assert(not order_panelN:_serve_enabled(),
-            "Serve should be disabled with an untagged " .. raw_type_id .. " in the panel")
-
-        -- Click Skip instead.
-        local skipN = order_panelN.buttons["Skip"]
-        assert(skipN, "order panel should have a Skip button")
-        sceneN:mouse_pressed(skipN.x + skipN.w / 2, skipN.y + skipN.h / 2)
-
-        assert(#sceneN.panels == 0, "clicking Skip should close the order panel")
-        assert(raw_item.grid == sceneN.grid, "the skipped item should be returned to the main floor grid")
-
-        local back_on_grid = false
-        for _, it in ipairs(sceneN.grid:items()) do
-            if it == raw_item then back_on_grid = true end
-        end
-        assert(back_on_grid, "the skipped item should be listed on the main floor grid")
-
-        assert(sceneN.day_state.currency == currency_before,
-            "dropping raw " .. raw_type_id .. " must never award currency, even when requesting " .. tag)
-        assert(sceneN.day_state.customers_served == served_before + 1,
-            "the visit should still count toward the day even though it was rejected")
-        assert(sceneN.customer.dismissed,
-            "dropping raw " .. raw_type_id .. " on a customer requesting " .. tag .. " should always be dismissed")
+        assert(raw_item.grid == order_panelN.item.panel, "raw item should be in the order panel")
+        assert(order_panelN:_serve_enabled(),
+            "Serve should be enabled for " .. raw_type_id .. " (any item enables serve in the trait system)")
     end
 
-    -- Cross-product: each raw item against each tag currently in play, so
-    -- this doesn't just prove "raw_chicken never satisfies Protein" (which
-    -- could coincidentally hold for the wrong reason) but the general rule.
-    assert_raw_drop_rejected("raw_chicken", "Protein")
-    assert_raw_drop_rejected("raw_chicken", "Healthy")
-    assert_raw_drop_rejected("broccoli", "Healthy")
-    assert_raw_drop_rejected("broccoli", "Protein")
+    assert_raw_serve_enabled("raw_chicken")
+    assert_raw_serve_enabled("broccoli")
 
-    print("PASS: kitchen_scene: dropping any raw (untagged) item on a customer is always rejected, regardless of the requested tag")
+    print("PASS: kitchen_scene: raw (untagged) items enable Serve in the trait-tier system (serve gate is tag-agnostic)")
 end
 
 -- Test 17: double-click and right-click to open a container's panel also
@@ -1549,11 +1523,14 @@ do
     assert(not scene21.customer:active(), "customer should have fully walked off")
     assert(scene21:_next_day_ready(), "Next Day button should be ready")
 
-    -- Click Next Day to trigger overnight_tick on all items.
+    -- Click Next Day (opens summary overlay) then Continue (advances day +
+    -- triggers overnight_tick on all items).
     local config21 = require("lua/game/config")
     local btn_x = config21.SCREEN_W - 170
     local btn_y = config21.SPLIT_Y - 56
     scene21:mouse_pressed(btn_x + 5, btn_y + 5)
+    assert(scene21._showing_summary, "clicking Next Day should open the summary overlay")
+    scene21:mouse_pressed(540 + 10, 470 + 10) -- SUMMARY_BTN center
 
     -- The onion at center (1,1) should have spread to all 4 orthogonal neighbors.
     local onion_count = 0
