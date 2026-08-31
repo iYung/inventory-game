@@ -250,6 +250,14 @@ function ItemPanel:mouse_pressed(x, y)
             if state.running then locked = true; break end
         end
         if not locked then
+            local owner = self.item.grid and self.item.grid.owner
+            if owner then
+                for _, state in pairs(owner.action_state or {}) do
+                    if state.running then locked = true; break end
+                end
+            end
+        end
+        if not locked then
             self.item.panel:mouse_pressed(x, y)
         end
         return true

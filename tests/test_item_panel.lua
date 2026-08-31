@@ -485,4 +485,52 @@ do
     print("PASS: item_panel: grid drag still works normally when no action is running")
 end
 
+-- Test 21: panel.owner is set to the item itself when a panel grid is -------
+-- created (required for the parent-processing guard to work).
+
+do
+    local microwave = Item.new("microwave")
+    assert(microwave.panel.owner == microwave,
+        "panel Grid's owner should point back to the item that owns it")
+    print("PASS: item_panel: panel.owner backpointer is set correctly")
+end
+
+-- Test 22: clicking inside a pot's ItemPanel is blocked when the pot --------
+-- sits inside a cooking microwave (parent-container guard).
+
+do
+    local microwave = Item.new("microwave")
+
+    local pot = Item.new("pot")
+    microwave.panel:place(pot, 0, 0)
+
+    -- Put something in the pot so its panel has an item to (try to) drag.
+    local water = Item.new("water")
+    pot.panel:place(water, 0, 0)
+
+    -- Open the pot's panel.
+    local pot_panel = ItemPanel.new(pot)
+
+    -- pot itself has no running action — confirm drag would normally work.
+    local px, py = pot.panel:cell_to_world(0, 0)
+    pot_panel:mouse_pressed(px + 1, py + 1)
+    assert(pot.panel.dragging == water,
+        "drag should work normally before the microwave starts cooking")
+    pot_panel:mouse_released(px + 1, py + 1)
+
+    -- Now start Cook on the microwave.
+    local raw_chicken = Item.new("raw_chicken")
+    microwave.panel:place(raw_chicken, 1, 0)
+    microwave:start_action("Cook")
+    assert(microwave.action_state["Cook"] and microwave.action_state["Cook"].running,
+        "microwave Cook should be running")
+
+    -- Clicking in the pot's panel grid should now be blocked.
+    pot_panel:mouse_pressed(px + 1, py + 1)
+    assert(pot.panel.dragging == nil,
+        "drag in pot's panel should be blocked while the parent microwave is cooking")
+
+    print("PASS: item_panel: pot panel drag blocked when parent microwave is cooking")
+end
+
 print("ALL TESTS PASSED")

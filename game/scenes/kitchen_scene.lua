@@ -363,6 +363,14 @@ local function transfer_drag_first_fit(from_grid, to_grid, item)
     end
 end
 
+-- Returns true iff any action on `item` is currently running.
+local function any_action_running(item)
+    for _, state in pairs(item.action_state or {}) do
+        if state.running then return true end
+    end
+    return false
+end
+
 -- Checks (x,y) against `grid` for the double-click-to-open-panel
 -- gesture: if a has_panel item sits at that cell AND this is a second
 -- click within DOUBLE_CLICK_WINDOW on the same cell of the same grid,
@@ -377,6 +385,11 @@ function KitchenScene:_try_double_click_open(grid, x, y)
     if item then
         local def = item_defs[item.type_id]
         if def and def.has_panel then
+            local owner = item.grid and item.grid.owner
+            if owner and any_action_running(owner) then
+                return false
+            end
+
             local is_double_click = self._last_click_time
                 and (now - self._last_click_time) <= DOUBLE_CLICK_WINDOW
                 and self._last_click_grid == grid
@@ -411,6 +424,8 @@ function KitchenScene:_open_container_at(grid, x, y)
     if not item then return end
     local def = item_defs[item.type_id]
     if not (def and def.has_panel) then return end
+    local owner = item.grid and item.grid.owner
+    if owner and any_action_running(owner) then return end
     self:_open_or_focus_panel(item)
 end
 
