@@ -1728,13 +1728,19 @@ do
     assert(container25, "on_enter should have placed a container on the floor grid")
 
     local bean_count = 0
+    local has_milking_center = false
+    local has_cheese_cave    = false
     for _, it in ipairs(container25.panel:items()) do
         if it.type_id == "roasted_coffee_bean" then bean_count = bean_count + 1 end
+        if it.type_id == "milking_center"       then has_milking_center = true end
+        if it.type_id == "cheese_cave"          then has_cheese_cave    = true end
     end
     assert(bean_count == 2,
         "container should start with 2 roasted_coffee_bean items, got " .. bean_count)
+    assert(has_milking_center, "container should start with a milking_center")
+    assert(has_cheese_cave,    "container should start with a cheese_cave")
 
-    print("PASS: kitchen_scene: on_enter places coffee_machine at (6,2) and pre-stocks container with 2 roasted_coffee_beans")
+    print("PASS: kitchen_scene: on_enter places coffee_machine at (6,2) and pre-stocks container with milking_center, cheese_cave, and 2 roasted_coffee_beans")
 end
 
 print("ALL TESTS PASSED")

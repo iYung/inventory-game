@@ -155,13 +155,19 @@ function KitchenScene:on_enter()
     barn.panel:place(Item.new("cow"), 0, 0)
     barn.panel:place(Item.new("cow"), 2, 0)
 
-    -- Container (2x2) at (0,3)-(1,4): passive storage with two roasted
-    -- coffee beans pre-stocked so the coffee workflow is reachable immediately.
+    -- Container (2x2) at (0,3)-(1,4): holds the milking center and cheese cave,
+    -- plus two roasted coffee beans pre-stocked so the coffee workflow is
+    -- reachable immediately. Panel layout (6x6):
+    --   milking_center (3x3) at (0,0)-(2,2)
+    --   cheese_cave    (2x2) at (3,0)-(4,1)
+    --   roasted beans  (1x1) at (5,0) and (5,1)
     local container = Item.new("container")
     assert(self.grid:can_place(container, 0, 3), "container starting cell should be free")
     self.grid:place(container, 0, 3)
-    container.panel:place(Item.new("roasted_coffee_bean"), 4, 0)
+    container.panel:place(Item.new("milking_center"), 0, 0)
+    container.panel:place(Item.new("cheese_cave"), 3, 0)
     container.panel:place(Item.new("roasted_coffee_bean"), 5, 0)
+    container.panel:place(Item.new("roasted_coffee_bean"), 5, 1)
 
     -- Coffee machine (2x2) at (6,2)-(7,3): brews black coffee from water +
     -- roasted coffee beans. Sits directly below the fryer (6,0)-(7,1), clear

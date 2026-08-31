@@ -37,7 +37,11 @@ automatically overnight.
 A **coffee machine** (2×2) has a 2×2 panel; load it with one water and one roasted coffee bean, then press **Run** (3 s) to brew Caffeine-and-Bitter-tagged black coffee. One coffee machine starts on the floor at grid cell (6,2).
 A **container** (2×2) has a 6×6 internal storage panel — purely passive, no actions. Use it to organize items on the floor grid. The starting container comes pre-stocked with two roasted coffee beans so the coffee workflow is accessible from day one.
 A **barn** (3×3) has a 6×6 panel for housing cows — for every 2 cows inside,
-one new cow is born overnight (cows are never consumed). A **coop** (2×2)
+one new cow is born overnight (cows are never consumed). A **milking center**
+(3×3) has a 4×3 panel; place cows inside and every night it produces 2 milk
+per cow (cows are preserved). A **cheese cave** (2×2) has a 2×2 panel; milk
+left inside overnight converts entirely to cheese (1 milk → 1 cheese, all at
+once). A **coop** (2×2)
 produces one egg per night for each chicken inside it — chickens are residents,
 not consumed. An **incubator** (1×1) takes one egg and hatches it into a
 chicken after two nights; removing the egg resets progress. A **meat machine**

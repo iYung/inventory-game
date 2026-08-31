@@ -20,16 +20,17 @@ do
     end
     assert(outer, "on_enter should have placed a container on the floor grid")
 
-    -- Place a nested container (inner) inside the outer panel at (0,0).
-    -- The inner container is 2x2, so it occupies (0,0)-(1,1).
+    -- Place a nested container (inner) inside the outer panel at (3,2).
+    -- (0,0)-(2,2) is the milking_center, (3,0)-(4,1) is the cheese_cave;
+    -- (3,2) is the first free 2x2 region: occupies (3,2)-(4,3).
     local inner = Item.new("container")
-    assert(outer.panel:can_place(inner, 0, 0), "inner container should fit at (0,0) in outer panel")
-    outer.panel:place(inner, 0, 0)
+    assert(outer.panel:can_place(inner, 3, 2), "inner container should fit at (3,2) in outer panel")
+    outer.panel:place(inner, 3, 2)
 
-    -- Place a raw_chicken inside the outer panel at (3,0), clear of the inner container.
+    -- Place a raw_chicken inside the outer panel at (5,2), clear of the inner container.
     local chicken = Item.new("raw_chicken")
-    assert(outer.panel:can_place(chicken, 3, 0), "raw_chicken should fit at (3,0) in outer panel")
-    outer.panel:place(chicken, 3, 0)
+    assert(outer.panel:can_place(chicken, 5, 2), "raw_chicken should fit at (5,2) in outer panel")
+    outer.panel:place(chicken, 5, 2)
 
     -- Open the outer container's panel.
     scene:_open_panel(ItemPanel.new(outer))
