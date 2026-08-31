@@ -264,31 +264,34 @@ do
     print("PASS: grid: drag preserves click offset (item does not snap to center)")
 end
 
--- Test: snap centers item on the cell the center is over -------------------
+-- Test: snap rounds sprite top-left to nearest cell ------------------------
 
 do
     local g = Grid.new(10, 6, CELL, 0, 0)
-    -- 2x1 item; sprite width = 2*CELL, height = CELL.
-    local a = make_item({ { {0,0}, {1,0} } })
-    a.sprite = { x = 0, y = 0, width = 2 * CELL, height = CELL }
+    local a = make_item({ ONE_BY_ONE })
+    a.sprite = { x = 0, y = 0, width = CELL, height = CELL }
     g:place(a, 0, 0)
 
-    -- Grab at the far right edge (offset = 2*CELL-1 from sprite left = x=0).
-    g:mouse_pressed(2 * CELL - 1, 1)
+    -- Grab at pixel (8, 1). Offset = (8, 1).
+    g:mouse_pressed(8, 1)
 
-    -- Move cursor to x = 5*CELL. Sprite.x = 5*CELL - (2*CELL-1) = 3*CELL+1.
-    -- Sprite center_x = 3*CELL+1 + CELL = 4*CELL+1 → center_col = 4.
-    -- w_cells = 2, so snap_col = 4 - floor(2/2) = 4 - 1 = 3.
-    -- Item top-left at col 3, covering cols 3 and 4 — centered on col 4.
-    g:mouse_moved(5 * CELL, 1)
+    -- Move cursor to (3*CELL + 20, 1). sprite.x = 3*CELL+20 - 8 = 3*CELL+12.
+    -- round((3*CELL+12) / CELL) = round(3.33) = 3 → snap col 3.
+    g:mouse_moved(3 * CELL + 20, 1)
     assert(g.drag_preview_col == 3,
-        "snap_col should be center_col - floor(w/2) = 3, got " .. tostring(g.drag_preview_col))
+        "snap should round sprite top-left to nearest cell (col 3), got " .. tostring(g.drag_preview_col))
 
-    g:mouse_released(5 * CELL, 1)
-    assert(a.cell_col == 3 and a.cell_row == 0,
-        "item top-left should land at col 3 (centered on col 4), got col=" .. tostring(a.cell_col))
+    -- Move cursor so sprite.x = 3*CELL+19 (just past the half-cell mark).
+    -- round((3*CELL+19) / CELL) = round(3.527) = 4 → snap col 4.
+    g:mouse_moved(3 * CELL + 27, 1)  -- sprite.x = 3*CELL+27-8 = 3*CELL+19
+    assert(g.drag_preview_col == 4,
+        "snap should flip to col 4 past the half-cell threshold, got " .. tostring(g.drag_preview_col))
 
-    print("PASS: grid: snap centers item on the cell its center is over")
+    g:mouse_released(3 * CELL + 27, 1)
+    assert(a.cell_col == 4 and a.cell_row == 0,
+        "item should land at col 4 on release, got col=" .. tostring(a.cell_col))
+
+    print("PASS: grid: snap rounds sprite top-left to nearest cell")
 end
 
 -- Test: snap with no sprite falls back to cursor cell ---------------------

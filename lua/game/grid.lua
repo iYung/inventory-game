@@ -57,18 +57,17 @@ function Grid:_position_dragging_sprite()
     s.y = self.drag_cursor_y - self.drag_offset_y
 end
 
--- Returns the snap target (col, row) for the item's top-left, derived from
--- the item's current center: find which cell the center is in, then offset
--- back by half the item's size so the item ends up centered on that cell.
+-- Returns the snap target (col, row) for the item's top-left: rounds the
+-- sprite's current pixel position to the nearest cell boundary. The sprite
+-- is already positioned by the click offset, so rounding its top-left is
+-- equivalent to center-based snapping without the floor-on-boundary problem.
 function Grid:_snap_cell()
     local item = self.dragging
     if item and item.sprite then
         local s = item.sprite
-        local center_col, center_row = self:world_to_cell(s.x + s.width / 2, s.y + s.height / 2)
-        local w_cells = math.floor(s.width  / self.cell_size + 0.5)
-        local h_cells = math.floor(s.height / self.cell_size + 0.5)
-        return center_col - math.floor(w_cells / 2),
-               center_row - math.floor(h_cells / 2)
+        local col = math.floor((s.x - self.origin_x) / self.cell_size + 0.5)
+        local row = math.floor((s.y - self.origin_y) / self.cell_size + 0.5)
+        return col, row
     end
     return self:world_to_cell(self.drag_cursor_x, self.drag_cursor_y)
 end
