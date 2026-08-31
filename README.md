@@ -17,6 +17,9 @@ handles raw chicken -> Protein-tagged baked chicken, raw beef -> Protein-tagged 
 broccoli -> Healthy-tagged steamed broccoli, and potato -> Filling-tagged baked potato;
 the fryer turns potato into Greasy-tagged fries, onion into Greasy-tagged blooming onion, and
 raw chicken into Greasy-and-Protein-tagged fried chicken.
+A **pump** (1×2) has a 1×1 panel and a "Pump" button that produces one water
+per press, no ingredients required; if the panel is already full the action
+runs but produces nothing.
 A **pot** is a movable container in
 its own right: load it with water + raw chicken (or water + onion, or water + egg, or
 water + potato + raw beef), then place the loaded pot itself inside the microwave's panel
