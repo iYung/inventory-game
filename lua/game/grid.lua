@@ -57,19 +57,22 @@ function Grid:_position_dragging_sprite()
     s.y = self.drag_cursor_y - self.drag_offset_y
 end
 
--- Returns the snap target (col, row) for the item's top-left: rounds the
--- sprite's current pixel position to the nearest cell boundary. The sprite
--- is already positioned by the click offset, so rounding its top-left is
--- equivalent to center-based snapping without the floor-on-boundary problem.
-function Grid:_snap_cell()
-    local item = self.dragging
+-- Returns the snap target (col, row) for any item's top-left: rounds the
+-- sprite's current pixel position to the nearest cell boundary on THIS grid.
+-- Works for any item, not just self.dragging, so preview_override and
+-- transfer_drag can use the same rounding as an in-grid drag.
+function Grid:_snap_cell_for(item)
     if item and item.sprite then
         local s = item.sprite
-        local col = math.floor((s.x - self.origin_x) / self.cell_size + 0.5)
-        local row = math.floor((s.y - self.origin_y) / self.cell_size + 0.5)
-        return col, row
+        return math.floor((s.x - self.origin_x) / self.cell_size + 0.5),
+               math.floor((s.y - self.origin_y) / self.cell_size + 0.5)
     end
     return self:world_to_cell(self.drag_cursor_x, self.drag_cursor_y)
+end
+
+-- Snap for the currently-dragged item on this grid.
+function Grid:_snap_cell()
+    return self:_snap_cell_for(self.dragging)
 end
 
 -- Coordinate conversion ----------------------------------------------------
@@ -248,7 +251,7 @@ end
 -- grid it would actually land on - not the origin grid's coordinate system.
 function Grid:preview_override(item, x, y)
     self._preview_override_item = item
-    self._preview_override_col, self._preview_override_row = self:world_to_cell(x, y)
+    self._preview_override_col, self._preview_override_row = self:_snap_cell_for(item)
 end
 
 function Grid:clear_preview_override()

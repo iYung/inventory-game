@@ -6,6 +6,8 @@
 -- just what Grid needs: :footprint(), :rotate(), :update(dt), plus the
 -- cell_col/cell_row/grid fields Grid itself sets.
 
+love = love or {}  -- stubs.lua expects love to exist before patching it
+require("lua/headless/stubs")
 local Grid = require("lua/game/grid")
 
 -- Builds a fake item with one or more footprint "shapes" (lists of {dx,dy}
@@ -362,14 +364,17 @@ end
 do
     local g = Grid.new(10, 6, CELL, 100, 200) -- non-zero origin, on purpose
     local a = make_item({ ONE_BY_ONE })
+    -- Give the item a sprite so _snap_cell_for uses the sprite path.
+    -- Sprite at cell (3,2) relative to this grid's origin.
+    a.sprite = { x = 100 + CELL * 3, y = 200 + CELL * 2, width = CELL, height = CELL }
 
     -- Not dragging anything of its own: preview_override still works and
     -- draw() must not error (uses the override branch since self.dragging
     -- is nil here).
-    g:preview_override(a, 100 + CELL * 3 + 1, 200 + CELL * 2 + 1)
+    g:preview_override(a, 0, 0) -- x,y unused; snap is sprite-based
     assert(g._preview_override_item == a, "preview_override should record the item")
     assert(g._preview_override_col == 3 and g._preview_override_row == 2,
-        "preview_override should compute the cell via this grid's own world_to_cell")
+        "preview_override should snap via sprite position on this grid")
 
     g:draw() -- must not error with an override set but nothing actually dragging
 
@@ -382,11 +387,47 @@ do
     g:mouse_pressed(100 + 1, 200 + 1) -- picks up `a`
     assert(g.dragging == a, "sanity check: should be dragging a")
     local b = make_item({ ONE_BY_ONE })
-    g:preview_override(b, 100 + CELL * 5 + 1, 200 + 1) -- a different item's override
+    b.sprite = { x = 100 + CELL * 5, y = 200, width = CELL, height = CELL }
+    g:preview_override(b, 0, 0) -- a different item's override; x,y unused
     g:draw() -- must not error; self.dragging (a) takes priority over the override (b)
     g:mouse_released(100 + 1, 200 + 1)
 
     print("PASS: grid: preview_override/clear_preview_override let another grid's drag preview here")
+end
+
+-- Test: _snap_cell_for uses sprite position relative to THIS grid's origin --
+
+do
+    -- Two grids at different origins (simulating main floor vs open panel).
+    local main  = Grid.new(10, 6, CELL, 0,   0)
+    local panel = Grid.new(4,  4, CELL, 400, 300)
+
+    -- Item dragged from `main`, sprite currently positioned at panel col 1, row 1
+    -- in panel-space: sprite.x = 400 + CELL, sprite.y = 300 + CELL.
+    local item = make_item({ ONE_BY_ONE })
+    item.sprite = { x = 400 + CELL, y = 300 + CELL, width = CELL, height = CELL }
+
+    -- panel:_snap_cell_for should place it at (1,1).
+    local col, row = panel:_snap_cell_for(item)
+    assert(col == 1 and row == 1,
+        "_snap_cell_for should snap to panel col/row 1,1 got " .. tostring(col) .. "," .. tostring(row))
+
+    -- Sprite shifted to straddle the boundary between col 1 and col 2 (past half-cell).
+    item.sprite.x = 400 + CELL + math.floor(CELL / 2) + 1
+    col, row = panel:_snap_cell_for(item)
+    assert(col == 2,
+        "_snap_cell_for should round up to col 2 past the half-cell threshold, got " .. tostring(col))
+
+    -- When item has no sprite, falls back to world_to_cell using drag_cursor on THAT grid.
+    local nosp = make_item({ ONE_BY_ONE })
+    panel.drag_cursor_x = 400 + CELL * 2 + 5
+    panel.drag_cursor_y = 300 + 5
+    col, row = panel:_snap_cell_for(nosp)
+    assert(col == 2 and row == 0,
+        "_snap_cell_for no-sprite fallback should use drag_cursor on this grid, got "
+        .. tostring(col) .. "," .. tostring(row))
+
+    print("PASS: grid: _snap_cell_for snaps via sprite position relative to this grid's origin")
 end
 
 -- Test 11: place_first_fit -------------------------------------------------

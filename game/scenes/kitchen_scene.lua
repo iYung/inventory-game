@@ -366,7 +366,7 @@ local function transfer_drag(from_grid, to_grid, item, x, y)
     clear_drag(from_grid, item)
     to_grid:clear_hover()
 
-    local col, row = to_grid:world_to_cell(x, y)
+    local col, row = to_grid:_snap_cell_for(item)
     if to_grid:can_place(item, col, row) then
         to_grid:place(item, col, row)
     else
