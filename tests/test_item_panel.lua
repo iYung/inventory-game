@@ -14,7 +14,7 @@ local config    = require("lua/game/config")
 -- Test 1: ItemPanel.new errors if item.panel is nil (not a container). -----
 
 do
-    local meat = Item.new("raw_meat")
+    local meat = Item.new("raw_chicken")
     local ok, err = pcall(ItemPanel.new, meat)
     assert(ok == false, "ItemPanel.new should error for an item with no panel")
     print("PASS: item_panel: ItemPanel.new errors when item.panel is nil")
@@ -32,18 +32,18 @@ do
     print("PASS: item_panel: is_action_enabled is false with an empty panel")
 end
 
--- Test 3: is_action_enabled becomes true once a matching raw_meat item is --
+-- Test 3: is_action_enabled becomes true once a matching raw_chicken item is --
 -- placed into the panel grid.
 
 do
     local microwave = Item.new("microwave")
     local panel = ItemPanel.new(microwave)
 
-    local meat = Item.new("raw_meat")
+    local meat = Item.new("raw_chicken")
     local placed = microwave.panel:place(meat, 0, 0)
 
     assert(panel:is_action_enabled("Cook") == true,
-        "Cook should be enabled once a matching raw_meat item is in the panel")
+        "Cook should be enabled once a matching raw_chicken item is in the panel")
     print("PASS: item_panel: is_action_enabled is true once a matching item is placed")
 end
 
@@ -58,7 +58,7 @@ do
     microwave.panel:place(broccoli, 0, 0)
 
     assert(panel:is_action_enabled("Cook") == true,
-        "Cook should be enabled with broccoli in the panel too, not just raw_meat")
+        "Cook should be enabled with broccoli in the panel too, not just raw_chicken")
     print("PASS: item_panel: is_action_enabled is true for any of Cook's recipes, not just the first")
 end
 
@@ -70,7 +70,7 @@ do
     local microwave = Item.new("microwave")
     local panel = ItemPanel.new(microwave)
 
-    local meat = Item.new("raw_meat")
+    local meat = Item.new("raw_chicken")
     microwave.panel:place(meat, 0, 0)
 
     local rect = panel.buttons["Cook"]
@@ -110,13 +110,13 @@ do
 end
 
 -- Test 5: ticking item:update(dt) past the action's duration completes it, --
--- and the panel's contents change from raw_meat to cooked_meat.
+-- and the panel's contents change from raw_chicken to baked_chicken.
 
 do
     local microwave = Item.new("microwave")
     local panel = ItemPanel.new(microwave)
 
-    local meat = Item.new("raw_meat")
+    local meat = Item.new("raw_chicken")
     microwave.panel:place(meat, 0, 0)
 
     local rect = panel.buttons["Cook"]
@@ -125,11 +125,11 @@ do
     assert(microwave.action_state["Cook"].running == true, "Cook should be running after the click")
 
     -- Advance short of duration (3.0s): should still be running, panel still
-    -- holds raw_meat.
+    -- holds raw_chicken.
     microwave:update(1.0)
     local mid_items = microwave.panel:items()
-    assert(#mid_items == 1 and mid_items[1].type_id == "raw_meat",
-        "panel should still contain raw_meat before the action completes")
+    assert(#mid_items == 1 and mid_items[1].type_id == "raw_chicken",
+        "panel should still contain raw_chicken before the action completes")
 
     -- Advance past duration.
     microwave:update(2.5)
@@ -138,11 +138,11 @@ do
 
     local final_items = microwave.panel:items()
     assert(#final_items == 1, "panel should still contain exactly one item after completion")
-    assert(final_items[1].type_id == "cooked_meat",
-        "panel item should have transformed from raw_meat to cooked_meat, got " .. tostring(final_items[1].type_id))
+    assert(final_items[1].type_id == "baked_chicken",
+        "panel item should have transformed from raw_chicken to baked_chicken, got " .. tostring(final_items[1].type_id))
 
     assert(panel:is_action_enabled("Cook") == false,
-        "Cook should be disabled again once the panel only holds cooked_meat (no raw_meat left)")
+        "Cook should be disabled again once the panel only holds baked_chicken (no raw_chicken left)")
 
     print("PASS: item_panel: update(dt) past duration completes the action and transforms panel contents")
 end
@@ -157,7 +157,7 @@ do
     local microwave = Item.new("microwave")
     local panel = ItemPanel.new(microwave)
 
-    local meat = Item.new("raw_meat")
+    local meat = Item.new("raw_chicken")
     microwave.panel:place(meat, 0, 0)
 
     local px, py = microwave.panel:cell_to_world(0, 0)
@@ -180,7 +180,7 @@ end
 do
     local microwave = Item.new("microwave")
     local panel = ItemPanel.new(microwave)
-    local meat = Item.new("raw_meat")
+    local meat = Item.new("raw_chicken")
     microwave.panel:place(meat, 0, 0)
     panel:mouse_pressed(panel.buttons["Cook"].x + 1, panel.buttons["Cook"].y + 1)
     panel:draw() -- must not error, including the running-action progress bar branch
@@ -364,9 +364,9 @@ do
     microwave.panel:place(pot, 0, 0)
 
     local water    = Item.new("water")
-    local raw_meat = Item.new("raw_meat")
+    local raw_chicken = Item.new("raw_chicken")
     pot.panel:place(water, 0, 0)
-    pot.panel:place(raw_meat, 1, 0)
+    pot.panel:place(raw_chicken, 1, 0)
 
     assert(panel:is_action_enabled("Cook") == true,
         "Cook should be enabled when a fully-loaded pot sits in the microwave's panel")
@@ -374,7 +374,7 @@ do
     print("PASS: item_panel: is_action_enabled is true for a fully-loaded pot in the microwave")
 end
 
--- Test 16: a partially-loaded pot (missing raw_meat) in the ----------------
+-- Test 16: a partially-loaded pot (missing raw_chicken) in the ----------------
 -- microwave's panel does not enable Cook.
 
 do
@@ -387,7 +387,7 @@ do
 
     local water  = Item.new("water")
     pot.panel:place(water, 0, 0)
-    -- No raw_meat placed - the pot is only partially loaded.
+    -- No raw_chicken placed - the pot is only partially loaded.
 
     assert(panel:is_action_enabled("Cook") == false,
         "Cook should stay disabled when the pot is missing an ingredient")
@@ -408,9 +408,9 @@ do
     floor_grid:place(pot, 0, 0)
 
     local water    = Item.new("water")
-    local raw_meat = Item.new("raw_meat")
+    local raw_chicken = Item.new("raw_chicken")
     pot.panel:place(water, 0, 0)
-    pot.panel:place(raw_meat, 1, 0)
+    pot.panel:place(raw_chicken, 1, 0)
 
     -- A fresh microwave, with nothing in its own panel - the fully-loaded
     -- pot above is not sitting inside it.

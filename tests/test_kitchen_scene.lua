@@ -11,11 +11,11 @@
 -- customer force one directly via Customer:show(order_cfg(...)) rather than
 -- relying on whichever config CustomerQueue randomly drew first — see
 -- order_cfg() just below. (The default order config now requests the
--- "Protein" tag, which only "cooked_meat" carries — raw items carry no tags
+-- "Protein" tag, which only "baked_chicken" carries — raw items carry no tags
 -- at all and can never satisfy any tag request, by design; see
 -- lua/game/data/item_defs.lua. on_enter() only pre-places raw ingredients
 -- on the grid, so a test that wants a Protein-tagged item without driving
--- the microwave's cook timer places a fresh cooked_meat Item directly on
+-- the microwave's cook timer places a fresh baked_chicken Item directly on
 -- the grid instead — see the first test below. The cook-it-yourself
 -- pipeline through this scene is covered by Test 4 further down; the
 -- Item/ItemPanel action-timer mechanism itself is covered separately by
@@ -28,7 +28,7 @@ local Item           = require("lua/game/item")
 -- A deterministic food-order (kind == "order", i.e. kind omitted) customer
 -- config, with any fields overridden. Mirrors customer_queue.lua's
 -- make_default_cfg() shape. Defaults to requesting the "Protein" tag (the
--- tag "cooked_meat" carries) since that's the tag this file's tests most
+-- tag "baked_chicken" carries) since that's the tag this file's tests most
 -- often want; individual tests override requested_tag as needed.
 local function order_cfg(overrides)
     local cfg = {
@@ -64,13 +64,13 @@ end, 0)
 assert(scene.customer:arrived(), "customer should be waiting after fast-forwarding")
 assert(scene.customer.requested_tag == "Protein", "sanity check: forced order config should request Protein")
 
--- Place a fresh cooked_meat item (tagged "Protein", see item_defs.lua)
+-- Place a fresh baked_chicken item (tagged "Protein", see item_defs.lua)
 -- directly on a free grid cell, rather than driving the microwave's cook
 -- timer here - that pipeline is exercised end-to-end through this scene by
 -- Test 4 below, and the Item-level timer mechanism itself is covered by
 -- tests/test_item.lua / tests/test_item_panel.lua.
-local cooked = Item.new("cooked_meat")
-assert(scene.grid:can_place(cooked, 5, 0), "(5,0) should be free for the test's cooked_meat item")
+local cooked = Item.new("baked_chicken")
+assert(scene.grid:can_place(cooked, 5, 0), "(5,0) should be free for the test's baked_chicken item")
 scene.grid:place(cooked, 5, 0)
 
 local mx, my = scene.grid:cell_to_world(cooked.cell_col, cooked.cell_row)
@@ -95,17 +95,17 @@ assert(#scene.panels == 1, "the same click that finishes the greeting should imm
 local order_panel = scene.panels[1]
 assert(order_panel.item == scene.customer, "the order panel should wrap the customer itself")
 
--- Drag the cooked_meat item into the order panel's grid, the same way Test 4
+-- Drag the baked_chicken item into the order panel's grid, the same way Test 4
 -- further down drags an item into the microwave's panel.
 scene:mouse_pressed(mx, my)
-assert(scene.grid.dragging == cooked, "mouse_pressed on the cooked_meat's cell should start dragging it")
+assert(scene.grid.dragging == cooked, "mouse_pressed on the baked_chicken's cell should start dragging it")
 
 local px, py = order_panel.item.panel:cell_to_world(0, 0)
 scene:mouse_moved(px + 1, py + 1)
 scene:mouse_released(px + 1, py + 1)
 
 assert(scene.grid.dragging == nil, "dropping into the order panel should clear the main grid's drag state")
-assert(cooked.grid == order_panel.item.panel, "the cooked_meat item should now be in the order panel's grid")
+assert(cooked.grid == order_panel.item.panel, "the baked_chicken item should now be in the order panel's grid")
 
 -- Click the panel's Serve button.
 assert(order_panel:_serve_enabled(),
@@ -124,13 +124,13 @@ local still_on_grid = false
 for _, it in ipairs(scene.grid:items()) do
     if it == cooked then still_on_grid = true end
 end
-assert(not still_on_grid, "the served cooked_meat item should be removed from the grid")
+assert(not still_on_grid, "the served baked_chicken item should be removed from the grid")
 
 local still_in_panel = false
 for _, it in ipairs(order_panel.item.panel:items()) do
     if it == cooked then still_in_panel = true end
 end
-assert(not still_in_panel, "the served cooked_meat item should be removed from the order panel's grid")
+assert(not still_in_panel, "the served baked_chicken item should be removed from the order panel's grid")
 assert(cooked.grid == nil, "the served item's grid reference should be cleared")
 
 print("PASS: kitchen_scene: dragging an item carrying the requested tag into the order panel and clicking Serve serves the customer and consumes the item")
@@ -174,9 +174,9 @@ do
     local microwave, meat2
     for _, it in ipairs(scene2.grid:items()) do
         if it.type_id == "microwave" then microwave = it end
-        if it.type_id == "raw_meat" and not meat2 then meat2 = it end
+        if it.type_id == "raw_chicken" and not meat2 then meat2 = it end
     end
-    assert(microwave and meat2, "on_enter should have placed a microwave and raw_meat")
+    assert(microwave and meat2, "on_enter should have placed a microwave and raw_chicken")
 
     scene2.panels = { ItemPanel.new(microwave) }
 
@@ -283,7 +283,7 @@ do
     local scene4 = ctx4.sm.current
 
     -- Force a deterministic food-order customer (requesting the default
-    -- "Protein" tag, which only cooked_meat carries) regardless of whatever
+    -- "Protein" tag, which only baked_chicken carries) regardless of whatever
     -- CustomerQueue's random merchant-slot pick queued up first for this
     -- day.
     scene4.customer:show(order_cfg())
@@ -301,13 +301,13 @@ do
     scene4.panels = { ItemPanel.new(microwave4) }
     local microwave_panel4 = scene4.panels[1]
 
-    -- Move a raw_meat item from the floor into the panel and cook it, the
+    -- Move a raw_chicken item from the floor into the panel and cook it, the
     -- same way Test 2 already covers the transfer itself.
     local meat4
     for _, it in ipairs(scene4.grid:items()) do
-        if it.type_id == "raw_meat" then meat4 = it end
+        if it.type_id == "raw_chicken" then meat4 = it end
     end
-    assert(meat4, "on_enter should have placed raw_meat")
+    assert(meat4, "on_enter should have placed raw_chicken")
 
     local mx, my = scene4.grid:cell_to_world(meat4.cell_col, meat4.cell_row)
     scene4:mouse_pressed(mx + 1, my + 1)
@@ -319,14 +319,14 @@ do
     assert(microwave4:start_action("Cook"), "should be able to start cooking with meat in the panel")
     microwave4:update(3.5) -- past the 3.0s Cook duration
 
-    -- Cooking replaces the raw_meat item with a brand new cooked_meat Item
+    -- Cooking replaces the raw_chicken item with a brand new baked_chicken Item
     -- in the freed cell (see lua/game/item.lua's complete_action) rather
     -- than mutating meat4 in place, so look the result up fresh.
     local cooked4
     for _, it in ipairs(microwave4.panel:items()) do
-        if it.type_id == "cooked_meat" then cooked4 = it end
+        if it.type_id == "baked_chicken" then cooked4 = it end
     end
-    assert(cooked4, "sanity check: panel should contain a cooked_meat item after cooking")
+    assert(cooked4, "sanity check: panel should contain a baked_chicken item after cooking")
 
     local currency_before = scene4.day_state.currency
     local served_before   = scene4.day_state.customers_served
@@ -418,7 +418,7 @@ do
             kind       = "merchant",
             name       = "Merchant",
             messages   = { "Fresh stock, take a look!" },
-            stock      = { "raw_meat", "cooked_meat" },
+            stock      = { "raw_chicken", "baked_chicken" },
             walk_speed = 1000, -- fast: reach `waiting` almost immediately
         }
     end
@@ -442,9 +442,9 @@ do
 
     local meat6
     for _, it in ipairs(scene6.grid:items()) do
-        if it.type_id == "raw_meat" then meat6 = it end
+        if it.type_id == "raw_chicken" then meat6 = it end
     end
-    assert(meat6, "on_enter should have placed raw_meat on the main grid")
+    assert(meat6, "on_enter should have placed raw_chicken on the main grid")
 
     local mx6, my6 = scene6.grid:cell_to_world(meat6.cell_col, meat6.cell_row)
     scene6:mouse_pressed(mx6 + 1, my6 + 1)
@@ -468,7 +468,7 @@ do
 
     -- Step 4: drag a stock item out of the merchant's panel onto the main
     -- floor grid, at a cell free per on_enter's starting layout (microwave
-    -- occupies (0,0)-(1,1); raw_meat sits at (2,0),(3,0),(4,0); (5,3) is
+    -- occupies (0,0)-(1,1); raw_chicken sits at (2,0),(3,0),(4,0); (5,3) is
     -- untouched).
     local stock_item
     for _, it in ipairs(scene6.customer.panel:items()) do
@@ -556,12 +556,12 @@ do
 
     scene7.panels = { ItemPanel.new(microwave7) }
 
-    -- Move a raw_meat item into the microwave's panel first (same pattern
+    -- Move a raw_chicken item into the microwave's panel first (same pattern
     -- other tests in this file already use), so there's something in an
     -- open panel to drag back out.
     local meat7
     for _, it in ipairs(scene7.grid:items()) do
-        if it.type_id == "raw_meat" then meat7 = it end
+        if it.type_id == "raw_chicken" then meat7 = it end
     end
     local px7, py7 = microwave7.panel:cell_to_world(0, 0)
     local mx7, my7 = scene7.grid:cell_to_world(meat7.cell_col, meat7.cell_row)
@@ -633,7 +633,7 @@ do
         kind       = "merchant",
         name       = "Merchant",
         messages   = { "Fresh stock, take a look!" },
-        stock      = { "raw_meat" },
+        stock      = { "raw_chicken" },
         walk_speed = 1000,
     })
     runner.fast_forward_until(ctx8, function() return scene8.customer:arrived() end, 0)
@@ -711,7 +711,7 @@ do
         kind       = "merchant",
         name       = "Merchant",
         messages   = { "Fresh stock, take a look!" },
-        stock      = { "raw_meat" },
+        stock      = { "raw_chicken" },
         walk_speed = 1000,
     })
     runner.fast_forward_until(ctx9, function() return scene9.customer:arrived() end, 0)
@@ -836,9 +836,9 @@ do
 
     local meat11
     for _, it in ipairs(scene11.grid:items()) do
-        if it.type_id == "raw_meat" then meat11 = it end
+        if it.type_id == "raw_chicken" then meat11 = it end
     end
-    assert(meat11, "on_enter should have placed raw_meat")
+    assert(meat11, "on_enter should have placed raw_chicken")
 
     local currency_before = scene11.day_state.currency
     local served_before   = scene11.day_state.customers_served
@@ -854,19 +854,19 @@ do
     local order_panel11 = scene11.panels[1]
     assert(order_panel11.item == scene11.customer, "the order panel should wrap the customer itself")
 
-    -- Drag the wrong item (raw_meat, untagged) into the order panel's grid.
+    -- Drag the wrong item (raw_chicken, untagged) into the order panel's grid.
     local mx11, my11 = scene11.grid:cell_to_world(meat11.cell_col, meat11.cell_row)
     scene11:mouse_pressed(mx11 + 1, my11 + 1)
-    assert(scene11.grid.dragging == meat11, "mouse_pressed on the raw_meat's cell should start dragging it")
+    assert(scene11.grid.dragging == meat11, "mouse_pressed on the raw_chicken's cell should start dragging it")
 
     local px11, py11 = order_panel11.item.panel:cell_to_world(0, 0)
     scene11:mouse_moved(px11 + 1, py11 + 1)
     scene11:mouse_released(px11 + 1, py11 + 1)
 
     assert(scene11.grid.dragging == nil, "dropping into the order panel should clear the main grid's drag state")
-    assert(meat11.grid == order_panel11.item.panel, "the raw_meat item should now be in the order panel's grid")
+    assert(meat11.grid == order_panel11.item.panel, "the raw_chicken item should now be in the order panel's grid")
 
-    -- Serve must be disabled: raw_meat carries no tags at all, so it can
+    -- Serve must be disabled: raw_chicken carries no tags at all, so it can
     -- never satisfy the requested "Protein" tag.
     assert(not order_panel11:_serve_enabled(),
         "Serve should be disabled with a non-matching item in the panel")
@@ -940,7 +940,7 @@ do
 
     -- (1,0)/(0,1)/(1,1) are still part of the microwave's 2x2 footprint on
     -- the main grid, so nothing else should be placeable there.
-    local probe = Item.new("raw_meat")
+    local probe = Item.new("raw_chicken")
     assert(not scene12.grid:can_place(probe, 1, 0), "(1,0) should still be occupied by the microwave's footprint")
 
     -- Its own cooking panel, though, is 2x1 (grown from 1x1 so the pot's
@@ -962,9 +962,9 @@ do
     local microwave13, meat13
     for _, it in ipairs(scene13.grid:items()) do
         if it.type_id == "microwave" then microwave13 = it end
-        if it.type_id == "raw_meat" and not meat13 then meat13 = it end
+        if it.type_id == "raw_chicken" and not meat13 then meat13 = it end
     end
-    assert(microwave13 and meat13, "on_enter should have placed a microwave and raw_meat")
+    assert(microwave13 and meat13, "on_enter should have placed a microwave and raw_chicken")
 
     -- Right-clicking a plain item (no has_panel) does nothing.
     local mx13, my13 = scene13.grid:cell_to_world(meat13.cell_col, meat13.cell_row)
@@ -983,7 +983,7 @@ do
     scene13.customer:show({
         kind = "merchant", name = "Merchant",
         messages = { "Fresh stock, take a look!" },
-        stock = { "raw_meat" }, walk_speed = 1000,
+        stock = { "raw_chicken" }, walk_speed = 1000,
     })
     runner.fast_forward_until(ctx13, function() return scene13.customer:arrived() end, 0)
     scene13:mouse_pressed(scene13.customer.x, scene13.customer.y)
@@ -1015,18 +1015,18 @@ do
     local microwave14, meatA, meatB, meatC
     for _, it in ipairs(scene14.grid:items()) do
         if it.type_id == "microwave" then microwave14 = it end
-        if it.type_id == "raw_meat" then
+        if it.type_id == "raw_chicken" then
             if not meatA then meatA = it
             elseif not meatB then meatB = it
             elseif not meatC then meatC = it end
         end
     end
     assert(microwave14 and meatA and meatB and meatC,
-        "on_enter should have placed a microwave and at least three raw_meat")
+        "on_enter should have placed a microwave and at least three raw_chicken")
 
     local wx14, wy14 = scene14.grid:cell_to_world(0, 0) -- microwave's top-left cell
 
-    -- Drag the first raw_meat onto the microwave's own cell (not via its
+    -- Drag the first raw_chicken onto the microwave's own cell (not via its
     -- panel - it isn't even open).
     local mxA, myA = scene14.grid:cell_to_world(meatA.cell_col, meatA.cell_row)
     scene14:mouse_pressed(mxA + 1, myA + 1)
@@ -1078,9 +1078,9 @@ do
 end
 
 -- Test 15: the broccoli/Cook/steamed_broccoli pipeline works end-to-end
--- through this scene too, mirroring Test 4's meat/Cook/cooked_meat pipeline
+-- through this scene too, mirroring Test 4's meat/Cook/baked_chicken pipeline
 -- but for the "Healthy" tag - proves the has_tag match-check isn't
--- special-cased to Protein/cooked_meat, and that the single "Cook" button
+-- special-cased to Protein/baked_chicken, and that the single "Cook" button
 -- auto-matches broccoli's recipe just like it does raw meat's.
 
 do
@@ -1269,10 +1269,10 @@ do
     end
 
     -- Cross-product: each raw item against each tag currently in play, so
-    -- this doesn't just prove "raw_meat never satisfies Protein" (which
+    -- this doesn't just prove "raw_chicken never satisfies Protein" (which
     -- could coincidentally hold for the wrong reason) but the general rule.
-    assert_raw_drop_rejected("raw_meat", "Protein")
-    assert_raw_drop_rejected("raw_meat", "Healthy")
+    assert_raw_drop_rejected("raw_chicken", "Protein")
+    assert_raw_drop_rejected("raw_chicken", "Healthy")
     assert_raw_drop_rejected("broccoli", "Healthy")
     assert_raw_drop_rejected("broccoli", "Protein")
 
@@ -1437,9 +1437,9 @@ do
     -- the draw decision.
     local meat19
     for _, it in ipairs(scene19.grid:items()) do
-        if it.type_id == "raw_meat" then meat19 = it end
+        if it.type_id == "raw_chicken" then meat19 = it end
     end
-    assert(meat19, "on_enter should have placed raw_meat")
+    assert(meat19, "on_enter should have placed raw_chicken")
 
     local mx19, my19 = scene19.grid:cell_to_world(meat19.cell_col, meat19.cell_row)
     scene19:mouse_pressed(mx19 + 1, my19 + 1)
@@ -1483,9 +1483,9 @@ do
 
     local meat20
     for _, it in ipairs(scene20.grid:items()) do
-        if it.type_id == "raw_meat" then meat20 = it end
+        if it.type_id == "raw_chicken" then meat20 = it end
     end
-    assert(meat20, "on_enter should have placed raw_meat")
+    assert(meat20, "on_enter should have placed raw_chicken")
 
     local orig_col, orig_row = meat20.cell_col, meat20.cell_row
     local mx20, my20 = scene20.grid:cell_to_world(orig_col, orig_row)

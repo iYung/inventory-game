@@ -108,14 +108,14 @@ do
                 for _, item_type in ipairs(cfg.stock) do
                     counts[item_type] = (counts[item_type] or 0) + 1
                 end
-                assert(counts.raw_meat == 2, "merchant stock should contain exactly 2 raw_meat")
+                assert(counts.raw_chicken == 2, "merchant stock should contain exactly 2 raw_chicken")
                 assert(counts.broccoli and counts.broccoli >= 1, "merchant stock should contain broccoli")
                 assert(counts.water and counts.water >= 1, "merchant stock should contain water")
                 assert(counts.potato and counts.potato >= 1, "merchant stock should contain potato")
-                assert(counts.cooked_meat == nil, "merchant stock should not offer cooked_meat (raw ingredients only)")
+                assert(counts.baked_chicken == nil, "merchant stock should not offer baked_chicken (raw ingredients only)")
                 local total_stock = 0
                 for _ in pairs(counts) do total_stock = total_stock + 1 end
-                assert(total_stock == 4, "merchant stock should only contain raw_meat, broccoli, water, and potato entries")
+                assert(total_stock == 4, "merchant stock should only contain raw_chicken, broccoli, water, and potato entries")
             else
                 order_count = order_count + 1
                 assert(cfg.kind == nil or cfg.kind == "order",
@@ -180,13 +180,13 @@ do
         while q:has_next() do
             local cfg = q:next()
             if cfg.kind == "merchant" then
-                local has_broccoli, has_cooked_meat = false, false
+                local has_broccoli, has_baked_chicken = false, false
                 for _, item_type in ipairs(cfg.stock) do
                     if item_type == "broccoli" then has_broccoli = true end
-                    if item_type == "cooked_meat" then has_cooked_meat = true end
+                    if item_type == "baked_chicken" then has_baked_chicken = true end
                 end
                 assert(has_broccoli, "merchant config's stock should contain broccoli")
-                assert(not has_cooked_meat, "merchant config's stock should never contain cooked_meat")
+                assert(not has_baked_chicken, "merchant config's stock should never contain baked_chicken")
             else
                 local tags = known_tags()
                 local found = false
@@ -225,12 +225,12 @@ do
     assert(ds.customers_served == 0, "start_day should reset customers_served")
     assert(not ds:day_complete(), "day_complete() should be false right after start_day(3)")
 
-    ds:record_serve("cooked_meat")
+    ds:record_serve("baked_chicken")
     assert(ds.customers_served == 1, "record_serve should increment customers_served")
     assert(ds.currency == 10, "record_serve should award currency")
     assert(not ds:day_complete(), "day_complete() should still be false after 1 of 3")
 
-    ds:record_serve("cooked_meat")
+    ds:record_serve("baked_chicken")
     assert(ds.customers_served == 2, "record_serve should increment customers_served again")
     assert(ds.currency == 20, "currency should reflect only the 2 serves so far")
     assert(not ds:day_complete(), "day_complete() should still be false after 2 of 3")
@@ -260,12 +260,12 @@ do
     assert(type(ds.sold_items) == "table", "sold_items should be initialized as a table")
 
     ds:start_day(4)
-    ds:record_serve("cooked_meat")
-    ds:record_serve("cooked_meat")
+    ds:record_serve("baked_chicken")
+    ds:record_serve("baked_chicken")
     ds:record_serve("steamed_broccoli")
     ds:record_dismiss()
 
-    assert(ds.sold_items["cooked_meat"] == 2, "sold_items should tally cooked_meat × 2")
+    assert(ds.sold_items["baked_chicken"] == 2, "sold_items should tally baked_chicken × 2")
     assert(ds.sold_items["steamed_broccoli"] == 1, "sold_items should tally steamed_broccoli × 1")
     assert(ds.sold_items["baked_potato"] == nil, "unsold items should not appear in sold_items")
 

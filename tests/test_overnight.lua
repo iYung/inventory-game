@@ -88,7 +88,7 @@ do
     print("PASS: overnight: incubator resets progress when egg is removed mid-incubation")
 end
 
--- Test 5: meat_machine Process action consumes chicken and produces raw_meat.
+-- Test 5: meat_machine Process action consumes chicken and produces 2 raw_chicken.
 do
     local mm      = Item.new("meat_machine")
     local chicken = Item.new("chicken")
@@ -100,11 +100,11 @@ do
     mm:update(1.0)  -- duration is 1.0s
 
     local chickens  = count_type(mm.panel, "chicken")
-    local raw_meats = count_type(mm.panel, "raw_meat")
+    local raw_chickens = count_type(mm.panel, "raw_chicken")
     assert(chickens == 0,   "chicken should be consumed by Process, got " .. chickens)
-    assert(raw_meats == 1,  "Process should produce 1 raw_meat, got " .. raw_meats)
+    assert(raw_chickens == 2,  "Process should produce 2 raw_chicken, got " .. raw_chickens)
 
-    print("PASS: overnight: meat_machine Process turns chicken into raw_meat")
+    print("PASS: overnight: meat_machine Process turns 1 chicken into 2 raw_chicken")
 end
 
 -- Test 6: overnight_tick is a no-op on items without overnight_actions.
@@ -115,7 +115,7 @@ do
     local after     = #microwave.panel:items()
     assert(before == after, "overnight_tick on microwave should be a no-op")
 
-    local raw = Item.new("raw_meat")
+    local raw = Item.new("raw_chicken")
     raw:overnight_tick()  -- no panel, should not error
 
     print("PASS: overnight: overnight_tick is a no-op on items without overnight_actions")

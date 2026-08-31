@@ -2,12 +2,12 @@ local Item = require("lua/game/item")
 
 -- Test 0: tags - raw/unprepared items carry none; prepared items do.
 do
-    local raw = Item.new("raw_meat")
-    assert(#raw.tags == 0, "raw_meat should carry no tags, got " .. #raw.tags)
+    local raw = Item.new("raw_chicken")
+    assert(#raw.tags == 0, "raw_chicken should carry no tags, got " .. #raw.tags)
 
-    local cooked = Item.new("cooked_meat")
+    local cooked = Item.new("baked_chicken")
     assert(#cooked.tags == 1 and cooked.tags[1] == "Protein",
-        "cooked_meat should be tagged Protein")
+        "baked_chicken should be tagged Protein")
 
     local broccoli = Item.new("broccoli")
     assert(#broccoli.tags == 0, "raw broccoli should carry no tags")
@@ -21,11 +21,11 @@ end
 
 -- Test: item.label is set from def.name
 do
-    local raw = Item.new("raw_meat")
-    assert(raw.label == "Raw Meat", "raw_meat label should be 'Raw Meat', got " .. tostring(raw.label))
+    local raw = Item.new("raw_chicken")
+    assert(raw.label == "Raw Chicken", "raw_chicken label should be 'Raw Meat', got " .. tostring(raw.label))
 
-    local cooked = Item.new("cooked_meat")
-    assert(cooked.label == "Cooked Meat", "cooked_meat label should be 'Cooked Meat', got " .. tostring(cooked.label))
+    local cooked = Item.new("baked_chicken")
+    assert(cooked.label == "Baked Chicken", "baked_chicken label should be 'Cooked Meat', got " .. tostring(cooked.label))
 
     local mw = Item.new("microwave")
     assert(mw.label == "Microwave", "microwave label should be 'Microwave', got " .. tostring(mw.label))
@@ -96,7 +96,7 @@ do
     assert(microwave.panel ~= nil, "microwave should have a panel")
 
     local started = microwave:start_action("Cook")
-    assert(started == false, "start_action should return false when the panel has no raw_meat")
+    assert(started == false, "start_action should return false when the panel has no raw_chicken")
     assert(microwave.action_state["Cook"] == nil, "action_state should not be set when start_action fails")
     print("PASS: item: start_action no-ops without required items in panel")
 end
@@ -105,7 +105,7 @@ end
 -- (returns true).
 do
     local microwave = Item.new("microwave")
-    local meat = Item.new("raw_meat")
+    local meat = Item.new("raw_chicken")
     local placed = microwave.panel:place(meat, 0, 0)
 
     local started = microwave:start_action("Cook")
@@ -126,7 +126,7 @@ end
 
 -- Test 3c: start_action returns false for an item with no panel.
 do
-    local meat = Item.new("raw_meat")
+    local meat = Item.new("raw_chicken")
     local started = meat:start_action("Cook")
     assert(started == false, "start_action should return false when the item has no panel")
     print("PASS: item: start_action returns false when item has no panel")
@@ -134,14 +134,14 @@ end
 
 -- Test 3d: the microwave's single "Cook" button handles more than one
 -- recipe - it auto-matches whichever ingredient is actually present
--- (raw_meat or broccoli) rather than needing a separate button per recipe.
+-- (raw_chicken or broccoli) rather than needing a separate button per recipe.
 do
     local microwave = Item.new("microwave")
     local broccoli = Item.new("broccoli")
     microwave.panel:place(broccoli, 0, 0)
 
     local started = microwave:start_action("Cook")
-    assert(started == true, "Cook should start with broccoli in the panel too, not just raw_meat")
+    assert(started == true, "Cook should start with broccoli in the panel too, not just raw_chicken")
     assert(microwave.action_state["Cook"].matches[1].recipe.produces.steamed_broccoli == 1,
         "the matched recipe should be the broccoli->steamed_broccoli one")
 
@@ -154,10 +154,10 @@ do
 end
 
 -- Test 3e: start_action returns false when the panel holds nothing that
--- matches ANY of Cook's recipes (not raw_meat, not broccoli).
+-- matches ANY of Cook's recipes (not raw_chicken, not broccoli).
 do
     local microwave = Item.new("microwave")
-    local cooked = Item.new("cooked_meat") -- not an ingredient for any recipe
+    local cooked = Item.new("baked_chicken") -- not an ingredient for any recipe
     microwave.panel:place(cooked, 0, 0)
 
     local started = microwave:start_action("Cook")
@@ -167,21 +167,21 @@ do
 end
 
 -- Test 4: update(dt) advanced past duration transforms matching items in
--- panel from raw_meat to cooked_meat in place (same cell).
+-- panel from raw_chicken to baked_chicken in place (same cell).
 do
     local microwave = Item.new("microwave")
-    local meat = Item.new("raw_meat")
+    local meat = Item.new("raw_chicken")
     microwave.panel:place(meat, 0, 0)
 
     local started = microwave:start_action("Cook")
-    assert(started == true, "start_action should succeed with raw_meat in the panel")
+    assert(started == true, "start_action should succeed with raw_chicken in the panel")
 
     -- Advance short of duration: should not complete yet.
     microwave:update(1.0)
     assert(microwave.action_state["Cook"] ~= nil, "action should still be running before duration elapses")
     local panel_items = microwave.panel:items()
-    assert(#panel_items == 1 and panel_items[1].type_id == "raw_meat",
-        "panel should still contain raw_meat before the action completes")
+    assert(#panel_items == 1 and panel_items[1].type_id == "raw_chicken",
+        "panel should still contain raw_chicken before the action completes")
 
     -- Advance past duration (3.0s total, action.duration for Cook).
     microwave:update(2.5)
@@ -190,22 +190,22 @@ do
 
     local final_items = microwave.panel:items()
     assert(#final_items == 1, "panel should still contain exactly one item after the action completes")
-    assert(final_items[1].type_id == "cooked_meat",
-        "panel item should have transformed from raw_meat to cooked_meat, got " .. tostring(final_items[1].type_id))
+    assert(final_items[1].type_id == "baked_chicken",
+        "panel item should have transformed from raw_chicken to baked_chicken, got " .. tostring(final_items[1].type_id))
     assert(final_items[1].cell_col == 0 and final_items[1].cell_row == 0,
-        "cooked_meat should occupy the same cell the raw_meat was in")
-    print("PASS: item: update(dt) past duration transforms raw_meat into cooked_meat in place")
+        "baked_chicken should occupy the same cell the raw_chicken was in")
+    print("PASS: item: update(dt) past duration transforms raw_chicken into baked_chicken in place")
 end
 
 -- Test 5: Item:draw() is nil-safe / does not error when unplaced.
 do
-    local meat = Item.new("raw_meat")
+    local meat = Item.new("raw_chicken")
     meat:draw() -- should not error even though cell_col/cell_row/grid are nil
     print("PASS: item: draw() does not error for an unplaced item")
 end
 
 -- Test 6: container recipe, happy path. A loaded pot sitting inside
--- the microwave's panel cooks into soup inside the pot's OWN
+-- the microwave's panel cooks into chicken_soup inside the pot's OWN
 -- panel, not the microwave's - and the pot itself is never consumed.
 do
     local microwave = Item.new("microwave")
@@ -213,9 +213,9 @@ do
     microwave.panel:place(pot, 0, 0)
 
     local water    = Item.new("water")
-    local raw_meat = Item.new("raw_meat")
+    local raw_chicken = Item.new("raw_chicken")
     pot.panel:place(water, 0, 0)
-    pot.panel:place(raw_meat, 1, 0)
+    pot.panel:place(raw_chicken, 1, 0)
 
     local started = microwave:start_action("Cook")
     assert(started == true, "Cook should start with a fully loaded pot in the microwave's panel")
@@ -223,14 +223,14 @@ do
     microwave:update(3.5) -- past the 3.0s duration
 
     local soup_items = pot.panel:items()
-    assert(#soup_items == 1 and soup_items[1].type_id == "soup",
-        "pot's own panel should contain exactly one soup after cooking")
+    assert(#soup_items == 1 and soup_items[1].type_id == "chicken_soup",
+        "pot's own panel should contain exactly one chicken_soup after cooking")
 
     local microwave_items = microwave.panel:items()
     assert(#microwave_items == 1 and microwave_items[1].type_id == "pot" and microwave_items[1] == pot,
         "microwave's own panel should still contain only the same (uneaten) pot item")
 
-    print("PASS: item: container recipe cooks a loaded pot's contents into soup inside its own panel")
+    print("PASS: item: container recipe cooks a loaded pot's contents into chicken_soup inside its own panel")
 end
 
 -- Test 7: container recipe, not satisfied - a pot missing one
@@ -240,8 +240,8 @@ do
     local pot       = Item.new("pot")
     microwave.panel:place(pot, 0, 0)
 
-    local raw_meat = Item.new("raw_meat")
-    pot.panel:place(raw_meat, 0, 0)
+    local raw_chicken = Item.new("raw_chicken")
+    pot.panel:place(raw_chicken, 0, 0)
     -- No water placed.
 
     local started = microwave:start_action("Cook")
@@ -254,8 +254,8 @@ end
 -- Test 8: container recipe requires the container itself to be present -
 -- loose ingredients sitting directly in the microwave's own 2-cell panel
 -- (no pot item present) do not satisfy the container recipe. Note:
--- raw_meat already has its OWN flat, non-container Cook
--- recipe (raw_meat -> cooked_meat), so placing it loose would start
+-- raw_chicken already has its OWN flat, non-container Cook
+-- recipe (raw_chicken -> baked_chicken), so placing it loose would start
 -- Cook via that unrelated recipe instead and wouldn't isolate what this
 -- test is checking; water has no flat recipe of its own, so two waters
 -- (filling both of the microwave's panel cells) are used here to keep
@@ -275,33 +275,33 @@ do
     print("PASS: item: container recipe never fires without an actual container item present")
 end
 
--- Test 9: multiple recipes fire in one press - raw_meat and broccoli
+-- Test 9: multiple recipes fire in one press - raw_chicken and broccoli
 -- together in the microwave's (now 2-wide) panel both cook from a single
 -- Cook press.
 do
     local microwave = Item.new("microwave")
-    local meat      = Item.new("raw_meat")
+    local meat      = Item.new("raw_chicken")
     local broccoli  = Item.new("broccoli")
     microwave.panel:place(meat, 0, 0)
     microwave.panel:place(broccoli, 1, 0)
 
     local started = microwave:start_action("Cook")
-    assert(started == true, "Cook should start with both raw_meat and broccoli present")
+    assert(started == true, "Cook should start with both raw_chicken and broccoli present")
 
     microwave:update(3.5) -- past the 3.0s duration
 
     local items = microwave.panel:items()
     assert(#items == 2, "panel should contain exactly two items after both recipes fire, got " .. #items)
 
-    local has_cooked_meat, has_steamed_broccoli = false, false
+    local has_baked_chicken, has_steamed_broccoli = false, false
     for _, it in ipairs(items) do
-        if it.type_id == "cooked_meat" then has_cooked_meat = true end
+        if it.type_id == "baked_chicken" then has_baked_chicken = true end
         if it.type_id == "steamed_broccoli" then has_steamed_broccoli = true end
     end
-    assert(has_cooked_meat, "panel should contain cooked_meat after the single Cook press")
+    assert(has_baked_chicken, "panel should contain baked_chicken after the single Cook press")
     assert(has_steamed_broccoli, "panel should contain steamed_broccoli after the single Cook press")
 
-    print("PASS: item: a single Cook press fires every satisfied recipe (raw_meat and broccoli together)")
+    print("PASS: item: a single Cook press fires every satisfied recipe (raw_chicken and broccoli together)")
 end
 
 -- Test 10: the new simple potato recipe (potato -> baked_potato) works like
@@ -353,10 +353,10 @@ do
     print("PASS: item: refill_daily() restores broccoli_garden panel back to 4 broccoli after one is removed")
 end
 
--- Test 14: refill_daily() on an item without daily_fill (e.g. raw_meat) is a no-op.
+-- Test 14: refill_daily() on an item without daily_fill (e.g. raw_chicken) is a no-op.
 do
-    local meat = Item.new("raw_meat")
-    -- raw_meat has no panel and no daily_fill — calling refill_daily() must not error.
+    local meat = Item.new("raw_chicken")
+    -- raw_chicken has no panel and no daily_fill — calling refill_daily() must not error.
     meat:refill_daily()
     print("PASS: item: refill_daily() is a no-op and does not error on an item without daily_fill")
 end
