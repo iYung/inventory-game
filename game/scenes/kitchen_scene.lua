@@ -156,6 +156,7 @@ function KitchenScene:on_enter()
     self.grid:place(container, 0, 3)
 
     self._scene_bg = love.graphics.newImage("assets/images/scene/bg.png")
+    self._scene_fg = love.graphics.newImage("assets/images/scene/fg.png")
 
     self.day_state = DayState.new()
     self.day_state:start_day(config.CUSTOMERS_PER_DAY)
@@ -167,7 +168,7 @@ function KitchenScene:on_enter()
     -- walking_in moves left-to-right, like wip's customers do.
     local target_x = config.SCREEN_W / 2
     local exit_x    = -150
-    local y         = 228  -- feet at the wooden sill (sill_y=300, sprite center = 300 - CH/2)
+    local y         = 246  -- counter at waist (sill_y=270, sprite center = 270 - 96 + 72)
     self.customer = Customer.new(target_x, exit_x, y)
     self.customer:show(self.queue:next())
 
@@ -721,7 +722,7 @@ function KitchenScene:draw()
 
     local colors = config.COLORS or {}
 
-    -- Scene background: sky, treeline, street, wooden food-cart frame
+    -- Scene background: sky, treeline, cobblestone street
     if self._scene_bg then
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.draw(self._scene_bg, 0, 0)
@@ -730,6 +731,10 @@ function KitchenScene:draw()
         love.graphics.rectangle("fill", 0, 0, config.SCREEN_W, config.SPLIT_Y)
     end
 
+    -- Bottom half background (below the split line)
+    love.graphics.setColor(0.09, 0.10, 0.13, 1)
+    love.graphics.rectangle("fill", 0, config.SPLIT_Y, config.SCREEN_W, config.SCREEN_H - config.SPLIT_Y)
+
     -- Everything below draws its own actively-dragged item (if any) inline,
     -- at its position in that layer's stacking order. Skip that here and
     -- draw whichever item is actually being dragged once, last, on top of
@@ -737,9 +742,17 @@ function KitchenScene:draw()
     -- customer sprite would occlude an item being dragged up toward them.
     self.grid:draw(true)
 
+    -- Customer drawn before the foreground frame so the frame occludes their
+    -- lower body, creating a sense of depth (counter is in front of them).
     love.graphics.setColor(1, 1, 1, 1)
     self.customer:draw()
     self.customer:draw_bubble()
+
+    -- Foreground frame: metal posts and counter sill, overlaps customer
+    if self._scene_fg then
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.draw(self._scene_fg, 0, 0)
+    end
 
     if self:_next_day_ready() then
         love.graphics.setColor(colors.button or { 0.3, 0.55, 0.3, 1 })
