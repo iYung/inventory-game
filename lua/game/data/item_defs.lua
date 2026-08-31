@@ -126,6 +126,11 @@ local item_defs = {
                         requires  = { water = 1, potato = 1, raw_beef = 1 },
                         produces  = { beef_stew = 1 },
                     },
+                    {
+                        container = "pot",
+                        requires  = { egg = 1, broccoli = 1 },
+                        produces  = { omelette = 1 },
+                    },
                 },
             },
         },
@@ -227,6 +232,13 @@ local item_defs = {
         footprint = { { 0, 0 } },
         color = { 0.95, 0.90, 0.75, 1 },
         tags = { "Protein" },
+    },
+
+    omelette = {
+        name     = "Omelette",
+        footprint = { { 0, 0 } },
+        color    = { 0.90, 0.80, 0.40, 1 },
+        tags     = { "Protein", "Healthy" },
     },
 
     chicken = {
