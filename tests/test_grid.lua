@@ -264,6 +264,57 @@ do
     print("PASS: grid: drag preserves click offset (item does not snap to center)")
 end
 
+-- Test: drop cell and preview use sprite anchor, not cursor position -------
+
+do
+    local g = Grid.new(10, 6, CELL, 0, 0)
+    local a = make_item({ ONE_BY_ONE })
+    a.sprite = { x = 0, y = 0, width = CELL, height = CELL }
+    g:place(a, 0, 0)
+
+    -- Click 27px into the sprite (3/4 of CELL=36). After dragging, the
+    -- sprite's left edge will trail the cursor by 27px.
+    g:mouse_pressed(27, 1)
+    assert(g.drag_offset_x == 27, "sanity: offset should be 27")
+
+    -- Move cursor to (3*CELL + 9, 1).
+    --   cursor_x = 117  → floor(117/36) = 3  (cursor in cell 3)
+    --   sprite.x = 117 - 27 = 90 = 2.5*CELL → floor(90/36) = 2  (sprite in cell 2)
+    -- With sprite-anchor drop logic, preview and final placement should use cell 2.
+    g:mouse_moved(3 * CELL + 9, 1)
+    assert(g.drag_preview_col == 2,
+        "preview col should use sprite anchor (cell 2), not cursor (cell 3), got " .. tostring(g.drag_preview_col))
+
+    g:mouse_released(3 * CELL + 9, 1)
+    assert(a.cell_col == 2 and a.cell_row == 0,
+        "item should land at col 2 (sprite anchor), not col 3 (cursor), got col=" .. tostring(a.cell_col))
+    assert(g:item_at(2, 0) == a, "item_at(2,0) should return the dropped item")
+
+    print("PASS: grid: drop cell and preview use sprite anchor, not cursor position")
+end
+
+-- Test: _sprite_anchor falls back to cursor when no sprite ----------------
+
+do
+    local g = Grid.new(10, 6, CELL, 0, 0)
+    local a = make_item({ ONE_BY_ONE }) -- no sprite
+    g:place(a, 0, 0)
+
+    g:mouse_pressed(1, 1)
+    assert(g.dragging == a, "should be dragging")
+
+    -- Without a sprite the anchor should fall back to the cursor position.
+    g:mouse_moved(4 * CELL + 1, 1)
+    assert(g.drag_preview_col == 4,
+        "fallback: preview col should equal cursor cell when item has no sprite, got " .. tostring(g.drag_preview_col))
+
+    g:mouse_released(4 * CELL + 1, 1)
+    assert(a.cell_col == 4 and a.cell_row == 0,
+        "fallback: item should drop at cursor cell when item has no sprite")
+
+    print("PASS: grid: _sprite_anchor falls back to cursor when item has no sprite")
+end
+
 -- Test 8: draw() does not error under the headless love.graphics stub ----
 
 do
