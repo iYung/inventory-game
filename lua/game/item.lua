@@ -80,6 +80,7 @@ function Item.new(type_id)
     if def.has_panel then
         local Grid = require("lua/game/grid")
         self.panel = Grid.new(def.panel_cols, def.panel_rows, config.U, 0, 0)
+        self.panel.owner = self
     end
 
     if def.daily_fill then
