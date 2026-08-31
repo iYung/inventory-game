@@ -22,17 +22,15 @@ function Grid.new(cols, rows, cell_size, origin_x, origin_y)
 
     self._items = {} -- items currently placed/tracked on this grid
 
-    self.dragging              = nil -- item currently being dragged, or nil
-    self.drag_orig_col         = nil
-    self.drag_orig_row         = nil
-    self.drag_preview_col      = nil
-    self.drag_preview_row      = nil
-    self.drag_cursor_x         = nil -- raw world-space cursor pos while dragging
-    self.drag_cursor_y         = nil
-    self.drag_offset_x         = nil -- px offset from cursor to sprite top-left
-    self.drag_offset_y         = nil
-    self.drag_cell_offset_col  = nil -- which cell within the item was clicked
-    self.drag_cell_offset_row  = nil
+    self.dragging          = nil -- item currently being dragged, or nil
+    self.drag_orig_col     = nil
+    self.drag_orig_row     = nil
+    self.drag_preview_col  = nil
+    self.drag_preview_row  = nil
+    self.drag_cursor_x     = nil -- raw world-space cursor pos while dragging
+    self.drag_cursor_y     = nil
+    self.drag_offset_x     = nil -- px offset from cursor to sprite top-left
+    self.drag_offset_y     = nil
 
     -- Set by an external owner (the scene) to show a drop-preview for an
     -- item that's being dragged on a DIFFERENT grid but is currently
@@ -59,13 +57,15 @@ function Grid:_position_dragging_sprite()
     s.y = self.drag_cursor_y - self.drag_offset_y
 end
 
--- Returns the snap target (col, row) for the dragged item given the current
--- cursor position: cursor cell minus the cell within the item that was clicked,
--- so the grabbed cell stays under the cursor throughout the drag.
-function Grid:_snap_cell(cursor_x, cursor_y)
-    local ccol, crow = self:world_to_cell(cursor_x, cursor_y)
-    return ccol - (self.drag_cell_offset_col or 0),
-           crow - (self.drag_cell_offset_row or 0)
+-- Returns the snap target (col, row) for the dragged item: whichever cell
+-- the item's current center is over. Independent of where the user grabbed it.
+function Grid:_snap_cell()
+    local item = self.dragging
+    if item and item.sprite then
+        local s = item.sprite
+        return self:world_to_cell(s.x + s.width / 2, s.y + s.height / 2)
+    end
+    return self:world_to_cell(self.drag_cursor_x, self.drag_cursor_y)
 end
 
 -- Coordinate conversion ----------------------------------------------------
@@ -192,13 +192,9 @@ function Grid:mouse_pressed(x, y)
             self.drag_offset_x = 0
             self.drag_offset_y = 0
         end
-        -- Cell offset: which cell within the item was clicked, so snap keeps
-        -- that cell under the cursor rather than snapping to the item's top-left.
-        self.drag_cell_offset_col = col - item.cell_col
-        self.drag_cell_offset_row = row - item.cell_row
         self:_position_dragging_sprite()
     end
-    self.drag_preview_col, self.drag_preview_row = self:_snap_cell(x, y)
+    self.drag_preview_col, self.drag_preview_row = self:_snap_cell()
 end
 
 function Grid:mouse_moved(x, y)
@@ -206,14 +202,14 @@ function Grid:mouse_moved(x, y)
     if not self.dragging then return end
     self.drag_cursor_x, self.drag_cursor_y = x, y
     self:_position_dragging_sprite()
-    self.drag_preview_col, self.drag_preview_row = self:_snap_cell(x, y)
+    self.drag_preview_col, self.drag_preview_row = self:_snap_cell()
 end
 
 function Grid:mouse_released(x, y)
     if not self.dragging then return end
     local item = self.dragging
 
-    local col, row = self:_snap_cell(x, y)
+    local col, row = self:_snap_cell()
     self.drag_preview_col, self.drag_preview_row = col, row
 
     if self:can_place(item, col, row) then
@@ -222,17 +218,15 @@ function Grid:mouse_released(x, y)
         self:place(item, self.drag_orig_col, self.drag_orig_row)
     end
 
-    self.dragging              = nil
-    self.drag_orig_col         = nil
-    self.drag_orig_row         = nil
-    self.drag_preview_col      = nil
-    self.drag_preview_row      = nil
-    self.drag_cursor_x         = nil
-    self.drag_cursor_y         = nil
-    self.drag_offset_x         = nil
-    self.drag_offset_y         = nil
-    self.drag_cell_offset_col  = nil
-    self.drag_cell_offset_row  = nil
+    self.dragging         = nil
+    self.drag_orig_col    = nil
+    self.drag_orig_row    = nil
+    self.drag_preview_col = nil
+    self.drag_preview_row = nil
+    self.drag_cursor_x    = nil
+    self.drag_cursor_y    = nil
+    self.drag_offset_x    = nil
+    self.drag_offset_y    = nil
 end
 
 -- Shows a drop-preview for `item` at world (x,y) on THIS grid's own
