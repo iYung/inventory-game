@@ -1560,4 +1560,68 @@ do
     print("PASS: kitchen_scene: garden overnight_tick spreads onion to neighbors after clicking Next Day")
 end
 
+-- Test 22: dragging an item from the main floor and dropping it onto the pot
+-- inside the microwave's open panel inserts it into the pot's own panel
+-- (first-fit), not the microwave panel, and does NOT snap back. Regression
+-- test for the bug where the nested-container drop check only existed for the
+-- main floor grid, not for open panel grids.
+
+do
+    local ItemPanel = require("lua/game/item_panel")
+
+    local ctx22 = runner.setup(function() return KitchenScene.new() end)
+    local scene22 = ctx22.sm.current
+
+    local microwave22, potato22
+    for _, it in ipairs(scene22.grid:items()) do
+        if it.type_id == "microwave" then microwave22 = it end
+        if it.type_id == "potato" and not potato22 then potato22 = it end
+    end
+    assert(microwave22, "on_enter should have placed a microwave")
+    assert(potato22, "on_enter should have placed a potato")
+
+    -- Open the microwave's panel.
+    scene22.panels = { ItemPanel.new(microwave22) }
+
+    -- Place a pot directly into the open microwave panel (it fits: the
+    -- microwave panel is 2x1 and the pot footprint is {{0,0},{1,0}}).
+    local pot22 = Item.new("pot")
+    assert(microwave22.panel:can_place(pot22, 0, 0), "pot should fit in the microwave's 2-wide panel")
+    microwave22.panel:place(pot22, 0, 0)
+
+    -- Drag the potato from the main floor and drop it onto the pot's cell
+    -- within the open microwave panel.
+    local orig_col, orig_row = potato22.cell_col, potato22.cell_row
+    local px22, py22 = scene22.grid:cell_to_world(orig_col, orig_row)
+    scene22:mouse_pressed(px22 + 1, py22 + 1)
+    assert(scene22.grid.dragging == potato22, "sanity check: should be dragging the potato")
+
+    -- Drop onto the pot's first cell inside the microwave's open panel.
+    local drop_x, drop_y = microwave22.panel:cell_to_world(0, 0)
+    scene22:mouse_moved(drop_x + 1, drop_y + 1)
+    scene22:mouse_released(drop_x + 1, drop_y + 1)
+
+    assert(scene22.grid.dragging == nil, "drop should clear the main grid's drag state")
+    assert(potato22.grid == pot22.panel,
+        "item dropped onto the pot inside the microwave panel should land in the pot's panel")
+
+    local still_on_main_grid = false
+    for _, it in ipairs(scene22.grid:items()) do
+        if it == potato22 then still_on_main_grid = true end
+    end
+    assert(not still_on_main_grid, "the item should be gone from the main floor grid")
+
+    local in_pot_panel = false
+    for _, it in ipairs(pot22.panel:items()) do
+        if it == potato22 then in_pot_panel = true end
+    end
+    assert(in_pot_panel, "the item should be listed in the pot's panel")
+
+    -- Verify the item did NOT snap back to its original cell.
+    assert(not (potato22.cell_col == orig_col and potato22.cell_row == orig_row and potato22.grid == scene22.grid),
+        "the item must not have snapped back to its original cell on the main floor grid")
+
+    print("PASS: kitchen_scene: dragging an item onto the pot inside the microwave's open panel inserts it into the pot's panel")
+end
+
 print("ALL TESTS PASSED")
