@@ -9,6 +9,17 @@ local config    = require("lua/game/config")
 local Sprite    = require("lua/core/sprite")
 local item_defs = require("lua/game/data/item_defs")
 
+local _icon_cache = {}
+local function load_icon(type_id)
+    if not _icon_cache[type_id] then
+        local path = "assets/images/items/" .. type_id .. ".png"
+        if love.filesystem.getInfo(path) then
+            _icon_cache[type_id] = love.graphics.newImage(path)
+        end
+    end
+    return _icon_cache[type_id]
+end
+
 local Item = {}
 Item.__index = Item
 
@@ -75,6 +86,13 @@ function Item.new(type_id)
     local w, h = bounding_box(def.footprint)
     self.sprite = Sprite.new(0, 0, w * config.U, h * config.U)
     self.sprite.color = def.color
+
+    local icon = load_icon(type_id)
+    if icon then
+        self.sprite.image = icon
+        self.sprite.border_color = def.color
+        self.sprite.color = { 1, 1, 1, 1 }  -- don't tint the PNG
+    end
 
     self.panel = nil
     if def.has_panel then

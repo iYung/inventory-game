@@ -13,6 +13,17 @@ local config = require("lua/game/config")
 local Grid   = require("lua/game/grid")
 local Item   = require("lua/game/item")
 
+local _icon_cache = {}
+local function load_icon(type_id)
+    if not _icon_cache[type_id] then
+        local path = "assets/images/items/" .. type_id .. ".png"
+        if love.filesystem.getInfo(path) then
+            _icon_cache[type_id] = love.graphics.newImage(path)
+        end
+    end
+    return _icon_cache[type_id]
+end
+
 local U  = config.U
 local CW = 2 * U -- customer body width
 local CH = 4 * U -- customer body height
@@ -25,8 +36,8 @@ local TAIL_H        = 12
 local BUBBLE_GAP    = 8 -- gap between bubble box and customer sprite
 
 local DEFAULT_COLOR = { 0.85, 0.55, 0.30, 1 }
-local BUBBLE_BG      = { 1, 1, 1, 0.95 }
-local BUBBLE_TEXT    = { 0.08, 0.07, 0.10, 1 }
+local BUBBLE_BG      = { 0.05, 0.05, 0.08, 0.97 }
+local BUBBLE_TEXT    = { 0.95, 0.95, 0.80, 1 }
 
 -- Walking animation (placeholder art: no sprite frames, so the "animation"
 -- is a procedural bob + a pair of swinging leg rectangles beneath the body).
@@ -127,6 +138,13 @@ function Customer:show(cfg)
 
     self.speed = cfg.walk_speed or 80
     if cfg.color then self.sprite.color = cfg.color end
+
+    local icon_id = (self.kind == "merchant") and "merchant" or "customer"
+    local icon = load_icon(icon_id)
+    if icon then
+        self.sprite.image = icon
+        self.sprite.color = { 1, 1, 1, 1 }
+    end
 
     self.x = self.exit_x
     self.state          = "walking_in"
@@ -291,15 +309,6 @@ end
 function Customer:draw()
     if self.state == "idle" then return end
 
-    local swing = self:_leg_swing()
-    if swing ~= 0 then
-        local leg_y = self.sprite.y + self.sprite.height - LEG_H * 0.5
-        love.graphics.setColor(LEG_COLOR)
-        love.graphics.rectangle("fill", self.x - LEG_GAP - LEG_W / 2 + swing, leg_y, LEG_W, LEG_H)
-        love.graphics.rectangle("fill", self.x + LEG_GAP - LEG_W / 2 - swing, leg_y, LEG_W, LEG_H)
-        love.graphics.setColor(1, 1, 1, 1)
-    end
-
     self.sprite:draw()
 end
 
@@ -349,6 +358,8 @@ function Customer:draw_bubble()
 
     love.graphics.setColor(BUBBLE_BG)
     love.graphics.rectangle("fill", box_x, box_y, box_w, box_h, 6, 6)
+    love.graphics.setColor(0.90, 0.82, 0.40, 1)
+    love.graphics.rectangle("line", box_x, box_y, box_w, box_h, 6, 6)
 
     -- Small triangular tail pointing down toward the customer.
     local tail_cx = self.x

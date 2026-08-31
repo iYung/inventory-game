@@ -1,0 +1,13 @@
+## DF Art Overhaul Checklist
+
+- [x] Task A — `scripts/gen_icons.py` + `assets/images/items/` — Write a Python/Pillow script that generates one 32×32 RGBA PNG per item type and saves it to `assets/images/items/<type_id>.png`. Transparent background. Items: `raw_chicken`, `raw_beef`, `baked_chicken`, `steak`, `fried_chicken`, `broccoli`, `steamed_broccoli`, `potato`, `baked_potato`, `water`, `fries`, `beef_stew`, `chicken_soup`, `onion`, `onion_soup`, `blooming_onion`, `boiled_egg`, `egg`, `chicken`, `cow`, `microwave`, `fryer`, `pot`, `coop`, `meat_machine`, `incubator`, `broccoli_garden`, `onion_garden`, `customer`, `merchant`. Icon descriptions are in `docs/design/df-art-overhaul.md`. Run the script as part of this task so the PNGs actually exist on disk when done.
+
+- [x] Task B — `lua/game/config.lua` — Replace the COLORS table with the DF-dark palette from the design doc: `stage_bg` near-black, `grid_bg` deeper dark, `grid_cell` dim, `grid_line` bright cyan, `panel_bg` near-black, `panel_border` bright amber, `button` dim green, `button_text` bright green. No other changes to config.lua.
+
+- [x] Task C — `lua/core/sprite.lua` — In `Sprite:draw()`, before drawing `self.image` (or the fallback filled rect), draw a dark filled rectangle the same size as the sprite: color `{0.08, 0.08, 0.10, 1}`. This gives every item a consistent dark tile backdrop. No changes to any other Sprite method.
+
+- [x] Task D — `lua/game/item.lua` — Add a module-level `_icon_cache` table. Add a `load_icon(type_id)` local function that checks `assets/images/items/<type_id>.png` via `love.filesystem.getInfo`, loads it with `love.graphics.newImage` on first call, and caches it. In `Item.new`, after creating `self.sprite`, set `self.sprite.image = load_icon(type_id)`. No other changes to item.lua.
+
+- [x] Task E — `lua/game/customer.lua` — On `Customer:show()`, set `self.sprite.image` from the cached PNG: `assets/images/items/customer.png` for order-kind, `assets/images/items/merchant.png` for merchant-kind (use the same `load_icon` pattern or inline equivalent). Remove the walking-leg rectangle drawing from `Customer:draw()` (the PNG has legs baked in). In `Customer:draw_bubble()`, change `BUBBLE_BG` to `{0.05, 0.05, 0.08, 0.97}` and `BUBBLE_TEXT` to `{0.95, 0.95, 0.80, 1}`; add a thin border rect around the bubble using `panel_border` color from config.
+
+- [x] Task F — `game/scenes/kitchen_scene.lua` — In `KitchenScene:draw()`, replace the stage-area fill color with `config.COLORS.stage_bg` (which is now near-black). HUD `love.graphics.print` calls for Day/Customers/$ already use whatever color is set; set color to `{1, 1, 1, 1}` before each. No other changes to kitchen_scene.lua.
