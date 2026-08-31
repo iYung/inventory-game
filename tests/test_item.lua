@@ -420,4 +420,68 @@ do
     print("PASS: item: pump action produces water regardless of panel state")
 end
 
+-- Coffee machine: roasted_coffee_bean has no tags (raw ingredient).
+do
+    local bean = Item.new("roasted_coffee_bean")
+    assert(#bean.tags == 0, "roasted_coffee_bean should carry no tags, got " .. #bean.tags)
+    print("PASS: item: roasted_coffee_bean carries no tags (raw ingredient)")
+end
+
+-- Coffee machine: black_coffee carries Caffeine and Bitter tags.
+do
+    local coffee = Item.new("black_coffee")
+    assert(#coffee.tags == 2, "black_coffee should have exactly 2 tags, got " .. #coffee.tags)
+    local has_caffeine, has_bitter = false, false
+    for _, t in ipairs(coffee.tags) do
+        if t == "Caffeine" then has_caffeine = true end
+        if t == "Bitter"   then has_bitter   = true end
+    end
+    assert(has_caffeine, "black_coffee should have Caffeine tag")
+    assert(has_bitter,   "black_coffee should have Bitter tag")
+    print("PASS: item: black_coffee carries Caffeine and Bitter tags")
+end
+
+-- Coffee machine: Run action requires water + roasted_coffee_bean and
+-- produces black_coffee.
+do
+    local machine = Item.new("coffee_machine")
+    assert(machine.panel ~= nil, "coffee_machine should have a panel")
+
+    -- Without ingredients, Run should not start.
+    local no_start = machine:start_action("Run")
+    assert(no_start == false, "Run should not start with an empty panel")
+
+    -- With only water, still no start.
+    local water = Item.new("water")
+    machine.panel:place(water, 0, 0)
+    local no_start2 = machine:start_action("Run")
+    assert(no_start2 == false, "Run should not start with only water (missing roasted_coffee_bean)")
+
+    -- Add roasted_coffee_bean — now it should start.
+    local bean = Item.new("roasted_coffee_bean")
+    machine.panel:place(bean, 1, 0)
+
+    local started = machine:start_action("Run")
+    assert(started == true, "Run should start with water + roasted_coffee_bean in the panel")
+
+    machine:update(3.5) -- past the 3.0s duration
+
+    local items = machine.panel:items()
+    assert(#items == 1 and items[1].type_id == "black_coffee",
+        "coffee_machine should produce black_coffee after Run completes, got " ..
+        (items[1] and items[1].type_id or "nothing"))
+
+    print("PASS: item: coffee_machine Run action brews black_coffee from water + roasted_coffee_bean")
+end
+
+-- Coffee machine: 2x2 footprint and 2x2 panel.
+do
+    local machine = Item.new("coffee_machine")
+    local fp = machine:footprint()
+    assert(#fp == 4, "coffee_machine footprint should have 4 cells, got " .. #fp)
+    assert(machine.panel.cols == 2 and machine.panel.rows == 2,
+        "coffee_machine panel should be 2x2")
+    print("PASS: item: coffee_machine has 2x2 footprint and 2x2 panel")
+end
+
 print("ALL TESTS PASSED")
