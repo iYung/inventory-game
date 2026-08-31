@@ -168,7 +168,7 @@ function KitchenScene:on_enter()
     -- walking_in moves left-to-right, like wip's customers do.
     local target_x = config.SCREEN_W / 2
     local exit_x    = -150
-    local y         = 215  -- counter at waist (sill_y=270, belt=(47/72)*CH from top, center=270-(belt-CH/2))
+    local y         = 226  -- counter at waist (sill_y=270, belt=(47/72)*CH from top, center=270-(belt-CH/2))
     self.customer = Customer.new(target_x, exit_x, y)
     self.customer:show(self.queue:next())
 

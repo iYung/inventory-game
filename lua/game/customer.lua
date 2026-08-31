@@ -25,8 +25,8 @@ local function load_icon(type_id)
 end
 
 local U  = config.U
-local CW = 360 -- 72 px sprite drawn at 5x
-local CH = 360 -- 72 px sprite drawn at 5x
+local CW = 288 -- 72 px sprite drawn at 4x
+local CH = 288 -- 72 px sprite drawn at 4x
 
 local REVEAL_SPEED = 40 -- characters per second
 local PAD          = 10
