@@ -371,6 +371,17 @@ local function any_action_running(item)
     return false
 end
 
+-- Returns true iff any ancestor container of `item` (at any depth) is
+-- currently running an action.
+local function ancestor_processing(item)
+    local grid = item.grid
+    while grid and grid.owner do
+        if any_action_running(grid.owner) then return true end
+        grid = grid.owner.grid
+    end
+    return false
+end
+
 -- Checks (x,y) against `grid` for the double-click-to-open-panel
 -- gesture: if a has_panel item sits at that cell AND this is a second
 -- click within DOUBLE_CLICK_WINDOW on the same cell of the same grid,
@@ -385,8 +396,7 @@ function KitchenScene:_try_double_click_open(grid, x, y)
     if item then
         local def = item_defs[item.type_id]
         if def and def.has_panel then
-            local owner = item.grid and item.grid.owner
-            if owner and any_action_running(owner) then
+            if ancestor_processing(item) then
                 return false
             end
 
@@ -424,8 +434,7 @@ function KitchenScene:_open_container_at(grid, x, y)
     if not item then return end
     local def = item_defs[item.type_id]
     if not (def and def.has_panel) then return end
-    local owner = item.grid and item.grid.owner
-    if owner and any_action_running(owner) then return end
+    if ancestor_processing(item) then return end
     self:_open_or_focus_panel(item)
 end
 
