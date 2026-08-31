@@ -632,7 +632,9 @@ function KitchenScene:mouse_moved(x, y)
                 grid.drag_preview_col, grid.drag_preview_row = nil, nil
             end
         elseif grid == hover then
-            grid:preview_override(item, x, y)
+            local px = item.sprite and item.sprite.x or x
+            local py = item.sprite and item.sprite.y or y
+            grid:preview_override(item, px, py)
         else
             grid:clear_preview_override()
         end
@@ -666,7 +668,10 @@ function KitchenScene:mouse_released(x, y)
 
     local item = owner.dragging
 
-    local hover = self:_hover_grid(x, y)
+    local sx = item.sprite and item.sprite.x or x
+    local sy = item.sprite and item.sprite.y or y
+
+    local hover = self:_hover_grid(sx, sy)
 
     -- Dropped directly onto a has_panel item's own footprint on the main
     -- floor grid (e.g. raw meat dropped right on the microwave): insert it
@@ -675,7 +680,7 @@ function KitchenScene:mouse_released(x, y)
     -- snapping back. Not applicable when already dragging out of that same
     -- panel (nothing to do) or dragging the container onto itself.
     if hover == self.grid then
-        local container = self:_container_at(x, y)
+        local container = self:_container_at(sx, sy)
         if container and container ~= item and container.panel ~= owner then
             transfer_drag_first_fit(owner, container.panel, item)
             return
@@ -688,7 +693,7 @@ function KitchenScene:mouse_released(x, y)
     -- but for a nested container. Only applies when the microwave (or any
     -- ancestor) is not currently running.
     if hover ~= nil and hover ~= self.grid and hover ~= owner then
-        local col, row = hover:world_to_cell(x, y)
+        local col, row = hover:world_to_cell(sx, sy)
         local nested = hover:item_at(col, row)
         if nested and nested ~= item and nested.panel and not ancestor_processing(nested) then
             transfer_drag_first_fit(owner, nested.panel, item)
@@ -701,7 +706,7 @@ function KitchenScene:mouse_released(x, y)
     -- started on, or just let it resolve normally (place/snap-back) if
     -- dropped back where it came from.
     if hover ~= nil and hover ~= owner then
-        transfer_drag(owner, hover, item, x, y)
+        transfer_drag(owner, hover, item, sx, sy)
     else
         owner:mouse_released(x, y)
     end

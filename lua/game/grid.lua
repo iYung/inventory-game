@@ -57,6 +57,13 @@ function Grid:_position_dragging_sprite()
     s.y = self.drag_cursor_y - self.drag_offset_y
 end
 
+function Grid:_sprite_anchor()
+    if self.dragging and self.dragging.sprite then
+        return self.dragging.sprite.x, self.dragging.sprite.y
+    end
+    return self.drag_cursor_x, self.drag_cursor_y
+end
+
 -- Coordinate conversion ----------------------------------------------------
 
 function Grid:cell_to_world(col, row)
@@ -190,16 +197,18 @@ end
 function Grid:mouse_moved(x, y)
     self._hover_col, self._hover_row = self:world_to_cell(x, y)
     if not self.dragging then return end
-    self.drag_preview_col, self.drag_preview_row = self:world_to_cell(x, y)
     self.drag_cursor_x, self.drag_cursor_y = x, y
     self:_position_dragging_sprite()
+    local sx, sy = self:_sprite_anchor()
+    self.drag_preview_col, self.drag_preview_row = self:world_to_cell(sx, sy)
 end
 
 function Grid:mouse_released(x, y)
     if not self.dragging then return end
     local item = self.dragging
 
-    local col, row = self:world_to_cell(x, y)
+    local sx, sy = self:_sprite_anchor()
+    local col, row = self:world_to_cell(sx, sy)
     self.drag_preview_col, self.drag_preview_row = col, row
 
     if self:can_place(item, col, row) then
