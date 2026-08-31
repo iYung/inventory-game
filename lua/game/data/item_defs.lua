@@ -352,6 +352,57 @@ local item_defs = {
             },
         },
     },
+
+    milk = {
+        name     = "Milk",
+        footprint = { { 0, 0 } },
+        color    = { 0.92, 0.92, 0.96, 1 },
+    },
+
+    cheese = {
+        name     = "Cheese",
+        footprint = { { 0, 0 } },
+        color    = { 0.95, 0.80, 0.20, 1 },
+    },
+
+    milking_center = {
+        name      = "Milking Center",
+        footprint = {
+            {0,0},{1,0},{2,0},
+            {0,1},{1,1},{2,1},
+            {0,2},{1,2},{2,2},
+        },
+        color     = { 0.60, 0.55, 0.70, 1 },
+        has_panel  = true,
+        panel_cols = 4,
+        panel_rows = 3,
+        overnight_actions = {
+            {
+                requires = { cow = 1 },
+                produces = { milk = 2 },
+                nights   = 1,
+                preserve = true,
+                per_item = "cow",
+            },
+        },
+    },
+
+    cheese_cave = {
+        name      = "Cheese Cave",
+        footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },
+        color     = { 0.55, 0.42, 0.30, 1 },
+        has_panel  = true,
+        panel_cols = 2,
+        panel_rows = 2,
+        overnight_actions = {
+            {
+                requires = { milk = 1 },
+                produces = { cheese = 1 },
+                nights   = 1,
+                per_item = "milk",
+            },
+        },
+    },
 }
 
 return item_defs

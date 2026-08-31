@@ -340,15 +340,15 @@ function Item:overnight_tick()
             if satisfies(action.requires, counts) then
                 state.nights_elapsed = state.nights_elapsed + 1
                 if state.nights_elapsed >= action.nights then
-                    if not action.preserve then
-                        for type_id, count in pairs(action.requires or {}) do
-                            remove_matching(self.panel, type_id, count)
-                        end
-                    end
                     local step = action.per_item_step or 1
                     local repeats = action.per_item
                         and math.floor((counts[action.per_item] or 0) / step)
                         or 1
+                    if not action.preserve then
+                        for type_id, count in pairs(action.requires or {}) do
+                            remove_matching(self.panel, type_id, count * repeats)
+                        end
+                    end
                     for _ = 1, repeats do
                         for type_id, count in pairs(action.produces or {}) do
                             for _ = 1, count do

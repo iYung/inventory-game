@@ -361,4 +361,94 @@ do
     print("PASS: barn: 8 cows with 1 free slot produce 1 new cow (space-capped)")
 end
 
+-- Test: milking_center with 1 cow produces 2 milk overnight (cow preserved).
+do
+    local mc  = Item.new("milking_center")
+    local cow = Item.new("cow")
+    mc.panel:place(cow, 0, 0)
+
+    mc:overnight_tick()
+
+    local milks = count_type(mc.panel, "milk")
+    local cows  = count_type(mc.panel, "cow")
+    assert(milks == 2,  "milking_center with 1 cow should produce 2 milk, got " .. milks)
+    assert(cows  == 1,  "cow should be preserved in milking_center, got " .. cows)
+
+    print("PASS: milking_center: 1 cow produces 2 milk overnight (cow preserved)")
+end
+
+-- Test: milking_center with 2 cows produces 4 milk overnight.
+-- (4x3 panel; each cow is 2x2; 2 cows fill rows 0-1, row 2 holds the 4 milk.)
+do
+    local mc = Item.new("milking_center")
+    mc.panel:place(Item.new("cow"), 0, 0)
+    mc.panel:place(Item.new("cow"), 2, 0)
+
+    mc:overnight_tick()
+
+    local milks = count_type(mc.panel, "milk")
+    local cows  = count_type(mc.panel, "cow")
+    assert(milks == 4, "milking_center with 2 cows should produce 4 milk, got " .. milks)
+    assert(cows  == 2, "both cows should be preserved, got " .. cows)
+
+    print("PASS: milking_center: 2 cows produce 4 milk overnight")
+end
+
+-- Test: milking_center with no cows produces no milk.
+do
+    local mc = Item.new("milking_center")
+
+    mc:overnight_tick()
+
+    local milks = count_type(mc.panel, "milk")
+    assert(milks == 0, "empty milking_center should produce no milk, got " .. milks)
+
+    print("PASS: milking_center: empty milking_center produces no milk overnight")
+end
+
+-- Test: cheese_cave with 1 milk converts to 1 cheese overnight (milk consumed).
+do
+    local cave = Item.new("cheese_cave")
+    cave.panel:place(Item.new("milk"), 0, 0)
+
+    cave:overnight_tick()
+
+    local cheeses = count_type(cave.panel, "cheese")
+    local milks   = count_type(cave.panel, "milk")
+    assert(cheeses == 1, "cheese_cave with 1 milk should produce 1 cheese, got " .. cheeses)
+    assert(milks   == 0, "milk should be consumed by cheese_cave, got " .. milks)
+
+    print("PASS: cheese_cave: 1 milk converts to 1 cheese overnight")
+end
+
+-- Test: cheese_cave with 4 milks converts all to cheese overnight.
+do
+    local cave = Item.new("cheese_cave")
+    cave.panel:place(Item.new("milk"), 0, 0)
+    cave.panel:place(Item.new("milk"), 1, 0)
+    cave.panel:place(Item.new("milk"), 0, 1)
+    cave.panel:place(Item.new("milk"), 1, 1)
+
+    cave:overnight_tick()
+
+    local cheeses = count_type(cave.panel, "cheese")
+    local milks   = count_type(cave.panel, "milk")
+    assert(cheeses == 4, "cheese_cave with 4 milks should produce 4 cheeses, got " .. cheeses)
+    assert(milks   == 0, "all milk should be consumed, got " .. milks)
+
+    print("PASS: cheese_cave: 4 milks all convert to cheese overnight")
+end
+
+-- Test: cheese_cave with no milk is a no-op.
+do
+    local cave = Item.new("cheese_cave")
+
+    cave:overnight_tick()
+
+    local cheeses = count_type(cave.panel, "cheese")
+    assert(cheeses == 0, "empty cheese_cave should produce no cheese, got " .. cheeses)
+
+    print("PASS: cheese_cave: empty cheese_cave is a no-op overnight")
+end
+
 print("ALL OVERNIGHT TESTS PASSED")

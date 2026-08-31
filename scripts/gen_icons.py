@@ -53,6 +53,10 @@ COLORS = {
     "garden":           (64,  122, 46),
     "container":        (153, 128, 89),
     "barn":             (166, 89,  51),
+    "milk":            (235, 235, 245),
+    "cheese":          (242, 204, 51),
+    "milking_center":  (153, 140, 179),
+    "cheese_cave":     (140, 107, 77),
 }
 
 
@@ -502,6 +506,71 @@ def gen_barn():
     save(img, "barn")
 
 
+def gen_milk():
+    img = new_img(); d = ImageDraw.Draw(img)
+    base, dk, lt = shades("milk")
+    # jug body
+    d.rectangle([10, 10, 22, 27], fill=base)
+    d.rectangle([10, 10, 22, 13], fill=lt)
+    # neck
+    d.rectangle([12, 6, 20, 11], fill=base)
+    # handle
+    d.arc([19, 14, 27, 22], 270, 90, fill=dk, width=2)
+    # shadow
+    d.line([(22, 14), (22, 26)], fill=dk, width=1)
+    d.point((11, 11), fill=lt)
+    save(img, "milk")
+
+
+def gen_cheese():
+    img = new_img(); d = ImageDraw.Draw(img)
+    base, dk, lt = shades("cheese")
+    # wedge of cheese
+    d.polygon([(6, 22), (26, 22), (26, 10), (16, 10)], fill=base)
+    d.polygon([(6, 22), (16, 10), (16, 22)], fill=dk)
+    # rind top
+    d.line([(16, 10), (26, 10)], fill=dk, width=1)
+    # holes
+    d.ellipse([19, 14, 23, 18], fill=dk)
+    d.ellipse([14, 16, 17, 19], fill=dk)
+    d.point((20, 12), fill=lt)
+    save(img, "cheese")
+
+
+def gen_milking_center():
+    img = new_img(); d = ImageDraw.Draw(img)
+    base, dk, lt = shades("milking_center")
+    # main body
+    d.rectangle([3, 14, 29, 28], fill=base)
+    # roof (flat, not gambrel)
+    d.rectangle([2, 10, 30, 14], fill=dk)
+    # milk pail symbol (circle inside)
+    d.ellipse([11, 16, 21, 26], fill=dk)
+    d.ellipse([12, 17, 20, 25], fill=lt)
+    # door
+    d.rectangle([24, 20, 28, 28], fill=dk)
+    # highlight
+    d.point((4, 15), fill=lt)
+    save(img, "milking_center")
+
+
+def gen_cheese_cave():
+    img = new_img(); d = ImageDraw.Draw(img)
+    base, dk, lt = shades("cheese_cave")
+    # cave arch opening
+    d.rectangle([4, 15, 28, 28], fill=base)
+    d.ellipse([4, 8, 28, 20], fill=base)
+    # dark interior
+    d.ellipse([8, 12, 24, 22], fill=dk)
+    d.ellipse([9, 13, 23, 21], fill=dk)
+    # stalactites
+    for x in [10, 15, 20]:
+        d.polygon([(x-1, 13), (x+1, 13), (x, 17)], fill=lt)
+    # highlight
+    d.point((6, 16), fill=lt)
+    save(img, "cheese_cave")
+
+
 def gen_pump():
     img = new_img(); d = ImageDraw.Draw(img)
     base, dk, lt = shades("pump")
@@ -549,6 +618,7 @@ GENERATORS = [
     gen_pump, gen_barn,
     gen_customer, gen_merchant,
     gen_container,
+    gen_milk, gen_cheese, gen_milking_center, gen_cheese_cave,
 ]
 
 if __name__ == "__main__":
