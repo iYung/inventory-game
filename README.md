@@ -63,7 +63,14 @@ lua/game/           Game logic — grid inventory, items, customers, day loop
 game/scenes/         Scene(s) built on lua/core (kitchen_scene.lua — the only scene)
 lua/headless/        Headless test infrastructure (stubs, HeadlessInput, runner)
 tests/               Test files — run with: love . --headless
-assets/              Images and other assets
+assets/images/
+  scene/bg.png       1280×360 Oregon Trail-style food-cart scene background
+  customer.png        48×72 px pixel-art customer sprite (drawn at 2× in-engine)
+  merchant.png        48×72 px pixel-art merchant sprite
+  items/              Per-item icon PNGs
+scripts/
+  gen_scene_art.py   Regenerates all scene/character PNGs (requires Pillow): python3 scripts/gen_scene_art.py
+  gen_icons.py       Generates item icon PNGs
 conf.lua             Window config; suppresses graphics/audio modules under --headless
 main.lua             Entry point — canvas rendering with letterboxing, pixel-art filter, mouse/keyboard wiring
 ```

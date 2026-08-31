@@ -162,6 +162,9 @@ function KitchenScene:on_enter()
     assert(self.grid:can_place(container, 0, 3), "container starting cell should be free")
     self.grid:place(container, 0, 3)
 
+    self._scene_bg = love.graphics.newImage("assets/images/scene/bg.png")
+    self._scene_fg = love.graphics.newImage("assets/images/scene/fg.png")
+
     self.day_state = DayState.new()
     self.day_state:start_day(config.CUSTOMERS_PER_DAY)
     self.queue = CustomerQueue.new(config.CUSTOMERS_PER_DAY)
@@ -172,7 +175,7 @@ function KitchenScene:on_enter()
     -- walking_in moves left-to-right, like wip's customers do.
     local target_x = config.SCREEN_W / 2
     local exit_x    = -150
-    local y         = config.SPLIT_Y / 2
+    local y         = 226  -- counter at waist (sill_y=270, belt=(47/72)*CH from top, center=270-(belt-CH/2))
     self.customer = Customer.new(target_x, exit_x, y)
     self.customer:show(self.queue:next())
 
@@ -731,10 +734,18 @@ function KitchenScene:draw()
 
     local colors = config.COLORS or {}
 
-    if colors.stage_bg then
+    -- Scene background: sky, treeline, cobblestone street
+    if self._scene_bg then
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.draw(self._scene_bg, 0, 0)
+    elseif colors.stage_bg then
         love.graphics.setColor(colors.stage_bg)
         love.graphics.rectangle("fill", 0, 0, config.SCREEN_W, config.SPLIT_Y)
     end
+
+    -- Bottom half background (below the split line)
+    love.graphics.setColor(0.09, 0.10, 0.13, 1)
+    love.graphics.rectangle("fill", 0, config.SPLIT_Y, config.SCREEN_W, config.SCREEN_H - config.SPLIT_Y)
 
     -- Everything below draws its own actively-dragged item (if any) inline,
     -- at its position in that layer's stacking order. Skip that here and
@@ -743,9 +754,23 @@ function KitchenScene:draw()
     -- customer sprite would occlude an item being dragged up toward them.
     self.grid:draw(true)
 
+    -- Clip customer and fg frame to the top half so a large sprite never
+    -- bleeds into the grid area below the split line.
+    love.graphics.setScissor(0, 0, config.SCREEN_W, config.SPLIT_Y)
+
+    -- Customer drawn before the foreground frame so the frame occludes their
+    -- lower body, creating a sense of depth (counter is in front of them).
     love.graphics.setColor(1, 1, 1, 1)
     self.customer:draw()
     self.customer:draw_bubble()
+
+    -- Foreground frame: metal posts and counter sill, overlaps customer
+    if self._scene_fg then
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.draw(self._scene_fg, 0, 0)
+    end
+
+    love.graphics.setScissor()
 
     if self:_next_day_ready() then
         love.graphics.setColor(colors.button or { 0.3, 0.55, 0.3, 1 })

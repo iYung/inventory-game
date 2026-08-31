@@ -25,8 +25,8 @@ local function load_icon(type_id)
 end
 
 local U  = config.U
-local CW = 2 * U -- customer body width
-local CH = 4 * U -- customer body height
+local CW = 288 -- 72 px sprite drawn at 4x
+local CH = 288 -- 72 px sprite drawn at 4x
 
 local REVEAL_SPEED = 40 -- characters per second
 local PAD          = 10
@@ -36,8 +36,8 @@ local TAIL_H        = 12
 local BUBBLE_GAP    = 8 -- gap between bubble box and customer sprite
 
 local DEFAULT_COLOR = { 0.85, 0.55, 0.30, 1 }
-local BUBBLE_BG      = { 0.05, 0.05, 0.08, 0.97 }
-local BUBBLE_TEXT    = { 0.95, 0.95, 0.80, 1 }
+local BUBBLE_BG      = { 1.00, 1.00, 1.00, 0.97 }
+local BUBBLE_TEXT    = { 0.08, 0.08, 0.10, 1 }
 
 -- Walking animation (placeholder art: no sprite frames, so the "animation"
 -- is a procedural bob + a pair of swinging leg rectangles beneath the body).
@@ -78,6 +78,7 @@ function Customer.new(target_x, exit_x, y)
     self.sprite = Sprite.new(0, 0, CW, CH)
     self.sprite.color   = DEFAULT_COLOR
     self.sprite.visible = false
+    self.sprite.no_bg   = true  -- drawn on the scene background, not a grid cell
 
     self.kind            = "order"
     self.panel           = nil
@@ -358,13 +359,21 @@ function Customer:draw_bubble()
 
     love.graphics.setColor(BUBBLE_BG)
     love.graphics.rectangle("fill", box_x, box_y, box_w, box_h, 6, 6)
-    love.graphics.setColor(0.90, 0.82, 0.40, 1)
+    love.graphics.setColor(0.25, 0.25, 0.30, 1)
     love.graphics.rectangle("line", box_x, box_y, box_w, box_h, 6, 6)
 
     -- Small triangular tail pointing down toward the customer.
     local tail_cx = self.x
+    love.graphics.setColor(BUBBLE_BG)
     love.graphics.polygon(
         "fill",
+        tail_cx - TAIL_H / 2, box_y + box_h,
+        tail_cx + TAIL_H / 2, box_y + box_h,
+        tail_cx,               box_y + box_h + TAIL_H
+    )
+    love.graphics.setColor(0.25, 0.25, 0.30, 1)
+    love.graphics.polygon(
+        "line",
         tail_cx - TAIL_H / 2, box_y + box_h,
         tail_cx + TAIL_H / 2, box_y + box_h,
         tail_cx,               box_y + box_h + TAIL_H
