@@ -214,9 +214,9 @@ print("Saved assets/images/scene/fg.png")
 
 
 # ---------------------------------------------------------------------------
-# Character sprites  48 x 72
+# Character sprites  72 x 72  (square, wider proportions fill the window)
 # ---------------------------------------------------------------------------
-SW, SH = 48, 72
+SW, SH = 72, 72
 
 def make_sprite():
     img = Image.new("RGBA", (SW, SH), (0, 0, 0, 0))
@@ -228,75 +228,75 @@ def srect(d, x1, y1, x2, y2, color, a=255):
 
 def draw_character(shirt_color, shirt_dark, hat_color, hat_dark, has_beard=False):
     img, d = make_sprite()
-    cx = SW // 2
+    cx = SW // 2   # 36
 
-    # Boots
-    srect(d, cx - 11, 62, cx - 2, 72, BOOT)
-    srect(d, cx + 2,  62, cx + 11, 72, BOOT)
-    srect(d, cx - 11, 62, cx - 3,  64, (60, 46, 28))
-    srect(d, cx + 2,  62, cx + 10, 64, (60, 46, 28))
+    # --- Boots (y 62-71) ---
+    srect(d, cx - 16, 62, cx - 3,  72, BOOT)
+    srect(d, cx + 3,  62, cx + 16, 72, BOOT)
+    srect(d, cx - 16, 62, cx - 4,  65, (60, 46, 28))
+    srect(d, cx + 4,  62, cx + 15, 65, (60, 46, 28))
 
-    # Pants
-    srect(d, cx - 10, 50, cx - 2, 62, PANTS)
-    srect(d, cx + 2,  50, cx + 10, 62, PANTS)
-    srect(d, cx - 10, 50, cx - 8,  62, PANTS_DARK)
-    srect(d, cx + 8,  50, cx + 10, 62, PANTS_DARK)
+    # --- Pants (y 50-62) ---
+    srect(d, cx - 15, 50, cx - 2, 62, PANTS)
+    srect(d, cx + 2,  50, cx + 15, 62, PANTS)
+    srect(d, cx - 15, 50, cx - 12, 62, PANTS_DARK)
+    srect(d, cx + 12, 50, cx + 15, 62, PANTS_DARK)
 
-    # Belt
-    srect(d, cx - 12, 48, cx + 12, 51, BELT)
-    srect(d, cx - 4,  48, cx + 4,  51, (180, 145, 60))
+    # --- Belt (y 47-51) ---
+    srect(d, cx - 18, 47, cx + 18, 51, BELT)
+    srect(d, cx - 5,  47, cx + 5,  51, (180, 145, 60))  # buckle
 
-    # Torso
-    srect(d, cx - 12, 30, cx + 12, 48, shirt_color)
-    srect(d, cx - 12, 30, cx - 10, 48, shirt_dark)
-    srect(d, cx + 10, 30, cx + 12, 48, shirt_dark)
-    for by in range(33, 47, 5):
-        srect(d, cx - 1, by, cx + 1, by + 2, (200, 185, 160))
+    # --- Torso (y 28-47) — wide, barrel-chested ---
+    srect(d, cx - 18, 28, cx + 18, 47, shirt_color)
+    srect(d, cx - 18, 28, cx - 15, 47, shirt_dark)
+    srect(d, cx + 15, 28, cx + 18, 47, shirt_dark)
+    for by in range(31, 46, 5):
+        srect(d, cx - 1, by, cx + 2, by + 2, (200, 185, 160))
 
-    # Arms + hands
-    srect(d, cx - 18, 30, cx - 12, 46, shirt_color)
-    srect(d, cx - 18, 30, cx - 16, 46, shirt_dark)
-    srect(d, cx - 19, 44, cx - 12, 50, SKIN)
-    srect(d, cx + 12, 30, cx + 18, 46, shirt_color)
-    srect(d, cx + 16, 30, cx + 18, 46, shirt_dark)
-    srect(d, cx + 12, 44, cx + 19, 50, SKIN)
+    # --- Arms (y 28-48) — thick ---
+    srect(d, cx - 28, 28, cx - 18, 46, shirt_color)
+    srect(d, cx - 28, 28, cx - 25, 46, shirt_dark)
+    srect(d, cx - 29, 43, cx - 18, 51, SKIN)   # left hand
+    srect(d, cx + 18, 28, cx + 28, 46, shirt_color)
+    srect(d, cx + 25, 28, cx + 28, 46, shirt_dark)
+    srect(d, cx + 18, 43, cx + 29, 51, SKIN)   # right hand
 
-    # Neck
-    srect(d, cx - 4, 24, cx + 4, 30, SKIN)
+    # --- Neck (y 22-28) ---
+    srect(d, cx - 5, 22, cx + 5, 28, SKIN)
 
-    # Head
-    srect(d, cx - 8, 12, cx + 8, 26, SKIN)
-    srect(d, cx - 8, 12, cx - 6, 26, SKIN_DARK)
-    srect(d, cx + 6, 12, cx + 8, 26, SKIN_DARK)
-    srect(d, cx - 5, 17, cx - 3, 19, (30, 22, 15))
-    srect(d, cx + 3, 17, cx + 5, 19, (30, 22, 15))
-    spx(d, cx - 4, 17, (255, 255, 255))
-    spx(d, cx + 4, 17, (255, 255, 255))
-    spx(d, cx,     21, SKIN_DARK)
-    spx(d, cx + 1, 21, SKIN_DARK)
-    srect(d, cx - 3, 23, cx + 3, 24, (160, 100, 80))
+    # --- Head (y 10-24) — wider ---
+    srect(d, cx - 13, 10, cx + 13, 24, SKIN)
+    srect(d, cx - 13, 10, cx - 10, 24, SKIN_DARK)
+    srect(d, cx + 10, 10, cx + 13, 24, SKIN_DARK)
+    # Eyes
+    srect(d, cx - 8, 15, cx - 5, 18, (30, 22, 15))
+    srect(d, cx + 5, 15, cx + 8, 18, (30, 22, 15))
+    spx(d, cx - 7, 15, (255, 255, 255))
+    spx(d, cx + 6, 15, (255, 255, 255))
+    # Nose
+    srect(d, cx - 1, 19, cx + 2, 20, SKIN_DARK)
+    # Mouth
+    srect(d, cx - 4, 22, cx + 4, 23, (150, 90, 70))
     if has_beard:
-        for bx in range(cx - 7, cx + 8, 2):
-            for byy in [22, 23, 24]:
-                spx(d, bx, byy, (90, 60, 35))
-        srect(d, cx - 7, 24, cx + 7, 26, (80, 54, 28))
+        srect(d, cx - 11, 20, cx + 11, 24, (90, 60, 35))
+        srect(d, cx - 12, 22, cx + 12, 26, (75, 50, 28))
 
-    # Ears
-    srect(d, cx - 10, 14, cx - 8, 20, SKIN)
-    srect(d, cx + 8,  14, cx + 10, 20, SKIN)
+    # --- Ears ---
+    srect(d, cx - 15, 13, cx - 13, 20, SKIN)
+    srect(d, cx + 13, 13, cx + 15, 20, SKIN)
 
-    # Hair
-    srect(d, cx - 8, 12, cx + 8, 14, HAIR_DARK)
+    # --- Hair under hat ---
+    srect(d, cx - 13, 10, cx + 13, 12, HAIR_DARK)
 
-    # Hat brim
-    srect(d, cx - 14, 8, cx + 14, 12, hat_color)
-    srect(d, cx - 8,  12, cx + 8, 14, hat_dark)
+    # --- Hat brim (y 6-10) — wide ---
+    srect(d, cx - 20, 6, cx + 20, 10, hat_color)
+    srect(d, cx - 13, 10, cx + 13, 12, hat_dark)
 
-    # Hat crown
-    srect(d, cx - 9, 0, cx + 9, 8, hat_color)
-    srect(d, cx - 9, 0, cx - 7, 8, hat_dark)
-    srect(d, cx + 7, 0, cx + 9, 8, hat_dark)
-    srect(d, cx - 9, 6, cx + 9, 8, hat_dark)
+    # --- Hat crown (y 0-6) ---
+    srect(d, cx - 13, 0, cx + 13, 6, hat_color)
+    srect(d, cx - 13, 0, cx - 10, 6, hat_dark)
+    srect(d, cx + 10, 0, cx + 13, 6, hat_dark)
+    srect(d, cx - 13, 5, cx + 13, 6, hat_dark)
 
     return img
 

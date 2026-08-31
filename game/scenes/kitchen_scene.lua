@@ -168,7 +168,7 @@ function KitchenScene:on_enter()
     -- walking_in moves left-to-right, like wip's customers do.
     local target_x = config.SCREEN_W / 2
     local exit_x    = -150
-    local y         = 234  -- counter at waist (sill_y=270, center = sill_y - CH/6)
+    local y         = 215  -- counter at waist (sill_y=270, belt=(47/72)*CH from top, center=270-(belt-CH/2))
     self.customer = Customer.new(target_x, exit_x, y)
     self.customer:show(self.queue:next())
 
@@ -742,6 +742,10 @@ function KitchenScene:draw()
     -- customer sprite would occlude an item being dragged up toward them.
     self.grid:draw(true)
 
+    -- Clip customer and fg frame to the top half so a large sprite never
+    -- bleeds into the grid area below the split line.
+    love.graphics.setScissor(0, 0, config.SCREEN_W, config.SPLIT_Y)
+
     -- Customer drawn before the foreground frame so the frame occludes their
     -- lower body, creating a sense of depth (counter is in front of them).
     love.graphics.setColor(1, 1, 1, 1)
@@ -753,6 +757,8 @@ function KitchenScene:draw()
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.draw(self._scene_fg, 0, 0)
     end
+
+    love.graphics.setScissor()
 
     if self:_next_day_ready() then
         love.graphics.setColor(colors.button or { 0.3, 0.55, 0.3, 1 })
