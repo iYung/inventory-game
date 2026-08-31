@@ -300,6 +300,22 @@ local item_defs = {
         },
     },
 
+    pump = {
+        name      = "Pump",
+        footprint = { {0,0}, {0,1} },
+        color     = { 0.35, 0.55, 0.75, 1 },
+        has_panel  = true,
+        panel_cols = 1,
+        panel_rows = 1,
+        actions = {
+            {
+                name     = "Pump",
+                duration = 1.0,
+                produces = { water = 1 },
+            },
+        },
+    },
+
     pot = {
         name = "Pot",
         footprint = { { 0, 0 }, { 1, 0 } },

@@ -97,6 +97,12 @@ function KitchenScene:on_enter()
     assert(self.grid:can_place(pot, 8, 0), "pot starting cell should be free")
     self.grid:place(pot, 8, 0)
 
+    -- Pump (1x2) at (8,1): sits directly below the pot so water is easy to
+    -- drag into it. Footprint occupies (8,1)-(8,2), clear of pot (8,0)-(9,0).
+    local pump = Item.new("pump")
+    assert(self.grid:can_place(pump, 8, 1), "pump starting cell should be free")
+    self.grid:place(pump, 8, 1)
+
     local potato_cells = { { 2, 2 }, { 3, 2 } }
     for _, cell in ipairs(potato_cells) do
         local potato = Item.new("potato")

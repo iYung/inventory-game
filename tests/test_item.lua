@@ -379,4 +379,31 @@ do
     print("PASS: item: fryer's Fry action turns potato into fries")
 end
 
+-- Test: pump action requires nothing and produces one water per use.
+do
+    local pump = Item.new("pump")
+    assert(pump.panel ~= nil, "pump should have a panel")
+
+    local started = pump:start_action("Pump")
+    assert(started == true, "Pump action should start on an empty panel (no requires)")
+
+    pump:update(1.5) -- past the 1.0s duration
+
+    local items = pump.panel:items()
+    assert(#items == 1 and items[1].type_id == "water",
+        "pump should produce one water, got " .. #items .. " items")
+
+    -- Panel is now full (1x1); a second pump action should start (no requires)
+    -- but produce nothing since there is no free cell.
+    local started2 = pump:start_action("Pump")
+    assert(started2 == true, "Pump action should still start when panel is full (no requires check)")
+
+    pump:update(1.5)
+
+    local items2 = pump.panel:items()
+    assert(#items2 == 1, "panel should still hold exactly 1 item when full")
+
+    print("PASS: item: pump action produces water regardless of panel state")
+end
+
 print("ALL TESTS PASSED")

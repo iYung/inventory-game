@@ -49,6 +49,7 @@ COLORS = {
     "onion_garden":     (166, 128, 51),
     "customer":         (217, 140, 77),
     "merchant":         (77,  230, 230),
+    "pump":             (89,  140, 191),
 }
 
 
@@ -447,6 +448,19 @@ def gen_onion_garden():
 
 # ── people ────────────────────────────────────────────────────────────────────
 
+def gen_pump():
+    img = new_img(); d = ImageDraw.Draw(img)
+    base, dk, lt = shades("pump")
+    d.rectangle([12, 4, 20, 28], fill=dk)
+    d.rectangle([13, 5, 19, 27], fill=base)
+    d.rectangle([5, 4, 13, 9], fill=dk)
+    d.rectangle([4, 9, 9, 15], fill=dk)
+    d.rectangle([19, 14, 26, 17], fill=dk)
+    d.ellipse([23, 12, 27, 19], fill=dk)
+    d.point((15, 7), fill=lt)
+    save(img, "pump")
+
+
 def gen_customer():
     img = new_img(); d = ImageDraw.Draw(img)
     base, dk, lt = shades("customer")
@@ -478,6 +492,7 @@ GENERATORS = [
     gen_chicken, gen_cow,
     gen_microwave, gen_fryer, gen_pot, gen_coop, gen_meat_machine, gen_incubator,
     gen_broccoli_garden, gen_onion_garden,
+    gen_pump,
     gen_customer, gen_merchant,
 ]
 
