@@ -310,6 +310,15 @@ local item_defs = {
         garden_spread = { "onion", "broccoli", "potato" },
     },
 
+    container = {
+        name      = "Container",
+        footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },
+        color     = { 0.60, 0.50, 0.35, 1 },
+        has_panel  = true,
+        panel_cols = 6,
+        panel_rows = 6,
+    },
+
     pot = {
         name = "Pot",
         footprint = { { 0, 0 }, { 1, 0 } },

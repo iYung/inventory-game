@@ -323,6 +323,30 @@ do
     print("PASS: item: potato -> baked_potato recipe works via the microwave's Cook button")
 end
 
+-- Test: container item has a 6x6 panel and no actions.
+do
+    local c = Item.new("container")
+    assert(c.panel ~= nil, "container should have a panel")
+    assert(#c.panel:items() == 0, "container panel should start empty")
+
+    local started = c:start_action("Store") -- no actions defined
+    assert(started == false, "container has no actions; start_action should always return false")
+
+    -- Place an item in each corner of the 6x6 panel to confirm full dimensions.
+    local function place_at(panel, type_id, col, row)
+        local it = Item.new(type_id)
+        assert(panel:can_place(it, col, row), "should be able to place " .. type_id .. " at " .. col .. "," .. row)
+        panel:place(it, col, row)
+    end
+    place_at(c.panel, "raw_chicken", 0, 0)
+    place_at(c.panel, "raw_chicken", 5, 0)
+    place_at(c.panel, "raw_chicken", 0, 5)
+    place_at(c.panel, "raw_chicken", 5, 5)
+    assert(#c.panel:items() == 4, "all four corners of the 6x6 panel should be reachable")
+
+    print("PASS: item: container has a 6x6 panel, no actions, and accepts items in all corners")
+end
+
 -- Test 12: a newly created garden has a 3x3 panel that starts empty.
 do
     local garden = Item.new("garden")

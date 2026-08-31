@@ -148,6 +148,13 @@ function KitchenScene:on_enter()
         self.grid:place(chicken, cell[1], cell[2])
     end
 
+    -- Container (2x2) at (0,3)-(1,4): empty passive storage, sits in the
+    -- open space between the cooking appliances (rows 0-2) and the animal
+    -- production chain (rows 4-5).
+    local container = Item.new("container")
+    assert(self.grid:can_place(container, 0, 3), "container starting cell should be free")
+    self.grid:place(container, 0, 3)
+
     self.day_state = DayState.new()
     self.day_state:start_day(config.CUSTOMERS_PER_DAY)
     self.queue = CustomerQueue.new(config.CUSTOMERS_PER_DAY)
