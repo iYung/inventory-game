@@ -1,37 +1,40 @@
 # love-exemplar
 
 A Love2D cooking-inventory game. Customers arrive one at a time up top
-requesting a food *tag/category* (e.g. "something with protein") rather than
-a specific item; you drag and rotate ingredients and appliances around a grid
-inventory on the bottom half, run timed actions in containers like the
-microwave and fryer (double-click a container to open its sub-inventory
-panel), and serve customers by clicking a waiting order customer to open
-their order panel, dragging the item carrying their requested tag into its
-3x3 grid, and pressing **Serve** (enabled only once the grid holds exactly
-one matching item) — or press **Skip** to send them away empty-handed,
+with a three-tier preference profile — **Loved**, **Liked**, and **Disliked**
+tags (e.g. "I'd love some Protein! Healthy works for me. Not a fan of Greasy.").
+You drag and rotate ingredients and appliances around a grid inventory (15×9
+cells) on the bottom half, run timed actions in containers like the microwave
+and fryer (double-click a container to open its sub-inventory panel), and serve
+customers by clicking a waiting order customer to open their order panel —
+which shows the three trait tiers with color-coded highlights for whatever food
+is currently inside — then dragging any item into its 3×3 grid and pressing
+**Serve** (enabled once the grid holds exactly one item, regardless of tags) —
+or press **Skip** to send them away empty-handed,
 which returns any item(s) in the grid to your floor inventory. Pressing a
 container's action button fires every recipe its
-panel's contents currently satisfy, not just one — so raw chicken and broccoli
+panel's contents currently satisfy, not just one — so raw chicken and potato
 dropped in together both cook from a single press. The microwave alone
 handles raw chicken -> Protein-tagged baked chicken, raw beef -> Protein-tagged steak,
-broccoli -> Healthy-tagged steamed broccoli, and potato -> Filling-tagged baked potato;
+and potato -> Filling-tagged baked potato;
 the fryer turns potato into Greasy-tagged fries, onion into Greasy-tagged blooming onion, and
 raw chicken into Greasy-and-Protein-tagged fried chicken.
 A **pump** (1×2) has a 1×1 panel and a "Pump" button that produces one water
 per press, no ingredients required; if the panel is already full the action
 runs but produces nothing.
 A **pot** is a movable container in
-its own right: load it with water + raw chicken (or water + onion, or water + egg, or
-water + potato + raw beef), then place the loaded pot itself inside the microwave's panel
-and press Cook to turn its contents into Protein-and-Hearty-tagged chicken soup,
-Hearty-tagged onion soup, Protein-tagged boiled egg, or Filling-and-Protein-tagged
-beef stew, produced inside the pot's own panel without consuming the pot. You can
+its own right: load it with water + an ingredient, then place the loaded pot itself inside the microwave's panel
+and press Cook to turn its contents into: water + broccoli -> Healthy-tagged steamed broccoli;
+water + raw chicken -> Protein-and-Hearty-tagged chicken soup; water + onion -> Hearty-tagged onion soup;
+water + egg -> Protein-tagged boiled egg; water + potato + raw beef -> Filling-and-Protein-tagged beef stew.
+All outputs land in the pot's own panel without consuming the pot. You can
 also load the pot after it is already inside the open microwave panel by dropping
 ingredients directly onto it there (provided the microwave is not running).
 Two **gardens** (3×3 each) sit on the kitchen floor. Each garden has a 3×3
 panel where you can place onions and broccoli; every night, each occupied
 cell spreads to its orthogonal empty neighbors so your supply grows
 automatically overnight.
+A **coffee machine** (2×2) has a 2×2 panel; load it with one water and one roasted coffee bean, then press **Run** (3 s) to brew Caffeine-and-Bitter-tagged black coffee.
 A **container** (2×2) has a 6×6 internal storage panel — purely passive, no actions. Use it to organize items on the floor grid.
 A **barn** (3×3) has a 6×6 panel for housing cows — for every 2 cows inside,
 one new cow is born overnight (cows are never consumed). A **milking center**

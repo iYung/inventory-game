@@ -57,6 +57,7 @@ COLORS = {
     "cheese":          (242, 204, 51),
     "milking_center":  (153, 140, 179),
     "cheese_cave":     (140, 107, 77),
+    "omelette":         (230, 204, 102),
 }
 
 
@@ -571,6 +572,21 @@ def gen_cheese_cave():
     save(img, "cheese_cave")
 
 
+def gen_omelette():
+    img = new_img(); d = ImageDraw.Draw(img)
+    base, dk, lt = shades("omelette")
+    # folded egg body
+    d.ellipse([5, 13, 27, 23], fill=base)
+    d.arc([5, 13, 27, 23], 180, 360, fill=dk, width=2)
+    # fold line
+    d.line([(5, 18), (27, 18)], fill=dk, width=1)
+    # broccoli fleck
+    d.ellipse([13, 15, 16, 18], fill=dk)
+    # highlight
+    d.point((8, 15), fill=lt)
+    save(img, "omelette")
+
+
 def gen_pump():
     img = new_img(); d = ImageDraw.Draw(img)
     base, dk, lt = shades("pump")
@@ -611,7 +627,7 @@ GENERATORS = [
     gen_water, gen_fries,
     gen_beef_stew, gen_chicken_soup,
     gen_onion, gen_onion_soup, gen_blooming_onion,
-    gen_boiled_egg, gen_egg,
+    gen_boiled_egg, gen_egg, gen_omelette,
     gen_chicken, gen_cow,
     gen_microwave, gen_fryer, gen_pot, gen_coop, gen_meat_machine, gen_incubator,
     gen_broccoli_garden, gen_onion_garden, gen_garden,

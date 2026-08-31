@@ -47,18 +47,23 @@ do
     print("PASS: item_panel: is_action_enabled is true once a matching item is placed")
 end
 
--- Test 3b: is_action_enabled("Cook") is also true for broccoli - the
--- single Cook button matches whichever of its recipes the panel satisfies.
+-- Test 3b: is_action_enabled("Cook") is also true for the broccoli recipe -
+-- a pot loaded with water + broccoli satisfies the container recipe and the
+-- single Cook button enables for it just like raw_chicken does.
 
 do
     local microwave = Item.new("microwave")
     local panel = ItemPanel.new(microwave)
 
+    local pot      = Item.new("pot")
     local broccoli = Item.new("broccoli")
-    microwave.panel:place(broccoli, 0, 0)
+    local water    = Item.new("water")
+    pot.panel:place(broccoli, 0, 0)
+    pot.panel:place(water,    1, 0)
+    microwave.panel:place(pot, 0, 0)
 
     assert(panel:is_action_enabled("Cook") == true,
-        "Cook should be enabled with broccoli in the panel too, not just raw_chicken")
+        "Cook should be enabled with water+broccoli in a pot in the panel")
     print("PASS: item_panel: is_action_enabled is true for any of Cook's recipes, not just the first")
 end
 

@@ -13,8 +13,8 @@ do
     assert(#broccoli.tags == 0, "raw broccoli should carry no tags")
 
     local steamed = Item.new("steamed_broccoli")
-    assert(#steamed.tags == 1 and steamed.tags[1] == "Healthy",
-        "steamed_broccoli should be tagged Healthy")
+    assert(#steamed.tags == 2 and steamed.tags[1] == "Healthy" and steamed.tags[2] == "Veggie",
+        "steamed_broccoli should be tagged Healthy and Veggie")
 
     print("PASS: item: raw items carry no tags, prepared items carry their def's tags")
 end
@@ -134,21 +134,25 @@ end
 
 -- Test 3d: the microwave's single "Cook" button handles more than one
 -- recipe - it auto-matches whichever ingredient is actually present
--- (raw_chicken or broccoli) rather than needing a separate button per recipe.
+-- (raw_chicken or broccoli+water in a pot) rather than needing a separate button per recipe.
 do
     local microwave = Item.new("microwave")
-    local broccoli = Item.new("broccoli")
-    microwave.panel:place(broccoli, 0, 0)
+    local pot       = Item.new("pot")
+    local broccoli  = Item.new("broccoli")
+    local water     = Item.new("water")
+    pot.panel:place(broccoli, 0, 0)
+    pot.panel:place(water,    1, 0)
+    microwave.panel:place(pot, 0, 0)
 
     local started = microwave:start_action("Cook")
-    assert(started == true, "Cook should start with broccoli in the panel too, not just raw_chicken")
+    assert(started == true, "Cook should start with a pot of water+broccoli in the microwave")
     assert(microwave.action_state["Cook"].matches[1].recipe.produces.steamed_broccoli == 1,
         "the matched recipe should be the broccoli->steamed_broccoli one")
 
     microwave:update(3.5) -- past the 3.0s duration
-    local items = microwave.panel:items()
-    assert(#items == 1 and items[1].type_id == "steamed_broccoli",
-        "broccoli should have cooked into steamed_broccoli via the same Cook button")
+    local pot_items = pot.panel:items()
+    assert(#pot_items == 1 and pot_items[1].type_id == "steamed_broccoli",
+        "broccoli+water in the pot should have cooked into steamed_broccoli")
 
     print("PASS: item: Cook auto-matches whichever recipe the panel's contents satisfy")
 end
@@ -275,33 +279,34 @@ do
     print("PASS: item: container recipe never fires without an actual container item present")
 end
 
--- Test 9: multiple recipes fire in one press - raw_chicken and broccoli
--- together in the microwave's (now 2-wide) panel both cook from a single
--- Cook press.
+-- Test 9: multiple recipes fire in one press - raw_chicken and potato
+-- together in the microwave's (2-wide) panel both cook from a single Cook press.
+-- (Broccoli now requires a pot+water and takes the full 2-wide panel on its own,
+-- so we use two 1-cell direct recipes to test multi-recipe firing.)
 do
     local microwave = Item.new("microwave")
     local meat      = Item.new("raw_chicken")
-    local broccoli  = Item.new("broccoli")
-    microwave.panel:place(meat, 0, 0)
-    microwave.panel:place(broccoli, 1, 0)
+    local potato    = Item.new("potato")
+    microwave.panel:place(meat,   0, 0)
+    microwave.panel:place(potato, 1, 0)
 
     local started = microwave:start_action("Cook")
-    assert(started == true, "Cook should start with both raw_chicken and broccoli present")
+    assert(started == true, "Cook should start with both raw_chicken and potato present")
 
     microwave:update(3.5) -- past the 3.0s duration
 
     local items = microwave.panel:items()
     assert(#items == 2, "panel should contain exactly two items after both recipes fire, got " .. #items)
 
-    local has_baked_chicken, has_steamed_broccoli = false, false
+    local has_baked_chicken, has_baked_potato = false, false
     for _, it in ipairs(items) do
         if it.type_id == "baked_chicken" then has_baked_chicken = true end
-        if it.type_id == "steamed_broccoli" then has_steamed_broccoli = true end
+        if it.type_id == "baked_potato"  then has_baked_potato  = true end
     end
     assert(has_baked_chicken, "panel should contain baked_chicken after the single Cook press")
-    assert(has_steamed_broccoli, "panel should contain steamed_broccoli after the single Cook press")
+    assert(has_baked_potato,  "panel should contain baked_potato after the single Cook press")
 
-    print("PASS: item: a single Cook press fires every satisfied recipe (raw_chicken and broccoli together)")
+    print("PASS: item: a single Cook press fires every satisfied recipe (raw_chicken and potato together)")
 end
 
 -- Test 10: the new simple potato recipe (potato -> baked_potato) works like
@@ -418,6 +423,106 @@ do
     assert(#items2 == 1, "panel should still hold exactly 1 item when full")
 
     print("PASS: item: pump action produces water regardless of panel state")
+end
+
+-- Coffee machine: roasted_coffee_bean has no tags (raw ingredient).
+do
+    local bean = Item.new("roasted_coffee_bean")
+    assert(#bean.tags == 0, "roasted_coffee_bean should carry no tags, got " .. #bean.tags)
+    print("PASS: item: roasted_coffee_bean carries no tags (raw ingredient)")
+end
+
+-- Coffee machine: black_coffee carries Caffeine and Bitter tags.
+do
+    local coffee = Item.new("black_coffee")
+    assert(#coffee.tags == 2, "black_coffee should have exactly 2 tags, got " .. #coffee.tags)
+    local has_caffeine, has_bitter = false, false
+    for _, t in ipairs(coffee.tags) do
+        if t == "Caffeine" then has_caffeine = true end
+        if t == "Bitter"   then has_bitter   = true end
+    end
+    assert(has_caffeine, "black_coffee should have Caffeine tag")
+    assert(has_bitter,   "black_coffee should have Bitter tag")
+    print("PASS: item: black_coffee carries Caffeine and Bitter tags")
+end
+
+-- Coffee machine: Run action requires water + roasted_coffee_bean and
+-- produces black_coffee.
+do
+    local machine = Item.new("coffee_machine")
+    assert(machine.panel ~= nil, "coffee_machine should have a panel")
+
+    -- Without ingredients, Run should not start.
+    local no_start = machine:start_action("Run")
+    assert(no_start == false, "Run should not start with an empty panel")
+
+    -- With only water, still no start.
+    local water = Item.new("water")
+    machine.panel:place(water, 0, 0)
+    local no_start2 = machine:start_action("Run")
+    assert(no_start2 == false, "Run should not start with only water (missing roasted_coffee_bean)")
+
+    -- Add roasted_coffee_bean — now it should start.
+    local bean = Item.new("roasted_coffee_bean")
+    machine.panel:place(bean, 1, 0)
+
+    local started = machine:start_action("Run")
+    assert(started == true, "Run should start with water + roasted_coffee_bean in the panel")
+
+    machine:update(3.5) -- past the 3.0s duration
+
+    local items = machine.panel:items()
+    assert(#items == 1 and items[1].type_id == "black_coffee",
+        "coffee_machine should produce black_coffee after Run completes, got " ..
+        (items[1] and items[1].type_id or "nothing"))
+
+    print("PASS: item: coffee_machine Run action brews black_coffee from water + roasted_coffee_bean")
+end
+
+-- Coffee machine: 2x2 footprint and 2x2 panel.
+do
+    local machine = Item.new("coffee_machine")
+    local fp = machine:footprint()
+    assert(#fp == 4, "coffee_machine footprint should have 4 cells, got " .. #fp)
+    assert(machine.panel.cols == 2 and machine.panel.rows == 2,
+        "coffee_machine panel should be 2x2")
+    print("PASS: item: coffee_machine has 2x2 footprint and 2x2 panel")
+end
+
+-- Test: pot container recipe - egg + broccoli in a pot microwaved produces omelette.
+do
+    local microwave = Item.new("microwave")
+    local pot       = Item.new("pot")
+    microwave.panel:place(pot, 0, 0)
+
+    local egg      = Item.new("egg")
+    local broccoli = Item.new("broccoli")
+    pot.panel:place(egg, 0, 0)
+    pot.panel:place(broccoli, 1, 0)
+
+    local started = microwave:start_action("Cook")
+    assert(started == true, "Cook should start with a loaded pot in the microwave's panel")
+
+    microwave:update(3.5) -- past the 3.0s duration
+
+    local pot_items = pot.panel:items()
+    assert(#pot_items == 1 and pot_items[1].type_id == "omelette",
+        "pot's panel should contain one omelette after cooking, got " .. #pot_items)
+
+    local microwave_items = microwave.panel:items()
+    assert(#microwave_items == 1 and microwave_items[1].type_id == "pot" and microwave_items[1] == pot,
+        "microwave's panel should still hold the same pot item")
+
+    print("PASS: item: pot container recipe cooks egg + broccoli into omelette")
+end
+
+-- Test: omelette has Protein and Healthy tags.
+do
+    local omelette = Item.new("omelette")
+    assert(omelette:has_tag("Protein"), "omelette should have the Protein tag")
+    assert(omelette:has_tag("Healthy"), "omelette should have the Healthy tag")
+    assert(not omelette:has_tag("Greasy"), "omelette should not have the Greasy tag")
+    print("PASS: item: omelette carries Protein and Healthy tags")
 end
 
 print("ALL TESTS PASSED")

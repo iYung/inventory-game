@@ -57,14 +57,20 @@ do
             assert(cfg.name == "Customer", "order config should have a name field")
 
             local tags = known_tags()
-            local found = false
-            for _, tag in ipairs(tags) do
-                if cfg.requested_tag == tag then found = true end
+            local function all_in_pool(tier)
+                for _, t in ipairs(tier) do
+                    local found = false
+                    for _, tag in ipairs(tags) do if t == tag then found = true end end
+                    if not found then return false end
+                end
+                return true
             end
-            assert(found, "order config's requested_tag should be one of the tags present in item_defs")
-
-            assert(type(cfg.messages) == "table" and cfg.messages[1] == expected_message_for_tag(cfg.requested_tag),
-                "order config's messages[1] should match TAG_MESSAGES (or fallback) for its requested_tag")
+            assert(type(cfg.loved_tags) == "table" and #cfg.loved_tags >= 1, "order config should have at least one loved_tag")
+            assert(all_in_pool(cfg.loved_tags), "all loved_tags should be tags present in item_defs")
+            assert(type(cfg.liked_tags) == "table", "order config should have a liked_tags table")
+            assert(all_in_pool(cfg.liked_tags), "all liked_tags should be tags present in item_defs")
+            assert(type(cfg.disliked_tags) == "table", "order config should have a disliked_tags table")
+            assert(all_in_pool(cfg.disliked_tags), "all disliked_tags should be tags present in item_defs")
 
             assert(type(cfg.after_messages) == "table" and #cfg.after_messages > 0, "order config should have non-empty after_messages")
         end
@@ -163,17 +169,32 @@ do
 end
 
 -- Test 1d: across many CustomerQueue.new() draws, every order config's
--- requested_tag/messages invariant holds (requested_tag is always one of
--- the tags actually present in item_defs, and messages[1] always matches
--- TAG_MESSAGES/fallback for that tag), and the merchant config's stock
--- always contains broccoli. Also confirms, since the tag pick is random
--- per customer, that more than one distinct tag is actually observed over
--- enough trials (rather than every draw coincidentally picking the same
--- one) — same spirit as Test 1c's merchant-slot-varies check.
+-- trait-tier invariant holds (all tags in loved/liked/disliked_tags are
+-- valid item_defs tags, no tag appears in more than one tier, and
+-- messages[1] is non-empty), and the merchant config's stock always
+-- contains broccoli. Also confirms that loved_tags vary across trials.
 do
     local total  = 5
     local trials = 50
-    local seen_tags = {}
+    local seen_loved = {}
+
+    local function all_valid(tier)
+        local tags = known_tags()
+        for _, t in ipairs(tier) do
+            local ok = false
+            for _, tag in ipairs(tags) do if t == tag then ok = true end end
+            if not ok then return false end
+        end
+        return true
+    end
+
+    local function no_overlap(loved, liked, disliked)
+        local seen = {}
+        for _, t in ipairs(loved)    do if seen[t] then return false end seen[t] = true end
+        for _, t in ipairs(liked)    do if seen[t] then return false end seen[t] = true end
+        for _, t in ipairs(disliked) do if seen[t] then return false end seen[t] = true end
+        return true
+    end
 
     for _ = 1, trials do
         local q = CustomerQueue.new(total)
@@ -188,26 +209,26 @@ do
                 assert(has_broccoli, "merchant config's stock should contain broccoli")
                 assert(not has_baked_chicken, "merchant config's stock should never contain baked_chicken")
             else
-                local tags = known_tags()
-                local found = false
-                for _, tag in ipairs(tags) do
-                    if cfg.requested_tag == tag then found = true end
-                end
-                assert(found, "order config's requested_tag should always be one of the tags present in item_defs")
-                seen_tags[cfg.requested_tag] = true
-
-                assert(cfg.messages[1] == expected_message_for_tag(cfg.requested_tag),
-                    "order config's messages[1] should always match TAG_MESSAGES/fallback for its requested_tag")
+                assert(type(cfg.loved_tags) == "table" and #cfg.loved_tags >= 1,
+                    "order config should have at least one loved_tag")
+                assert(all_valid(cfg.loved_tags),    "all loved_tags should be tags present in item_defs")
+                assert(all_valid(cfg.liked_tags),    "all liked_tags should be tags present in item_defs")
+                assert(all_valid(cfg.disliked_tags), "all disliked_tags should be tags present in item_defs")
+                assert(no_overlap(cfg.loved_tags, cfg.liked_tags, cfg.disliked_tags),
+                    "no tag should appear in more than one tier")
+                assert(type(cfg.messages) == "table" and type(cfg.messages[1]) == "string" and #cfg.messages[1] > 0,
+                    "order config's messages[1] should be a non-empty string")
+                seen_loved[cfg.loved_tags[1]] = true
             end
         end
     end
 
     local distinct = 0
-    for _ in pairs(seen_tags) do distinct = distinct + 1 end
+    for _ in pairs(seen_loved) do distinct = distinct + 1 end
     assert(distinct > 1,
-        "requested_tag should vary across runs (saw " .. distinct .. " distinct tag(s) over " .. trials .. " trials)")
+        "loved_tags[1] should vary across runs (saw " .. distinct .. " distinct tag(s) over " .. trials .. " trials)")
 
-    print("PASS: customer_queue: requested_tag/messages invariant holds and varies across many new() draws; merchant stock always has broccoli")
+    print("PASS: customer_queue: trait-tier invariant holds and varies across many new() draws; merchant stock always has broccoli")
 end
 
 -- Test 2: DayState tracks day/customers_served/customers_total/currency

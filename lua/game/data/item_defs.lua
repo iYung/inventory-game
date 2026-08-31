@@ -75,7 +75,7 @@ local item_defs = {
         name = "Steamed Broccoli",
         footprint = { { 0, 0 } },
         color = { 0.45, 0.75, 0.30, 1 },
-        tags = { "Healthy" },
+        tags = { "Healthy", "Veggie" },
     },
 
     -- Never placed via Item.new/on a Grid - used only by ItemPanel's title
@@ -104,7 +104,7 @@ local item_defs = {
                 recipes = {
                     { requires = { raw_chicken = 1 }, produces = { baked_chicken = 1 } },
                     { requires = { raw_beef = 1 },    produces = { steak = 1 } },
-                    { requires = { broccoli = 1 }, produces = { steamed_broccoli = 1 } },
+                    { container = "pot", requires = { water = 1, broccoli = 1 }, produces = { steamed_broccoli = 1 } },
                     { requires = { potato = 1 },   produces = { baked_potato = 1 } },
                     {
                         container = "pot",
@@ -126,6 +126,11 @@ local item_defs = {
                         requires  = { water = 1, potato = 1, raw_beef = 1 },
                         produces  = { beef_stew = 1 },
                     },
+                    {
+                        container = "pot",
+                        requires  = { egg = 1, broccoli = 1 },
+                        produces  = { omelette = 1 },
+                    },
                 },
             },
         },
@@ -141,6 +146,37 @@ local item_defs = {
         name = "Water",
         footprint = { { 0, 0 } },
         color = { 0.40, 0.65, 0.90, 1 },
+    },
+
+    roasted_coffee_bean = {
+        name = "Roasted Coffee Bean",
+        footprint = { { 0, 0 } },
+        color = { 0.35, 0.22, 0.10, 1 },
+    },
+
+    black_coffee = {
+        name = "Black Coffee",
+        footprint = { { 0, 0 } },
+        color = { 0.12, 0.08, 0.05, 1 },
+        tags = { "Caffeine", "Bitter" },
+    },
+
+    coffee_machine = {
+        name = "Coffee Machine",
+        footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },
+        color = { 0.25, 0.22, 0.20, 1 },
+        has_panel = true,
+        panel_cols = 2,
+        panel_rows = 2,
+        actions = {
+            {
+                name = "Run",
+                duration = 3.0,
+                recipes = {
+                    { requires = { water = 1, roasted_coffee_bean = 1 }, produces = { black_coffee = 1 } },
+                },
+            },
+        },
     },
 
     fries = {
@@ -188,7 +224,7 @@ local item_defs = {
         name  = "Onion Soup",
         footprint = { {0,0} },
         color = { 0.75, 0.55, 0.25, 1 },
-        tags  = { "Hearty" },
+        tags  = { "Hearty", "Veggie" },
     },
 
     boiled_egg = {
@@ -196,6 +232,13 @@ local item_defs = {
         footprint = { { 0, 0 } },
         color = { 0.95, 0.90, 0.75, 1 },
         tags = { "Protein" },
+    },
+
+    omelette = {
+        name     = "Omelette",
+        footprint = { { 0, 0 } },
+        color    = { 0.90, 0.80, 0.40, 1 },
+        tags     = { "Protein", "Healthy" },
     },
 
     chicken = {
