@@ -81,7 +81,22 @@ def new_img():
     return Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
 
 
+def autocenter(img):
+    """Crop to the non-transparent bounding box, then paste centered on a fresh canvas."""
+    bbox = img.getbbox()
+    if not bbox:
+        return img
+    cropped = img.crop(bbox)
+    out = new_img()
+    cw, ch = cropped.size
+    ox = (SIZE - cw) // 2
+    oy = (SIZE - ch) // 2
+    out.paste(cropped, (ox, oy), cropped)
+    return out
+
+
 def save(img, type_id):
+    img = autocenter(img)
     path = os.path.join(OUT_DIR, f"{type_id}.png")
     img.save(path)
     print(f"  wrote {path}")
