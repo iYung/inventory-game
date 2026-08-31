@@ -20,15 +20,14 @@ config.ORDER_PANEL_COLS = 3
 config.ORDER_PANEL_ROWS = 3
 
 config.COLORS = {
-    grid_bg     = { 0.16, 0.16, 0.20, 1 },
-    grid_cell   = { 0.22, 0.22, 0.27, 1 },
-    grid_line   = { 0.30, 0.30, 0.36, 1 },
-    stage_bg    = { 0.55, 0.75, 0.85, 1 },
-    counter     = { 0.45, 0.32, 0.22, 1 },
-    button      = { 0.30, 0.55, 0.30, 1 },
-    button_text = { 1, 1, 1, 1 },
-    panel_bg     = { 0.10, 0.10, 0.13, 0.95 },
-    panel_border = { 0.45, 0.45, 0.55, 1 },
+    grid_bg      = { 0.06, 0.06, 0.08, 1 },
+    grid_cell    = { 0.14, 0.14, 0.18, 1 },
+    grid_line    = { 0.00, 0.80, 0.80, 1 },  -- bright cyan drop-preview
+    stage_bg     = { 0.04, 0.04, 0.06, 1 },
+    button       = { 0.10, 0.32, 0.10, 1 },
+    button_text  = { 0.40, 1.00, 0.40, 1 },
+    panel_bg     = { 0.05, 0.05, 0.07, 0.97 },
+    panel_border = { 0.90, 0.82, 0.40, 1 },  -- bright amber
 }
 
 return config

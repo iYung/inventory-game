@@ -22,6 +22,9 @@ function Sprite:draw()
     local flip_ox = (self.scale_x < 0) and self.width or 0
     love.graphics.translate(self.x + flip_ox, self.y)
     love.graphics.scale(self.scale_x, self.scale_y)
+    -- Dark cell background behind every item sprite
+    love.graphics.setColor(0.08, 0.08, 0.10, 1)
+    love.graphics.rectangle("fill", 0, 0, self.width, self.height)
     if self.shader then love.graphics.setShader(self.shader) end
     love.graphics.setColor(self.color)
     if self.image then
