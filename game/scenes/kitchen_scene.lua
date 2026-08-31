@@ -155,12 +155,21 @@ function KitchenScene:on_enter()
     barn.panel:place(Item.new("cow"), 0, 0)
     barn.panel:place(Item.new("cow"), 2, 0)
 
-    -- Container (2x2) at (0,3)-(1,4): empty passive storage, sits in the
-    -- open space between the cooking appliances (rows 0-2) and the animal
-    -- production chain (rows 4-5).
+    -- Container (2x2) at (0,3)-(1,4): passive storage with two roasted
+    -- coffee beans pre-stocked so the coffee workflow is reachable immediately.
     local container = Item.new("container")
     assert(self.grid:can_place(container, 0, 3), "container starting cell should be free")
     self.grid:place(container, 0, 3)
+    container.panel:place(Item.new("roasted_coffee_bean"), 4, 0)
+    container.panel:place(Item.new("roasted_coffee_bean"), 5, 0)
+
+    -- Coffee machine (2x2) at (6,2)-(7,3): brews black coffee from water +
+    -- roasted coffee beans. Sits directly below the fryer (6,0)-(7,1), clear
+    -- of the test-reserved cells (5,0) and (5,3) and the drop targets used by
+    -- test_kitchen_scene.lua.
+    local coffee_machine = Item.new("coffee_machine")
+    assert(self.grid:can_place(coffee_machine, 6, 2), "coffee_machine starting cell should be free")
+    self.grid:place(coffee_machine, 6, 2)
 
     self._scene_bg = love.graphics.newImage("assets/images/scene/bg.png")
     self._scene_fg = love.graphics.newImage("assets/images/scene/fg.png")
