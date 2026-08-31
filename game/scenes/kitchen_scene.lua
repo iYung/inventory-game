@@ -692,12 +692,14 @@ function KitchenScene:mouse_released(x, y)
         end
     end
 
-    -- Dropped onto a has_panel item inside an open panel grid (e.g. an item
-    -- dragged from the main floor and dropped onto the pot inside the microwave
-    -- panel): same first-fit insertion as the main-floor container case above,
-    -- but for a nested container. Only applies when the microwave (or any
-    -- ancestor) is not currently running.
-    if hover ~= nil and hover ~= self.grid and hover ~= owner then
+    -- Dropped onto a has_panel item inside a panel grid (e.g. an item dragged
+    -- from the main floor or from inside the same panel and dropped onto a
+    -- nested container): same first-fit insertion as the main-floor container
+    -- case above. Covers both cross-panel drops (hover != owner) and same-panel
+    -- drops (hover == owner) - the latter is the case where both the dragged
+    -- item and the target container already live inside the same parent panel.
+    -- Only applies when the ancestor container is not currently running.
+    if hover ~= nil and hover ~= self.grid then
         local col, row = hover:world_to_cell(x, y)
         local nested = hover:item_at(col, row)
         if nested and nested ~= item and nested.panel and not ancestor_processing(nested) then
