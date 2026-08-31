@@ -57,9 +57,13 @@ function Grid:_position_dragging_sprite()
     s.y = self.drag_cursor_y - self.drag_offset_y
 end
 
+-- Returns the center of the dragged sprite in world space, used to determine
+-- which cell to snap to on preview and drop. Center-snapping feels more
+-- natural than top-left snapping when the cursor is not at the item's corner.
 function Grid:_sprite_anchor()
     if self.dragging and self.dragging.sprite then
-        return self.dragging.sprite.x, self.dragging.sprite.y
+        local s = self.dragging.sprite
+        return s.x + s.width / 2, s.y + s.height / 2
     end
     return self.drag_cursor_x, self.drag_cursor_y
 end
@@ -181,7 +185,7 @@ function Grid:mouse_pressed(x, y)
         self:_unlist(item)
         self.drag_cursor_x, self.drag_cursor_y = x, y
         -- Record where within the sprite the user clicked so the item
-        -- doesn't jump to center itself on the cursor.
+        -- doesn't jump during drag.
         if item.sprite then
             self.drag_offset_x = x - item.sprite.x
             self.drag_offset_y = y - item.sprite.y
