@@ -252,4 +252,51 @@ do
     print("PASS: garden spread: potato at center spreads to all 4 orthogonal neighbors")
 end
 
+-- Test 14: coop with 2 chickens produces 2 eggs overnight.
+do
+    local coop = Item.new("coop")
+    coop.panel:place(Item.new("chicken"), 0, 0)
+    coop.panel:place(Item.new("chicken"), 1, 0)
+
+    coop:overnight_tick()
+
+    local eggs    = count_type(coop.panel, "egg")
+    local chickens = count_type(coop.panel, "chicken")
+    assert(eggs == 2,    "coop with 2 chickens should produce 2 eggs, got " .. eggs)
+    assert(chickens == 2, "both chickens should remain in the coop, got " .. chickens)
+
+    print("PASS: coop: 2 chickens produce 2 eggs overnight")
+end
+
+-- Test 15: coop with 3 chickens and only 1 free cell produces 1 egg (space-capped).
+do
+    local coop = Item.new("coop")
+    -- 2x2 panel; fill 3 cells with chickens, leaving 1 free
+    coop.panel:place(Item.new("chicken"), 0, 0)
+    coop.panel:place(Item.new("chicken"), 1, 0)
+    coop.panel:place(Item.new("chicken"), 0, 1)
+    -- (1,1) is free
+
+    coop:overnight_tick()
+
+    local eggs    = count_type(coop.panel, "egg")
+    local chickens = count_type(coop.panel, "chicken")
+    assert(eggs == 1,    "coop with 3 chickens and 1 free cell should produce 1 egg, got " .. eggs)
+    assert(chickens == 3, "all 3 chickens should remain in the coop, got " .. chickens)
+
+    print("PASS: coop: 3 chickens with 1 free cell produce 1 egg (space-capped)")
+end
+
+-- Test 16: coop with no chickens produces no eggs.
+do
+    local coop = Item.new("coop")
+
+    coop:overnight_tick()
+
+    local eggs = count_type(coop.panel, "egg")
+    assert(eggs == 0, "empty coop should produce no eggs, got " .. eggs)
+
+    print("PASS: coop: empty coop produces no eggs overnight")
+end
+
 print("ALL OVERNIGHT TESTS PASSED")
