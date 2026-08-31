@@ -489,4 +489,40 @@ do
     print("PASS: item: coffee_machine has 2x2 footprint and 2x2 panel")
 end
 
+-- Test: pot container recipe - egg + broccoli in a pot microwaved produces omelette.
+do
+    local microwave = Item.new("microwave")
+    local pot       = Item.new("pot")
+    microwave.panel:place(pot, 0, 0)
+
+    local egg      = Item.new("egg")
+    local broccoli = Item.new("broccoli")
+    pot.panel:place(egg, 0, 0)
+    pot.panel:place(broccoli, 1, 0)
+
+    local started = microwave:start_action("Cook")
+    assert(started == true, "Cook should start with a loaded pot in the microwave's panel")
+
+    microwave:update(3.5) -- past the 3.0s duration
+
+    local pot_items = pot.panel:items()
+    assert(#pot_items == 1 and pot_items[1].type_id == "omelette",
+        "pot's panel should contain one omelette after cooking, got " .. #pot_items)
+
+    local microwave_items = microwave.panel:items()
+    assert(#microwave_items == 1 and microwave_items[1].type_id == "pot" and microwave_items[1] == pot,
+        "microwave's panel should still hold the same pot item")
+
+    print("PASS: item: pot container recipe cooks egg + broccoli into omelette")
+end
+
+-- Test: omelette has Protein and Healthy tags.
+do
+    local omelette = Item.new("omelette")
+    assert(omelette:has_tag("Protein"), "omelette should have the Protein tag")
+    assert(omelette:has_tag("Healthy"), "omelette should have the Healthy tag")
+    assert(not omelette:has_tag("Greasy"), "omelette should not have the Greasy tag")
+    print("PASS: item: omelette carries Protein and Healthy tags")
+end
+
 print("ALL TESTS PASSED")
