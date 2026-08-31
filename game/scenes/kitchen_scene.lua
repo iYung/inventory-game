@@ -583,10 +583,31 @@ function KitchenScene:mouse_moved(x, y)
     local owner = self:_dragging_grid()
 
     if not owner then
-        -- No active drag: every grid's mouse_moved is a no-op, harmless to
-        -- forward to all of them unconditionally.
+        -- No active drag: forward to all grids so hover state and title-bar
+        -- panel dragging (_dragging_panel) are updated everywhere.
         self.grid:mouse_moved(x, y)
         for _, panel in ipairs(self.panels) do panel:mouse_moved(x, y) end
+
+        -- Suppress hover for every grid occluded by a higher-z panel so
+        -- draw_labels() never renders a label on top of a covering panel.
+        -- Walk back-to-front to find the topmost panel whose backdrop covers
+        -- (x,y); clear hover for the floor grid and every panel below it.
+        local top_cover = nil
+        for i = #self.panels, 1, -1 do
+            if self.panels[i]:_point_in_bg(x, y) then
+                top_cover = self.panels[i]
+                break
+            end
+        end
+        if top_cover then
+            self.grid:clear_hover()
+            for _, panel in ipairs(self.panels) do
+                if panel ~= top_cover then
+                    panel.item.panel:clear_hover()
+                end
+            end
+        end
+
         return
     end
 

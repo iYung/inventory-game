@@ -1624,4 +1624,105 @@ do
     print("PASS: kitchen_scene: dragging an item onto the pot inside the microwave's open panel inserts it into the pot's panel")
 end
 
+-- Test 23: hovering the cursor over an open panel must NOT leave hover state
+-- on the floor grid (or any occluded panel inner grid), so draw_labels() never
+-- renders a label on top of a covering panel's backdrop.
+
+do
+    local ItemPanel = require("lua/game/item_panel")
+
+    local ctx23 = runner.setup(function() return KitchenScene.new() end)
+    local scene23 = ctx23.sm.current
+
+    local microwave23
+    for _, it in ipairs(scene23.grid:items()) do
+        if it.type_id == "microwave" then microwave23 = it end
+    end
+    assert(microwave23, "on_enter should have placed a microwave")
+
+    -- Find a floor item that sits under where the panel will be, so hover
+    -- would normally land on it. The microwave is at cells (0,0)-(1,1);
+    -- open its panel and position it so its backdrop covers the microwave's
+    -- own cell, then hover over that area.
+    local panel23 = ItemPanel.new(microwave23)
+    scene23.panels = { panel23 }
+
+    -- The microwave cell in screen space.
+    local mwx, mwy = scene23.grid:cell_to_world(0, 0)
+    -- Move the panel so its backdrop starts at the microwave cell.
+    panel23:_layout(mwx, mwy)
+
+    -- Sanity: that cell position should be inside the panel backdrop.
+    assert(panel23:_point_in_bg(mwx + 1, mwy + 1),
+        "sanity: microwave cell center should be inside the panel backdrop after re-layout")
+
+    -- Hover exactly over that position. The floor grid's hover should be
+    -- suppressed since a panel covers the cursor.
+    scene23:mouse_moved(mwx + 1, mwy + 1)
+
+    assert(scene23.grid._hover_col == nil and scene23.grid._hover_row == nil,
+        "floor grid hover must be nil when cursor is over an open panel's backdrop")
+
+    -- Moving off the panel's backdrop: floor hover should resume normally.
+    -- Find a cell clearly outside all panel backdrops.
+    local clear_x, clear_y = scene23.grid:cell_to_world(9, 9)
+    -- Verify that cell is outside the panel (re-layout above keeps panel near (mwx,mwy)).
+    assert(not panel23:_point_in_bg(clear_x + 1, clear_y + 1),
+        "sanity: cell (9,9) should be outside the panel backdrop")
+
+    scene23:mouse_moved(clear_x + 1, clear_y + 1)
+    assert(scene23.grid._hover_col ~= nil,
+        "floor grid hover should be set once cursor moves off the panel backdrop")
+
+    print("PASS: kitchen_scene: floor grid hover is suppressed when cursor is over an open panel backdrop")
+end
+
+-- Test 24: with two stacked panels, hover is suppressed for any grid beneath
+-- the topmost panel. Only the topmost covering panel's inner grid may show hover.
+
+do
+    local ItemPanel = require("lua/game/item_panel")
+
+    local ctx24 = runner.setup(function() return KitchenScene.new() end)
+    local scene24 = ctx24.sm.current
+
+    local microwave24
+    local fryer24
+    for _, it in ipairs(scene24.grid:items()) do
+        if it.type_id == "microwave" then microwave24 = it end
+        if it.type_id == "fryer"     then fryer24     = it end
+    end
+    assert(microwave24, "on_enter should have placed a microwave")
+    assert(fryer24,     "on_enter should have placed a fryer")
+
+    local panelA24 = ItemPanel.new(microwave24)  -- will sit at back (index 1)
+    local panelB24 = ItemPanel.new(fryer24)       -- will sit on top (index 2)
+    scene24.panels = { panelA24, panelB24 }
+
+    -- Place both panels at the same position so B completely covers A.
+    panelA24:_layout(200, 200)
+    panelB24:_layout(200, 200)
+
+    -- Hover inside both panels' shared inner grid area. Since A and B are at
+    -- the same position, panelA24's inner grid would normally get hover set
+    -- here (its _point_in_grid check is purely geometric) - that's the bug.
+    local hx, hy = panelB24.grid_x + 1, panelB24.grid_y + 1
+    assert(panelB24:_point_in_bg(hx, hy), "sanity: hx,hy should be inside panel B backdrop")
+    assert(panelA24:_point_in_bg(hx, hy), "sanity: hx,hy should also be inside panel A backdrop")
+    assert(panelB24:_point_in_grid(hx, hy), "sanity: hx,hy should be inside panel B's inner grid")
+    assert(panelA24:_point_in_grid(hx, hy), "sanity: hx,hy should also be inside panel A's inner grid (bug scenario)")
+
+    scene24:mouse_moved(hx, hy)
+
+    -- Floor grid hover must be suppressed.
+    assert(scene24.grid._hover_col == nil and scene24.grid._hover_row == nil,
+        "floor grid hover must be nil when cursor is over stacked panels")
+
+    -- Panel A's inner grid (beneath panel B) must also be suppressed.
+    assert(panelA24.item.panel._hover_col == nil and panelA24.item.panel._hover_row == nil,
+        "lower panel's inner grid hover must be nil when topmost panel covers the cursor")
+
+    print("PASS: kitchen_scene: lower panel inner grid hover is suppressed when a higher panel covers the cursor")
+end
+
 print("ALL TESTS PASSED")
