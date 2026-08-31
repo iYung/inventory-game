@@ -235,6 +235,35 @@ do
     print("PASS: grid: clear_hover resets hover cell to nil")
 end
 
+-- Test: drag preserves click offset so item doesn't snap to center ------
+
+do
+    local g = Grid.new(10, 6, CELL, 0, 0)
+    local a = make_item({ ONE_BY_ONE })
+    -- Give the item a sprite-like table with x/y/width/height.
+    -- Sprite starts at the item's cell origin (0,0) = world (0,0).
+    a.sprite = { x = 0, y = 0, width = CELL, height = CELL }
+    g:place(a, 0, 0)
+
+    -- Click at (8, 10) — 8px right and 10px down from the sprite's top-left.
+    g:mouse_pressed(8, 10)
+    assert(g.dragging == a, "should be dragging a")
+    assert(g.drag_offset_x == 8,  "drag_offset_x should be the x distance from sprite left to click")
+    assert(g.drag_offset_y == 10, "drag_offset_y should be the y distance from sprite top to click")
+
+    -- Move to (50, 60): sprite should land at (50-8, 60-10) = (42, 50)
+    g:mouse_moved(50, 60)
+    assert(a.sprite.x == 42, "sprite.x should be cursor_x - offset_x, got " .. tostring(a.sprite.x))
+    assert(a.sprite.y == 50, "sprite.y should be cursor_y - offset_y, got " .. tostring(a.sprite.y))
+
+    -- After release, offset fields should be cleared.
+    g:mouse_released(50, 60)
+    assert(g.drag_offset_x == nil and g.drag_offset_y == nil,
+        "drag offsets should be cleared after mouse_released")
+
+    print("PASS: grid: drag preserves click offset (item does not snap to center)")
+end
+
 -- Test 8: draw() does not error under the headless love.graphics stub ----
 
 do

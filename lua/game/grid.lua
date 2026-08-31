@@ -29,6 +29,8 @@ function Grid.new(cols, rows, cell_size, origin_x, origin_y)
     self.drag_preview_row  = nil
     self.drag_cursor_x     = nil -- raw world-space cursor pos while dragging
     self.drag_cursor_y     = nil
+    self.drag_offset_x     = nil -- click offset within the sprite (px from sprite top-left)
+    self.drag_offset_y     = nil
 
     -- Set by an external owner (the scene) to show a drop-preview for an
     -- item that's being dragged on a DIFFERENT grid but is currently
@@ -43,16 +45,16 @@ function Grid.new(cols, rows, cell_size, origin_x, origin_y)
     return self
 end
 
--- Re-centers the dragging item's sprite on the last known cursor position,
--- so it visually follows the mouse instead of sitting at its origin cell.
+-- Positions the dragging item's sprite so the cursor stays at the same
+-- relative point within the sprite as where the user originally clicked.
 -- Item:draw() skips its own cell-based repositioning while
 -- `item.grid.dragging == item`, deferring to whatever position is set here.
 function Grid:_position_dragging_sprite()
     if not self.dragging or not self.dragging.sprite then return end
-    if not self.drag_cursor_x then return end
+    if not self.drag_cursor_x or not self.drag_offset_x then return end
     local s = self.dragging.sprite
-    s.x = self.drag_cursor_x - s.width  / 2
-    s.y = self.drag_cursor_y - s.height / 2
+    s.x = self.drag_cursor_x - self.drag_offset_x
+    s.y = self.drag_cursor_y - self.drag_offset_y
 end
 
 -- Coordinate conversion ----------------------------------------------------
@@ -171,6 +173,15 @@ function Grid:mouse_pressed(x, y)
         -- OTHER items don't reject its own current cells during preview.
         self:_unlist(item)
         self.drag_cursor_x, self.drag_cursor_y = x, y
+        -- Record where within the sprite the user clicked so the item
+        -- doesn't jump to center itself on the cursor.
+        if item.sprite then
+            self.drag_offset_x = x - item.sprite.x
+            self.drag_offset_y = y - item.sprite.y
+        else
+            self.drag_offset_x = 0
+            self.drag_offset_y = 0
+        end
         self:_position_dragging_sprite()
     end
     self.drag_preview_col, self.drag_preview_row = col, row
@@ -204,6 +215,8 @@ function Grid:mouse_released(x, y)
     self.drag_preview_row = nil
     self.drag_cursor_x    = nil
     self.drag_cursor_y    = nil
+    self.drag_offset_x    = nil
+    self.drag_offset_y    = nil
 end
 
 -- Shows a drop-preview for `item` at world (x,y) on THIS grid's own
@@ -234,6 +247,13 @@ end
 function Grid:rotate_dragged()
     if self.dragging then
         self.dragging:rotate()
+        -- After rotation the sprite dimensions change; reset offset to center
+        -- so the item pivots around the cursor rather than jumping.
+        local s = self.dragging.sprite
+        if s then
+            self.drag_offset_x = s.width  / 2
+            self.drag_offset_y = s.height / 2
+        end
         self:_position_dragging_sprite()
     end
 end
