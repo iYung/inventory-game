@@ -66,6 +66,7 @@ function Item.new(type_id)
     self.cell_row      = nil
     self.grid           = nil
     self.action_state  = {}
+    self.overnight_state = {}
     -- Plain field, not a method like footprint() - tags don't depend on
     -- rotation state, they never change after construction.
     self.tags          = def.tags or {}
@@ -307,6 +308,38 @@ local function complete_action(self, def, matches)
 end
 
 -- Frame tick ----------------------------------------------------------------
+
+function Item:overnight_tick()
+    if not self.panel then return end
+    local def = item_defs[self.type_id]
+    if not def.overnight_actions then return end
+
+    for i, action in ipairs(def.overnight_actions) do
+        local counts = count_panel_items(self.panel)
+        local state = self.overnight_state[i] or { nights_elapsed = 0 }
+
+        if satisfies(action.requires, counts) then
+            state.nights_elapsed = state.nights_elapsed + 1
+            if state.nights_elapsed >= action.nights then
+                if not action.preserve then
+                    for type_id, count in pairs(action.requires or {}) do
+                        remove_matching(self.panel, type_id, count)
+                    end
+                end
+                for type_id, count in pairs(action.produces or {}) do
+                    for _ = 1, count do
+                        local new_item = Item.new(type_id)
+                        place_first_fit(self.panel, new_item, def.panel_cols, def.panel_rows)
+                    end
+                end
+                state.nights_elapsed = 0
+            end
+            self.overnight_state[i] = state
+        else
+            self.overnight_state[i] = { nights_elapsed = 0 }
+        end
+    end
+end
 
 -- Ticks the panel grid (so nested items' own timers keep running) and any
 -- running action timers on this item; completes actions whose duration has

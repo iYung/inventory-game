@@ -116,6 +116,28 @@ function KitchenScene:on_enter()
     assert(self.grid:can_place(onion_garden, 4, 2), "onion_garden starting cell should be free")
     self.grid:place(onion_garden, 4, 2)
 
+    -- Chicken production chain: coop (2x2), meat machine (2x2), incubator (1x1),
+    -- two starting chickens on the floor. 2x2 items anchored at row 4 so their
+    -- bottom row lands at row 5 (the last valid row in the 6-row grid).
+    local coop = Item.new("coop")
+    assert(self.grid:can_place(coop, 2, 4), "coop starting cell should be free")
+    self.grid:place(coop, 2, 4)
+
+    local meat_machine = Item.new("meat_machine")
+    assert(self.grid:can_place(meat_machine, 6, 4), "meat_machine starting cell should be free")
+    self.grid:place(meat_machine, 6, 4)
+
+    local incubator = Item.new("incubator")
+    assert(self.grid:can_place(incubator, 4, 4), "incubator starting cell should be free")
+    self.grid:place(incubator, 4, 4)
+
+    local chicken_cells = { { 8, 4 }, { 9, 4 } }
+    for _, cell in ipairs(chicken_cells) do
+        local chicken = Item.new("chicken")
+        assert(self.grid:can_place(chicken, cell[1], cell[2]), "chicken starting cell should be free")
+        self.grid:place(chicken, cell[1], cell[2])
+    end
+
     self.day_state = DayState.new()
     self.day_state:start_day(config.CUSTOMERS_PER_DAY)
     self.queue = CustomerQueue.new(config.CUSTOMERS_PER_DAY)
@@ -399,6 +421,9 @@ function KitchenScene:mouse_pressed(x, y)
             self.customer:show(self.queue:next())
             for _, item in ipairs(self.grid:items()) do
                 item:refill_daily()
+            end
+            for _, item in ipairs(self.grid:items()) do
+                item:overnight_tick()
             end
             self._showing_summary = false
         end

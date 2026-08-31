@@ -21,10 +21,14 @@ its own right: load it with water + raw meat (or water + onion), then place the
 loaded pot itself inside the microwave's panel and press Cook to turn
 its contents into Protein-and-Hearty-tagged soup or Hearty-tagged onion soup,
 produced inside the pot's own panel without consuming the pot.
-Two **plants** sit on the kitchen floor as passive suppliers: the broccoli
-plant and the onion plant each hold 3 of their ingredient in a built-in
-panel; both panels automatically refill to 3 items at the start of every
-new day. One visitor per day
+Two **gardens** sit on the kitchen floor as passive suppliers: the broccoli
+garden and the onion garden each hold 4 of their ingredient in a built-in
+panel; both panels automatically refill at the start of every new day.
+A **coop** (2×2) produces one egg per night for each chicken inside it —
+chickens are residents, not consumed. An **incubator** (1×1) takes one egg
+and hatches it into a chicken after two nights; removing the egg resets
+progress. A **meat machine** (2×2) has a "Process" button that converts a
+chicken into raw meat on demand. One visitor per day
 is a merchant instead of a food order — click them to open their stock panel
 and drag free items (including water and potato) into your grid, then click
 "Leave" to send them off. Once everyone for the day is served, a "Next Day"

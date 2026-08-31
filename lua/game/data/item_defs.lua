@@ -160,6 +160,61 @@ local item_defs = {
         tags  = { "Hearty" },
     },
 
+    chicken = {
+        name     = "Chicken",
+        footprint = { { 0, 0 } },
+        color    = { 0.72, 0.55, 0.30, 1 },
+    },
+
+    egg = {
+        name     = "Egg",
+        footprint = { { 0, 0 } },
+        color    = { 0.95, 0.92, 0.80, 1 },
+    },
+
+    coop = {
+        name      = "Coop",
+        footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },
+        color     = { 0.55, 0.42, 0.25, 1 },
+        has_panel  = true,
+        panel_cols = 2,
+        panel_rows = 2,
+        overnight_actions = {
+            -- preserve = true: chicken stays in the coop, only the egg is added.
+            { requires = { chicken = 1 }, produces = { egg = 1 }, nights = 1, preserve = true },
+        },
+    },
+
+    meat_machine = {
+        name      = "Meat Machine",
+        footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },
+        color     = { 0.40, 0.40, 0.45, 1 },
+        has_panel  = true,
+        panel_cols = 2,
+        panel_rows = 1,
+        actions = {
+            {
+                name     = "Process",
+                duration = 1.0,
+                recipes  = {
+                    { requires = { chicken = 1 }, produces = { raw_meat = 1 } },
+                },
+            },
+        },
+    },
+
+    incubator = {
+        name      = "Incubator",
+        footprint = { { 0, 0 } },
+        color     = { 0.65, 0.75, 0.60, 1 },
+        has_panel  = true,
+        panel_cols = 1,
+        panel_rows = 1,
+        overnight_actions = {
+            { requires = { egg = 1 }, produces = { chicken = 1 }, nights = 2 },
+        },
+    },
+
     broccoli_garden = {
         name      = "Broccoli Garden",
         footprint = { {0,0}, {1,0}, {0,1}, {1,1} },
