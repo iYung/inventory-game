@@ -642,8 +642,8 @@ function KitchenScene:mouse_moved(x, y)
                 grid.drag_preview_col, grid.drag_preview_row = nil, nil
             end
         elseif grid == hover then
-            local px = item.sprite and item.sprite.x or x
-            local py = item.sprite and item.sprite.y or y
+            local px = item.sprite and (item.sprite.x + item.sprite.width  / 2) or x
+            local py = item.sprite and (item.sprite.y + item.sprite.height / 2) or y
             grid:preview_override(item, px, py)
         else
             grid:clear_preview_override()
@@ -678,8 +678,13 @@ function KitchenScene:mouse_released(x, y)
 
     local item = owner.dragging
 
-    local sx = item.sprite and item.sprite.x or x
-    local sy = item.sprite and item.sprite.y or y
+    local sx, sy
+    if item.sprite then
+        sx = item.sprite.x + item.sprite.width  / 2
+        sy = item.sprite.y + item.sprite.height / 2
+    else
+        sx, sy = x, y
+    end
 
     local hover = self:_hover_grid(sx, sy)
 
