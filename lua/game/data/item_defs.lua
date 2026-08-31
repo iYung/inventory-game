@@ -260,26 +260,6 @@ local item_defs = {
         },
     },
 
-    broccoli_garden = {
-        name      = "Broccoli Garden",
-        footprint = { {0,0}, {1,0}, {0,1}, {1,1} },
-        color     = { 0.20, 0.50, 0.15, 1 },
-        has_panel  = true,
-        panel_cols = 2,
-        panel_rows = 2,
-        daily_fill = { broccoli = 4 },
-    },
-
-    onion_garden = {
-        name      = "Onion Garden",
-        footprint = { {0,0}, {1,0}, {0,1}, {1,1} },
-        color     = { 0.65, 0.50, 0.20, 1 },
-        has_panel  = true,
-        panel_cols = 2,
-        panel_rows = 2,
-        daily_fill = { onion = 4 },
-    },
-
     fryer = {
         name = "Fryer",
         footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },
@@ -314,6 +294,20 @@ local item_defs = {
                 produces = { water = 1 },
             },
         },
+    },
+
+    garden = {
+        name      = "Garden",
+        footprint = {
+            {0,0},{1,0},{2,0},
+            {0,1},{1,1},{2,1},
+            {0,2},{1,2},{2,2},
+        },
+        color     = { 0.25, 0.48, 0.18, 1 },
+        has_panel  = true,
+        panel_cols = 3,
+        panel_rows = 3,
+        garden_spread = { "onion", "broccoli", "potato" },
     },
 
     pot = {

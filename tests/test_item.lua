@@ -323,34 +323,24 @@ do
     print("PASS: item: potato -> baked_potato recipe works via the microwave's Cook button")
 end
 
--- Test 12: a newly created broccoli_garden has its panel pre-filled with 4 broccoli.
+-- Test 12: a newly created garden has a 3x3 panel that starts empty.
 do
-    local garden = Item.new("broccoli_garden")
-    assert(garden.panel ~= nil, "broccoli_garden should have a panel")
+    local garden = Item.new("garden")
+    assert(garden.panel ~= nil, "garden should have a panel")
     local items = garden.panel:items()
-    assert(#items == 4, "broccoli_garden panel should start with 4 items, got " .. #items)
-    for i, it in ipairs(items) do
-        assert(it.type_id == "broccoli",
-            "broccoli_garden panel item " .. i .. " should be broccoli, got " .. tostring(it.type_id))
-    end
-    print("PASS: item: newly created broccoli_garden has 4 broccoli pre-filled in its panel")
+    assert(#items == 0, "garden panel should start empty, got " .. #items)
+    print("PASS: item: newly created garden has an empty 3x3 panel")
 end
 
--- Test 13: removing one broccoli and calling refill_daily() restores 4 broccoli.
+-- Test 13: refill_daily() on a garden (no daily_fill) is a no-op.
 do
-    local garden = Item.new("broccoli_garden")
-    local items = garden.panel:items()
-    garden.panel:remove(items[1])
-    assert(#garden.panel:items() == 3, "broccoli_garden panel should have 3 items after removing one")
+    local garden = Item.new("garden")
+    garden.panel:place(Item.new("onion"), 0, 0)
+    assert(#garden.panel:items() == 1, "garden panel should have 1 item before refill")
 
     garden:refill_daily()
-    local refilled = garden.panel:items()
-    assert(#refilled == 4, "broccoli_garden panel should be back to 4 items after refill_daily(), got " .. #refilled)
-    for i, it in ipairs(refilled) do
-        assert(it.type_id == "broccoli",
-            "broccoli_garden panel item " .. i .. " should be broccoli after refill, got " .. tostring(it.type_id))
-    end
-    print("PASS: item: refill_daily() restores broccoli_garden panel back to 4 broccoli after one is removed")
+    assert(#garden.panel:items() == 1, "refill_daily() on garden should be a no-op (panel unchanged)")
+    print("PASS: item: refill_daily() on a garden with no daily_fill is a no-op")
 end
 
 -- Test 14: refill_daily() on an item without daily_fill (e.g. raw_chicken) is a no-op.

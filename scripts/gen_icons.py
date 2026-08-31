@@ -50,6 +50,7 @@ COLORS = {
     "customer":         (217, 140, 77),
     "merchant":         (77,  230, 230),
     "pump":             (89,  140, 191),
+    "garden":           (64,  122, 46),
 }
 
 
@@ -446,6 +447,19 @@ def gen_onion_garden():
     save(img, "onion_garden")
 
 
+def gen_garden():
+    img = new_img(); d = ImageDraw.Draw(img)
+    base, dk, lt = shades("garden")
+    # soil bed at bottom
+    d.rectangle([2, 22, 30, 30], fill=dk)
+    # three small plants: stem (dk) + leaf cluster (base) + highlight (lt)
+    for cx in [8, 16, 24]:
+        d.rectangle([cx-1, 17, cx+1, 22], fill=dk)
+        d.ellipse([cx-4, 10, cx+4, 18], fill=base)
+        d.point((cx-1, 12), fill=lt)
+    save(img, "garden")
+
+
 # ── people ────────────────────────────────────────────────────────────────────
 
 def gen_pump():
@@ -491,7 +505,7 @@ GENERATORS = [
     gen_boiled_egg, gen_egg,
     gen_chicken, gen_cow,
     gen_microwave, gen_fryer, gen_pot, gen_coop, gen_meat_machine, gen_incubator,
-    gen_broccoli_garden, gen_onion_garden,
+    gen_broccoli_garden, gen_onion_garden, gen_garden,
     gen_pump,
     gen_customer, gen_merchant,
 ]

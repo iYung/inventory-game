@@ -331,31 +331,75 @@ end
 function Item:overnight_tick()
     if not self.panel then return end
     local def = item_defs[self.type_id]
-    if not def.overnight_actions then return end
 
-    for i, action in ipairs(def.overnight_actions) do
-        local counts = count_panel_items(self.panel)
-        local state = self.overnight_state[i] or { nights_elapsed = 0 }
+    if def.overnight_actions then
+        for i, action in ipairs(def.overnight_actions) do
+            local counts = count_panel_items(self.panel)
+            local state = self.overnight_state[i] or { nights_elapsed = 0 }
 
-        if satisfies(action.requires, counts) then
-            state.nights_elapsed = state.nights_elapsed + 1
-            if state.nights_elapsed >= action.nights then
-                if not action.preserve then
-                    for type_id, count in pairs(action.requires or {}) do
-                        remove_matching(self.panel, type_id, count)
+            if satisfies(action.requires, counts) then
+                state.nights_elapsed = state.nights_elapsed + 1
+                if state.nights_elapsed >= action.nights then
+                    if not action.preserve then
+                        for type_id, count in pairs(action.requires or {}) do
+                            remove_matching(self.panel, type_id, count)
+                        end
                     end
-                end
-                for type_id, count in pairs(action.produces or {}) do
-                    for _ = 1, count do
-                        local new_item = Item.new(type_id)
-                        place_first_fit(self.panel, new_item, def.panel_cols, def.panel_rows)
+                    for type_id, count in pairs(action.produces or {}) do
+                        for _ = 1, count do
+                            local new_item = Item.new(type_id)
+                            place_first_fit(self.panel, new_item, def.panel_cols, def.panel_rows)
+                        end
                     end
+                    state.nights_elapsed = 0
                 end
-                state.nights_elapsed = 0
+                self.overnight_state[i] = state
+            else
+                self.overnight_state[i] = { nights_elapsed = 0 }
             end
-            self.overnight_state[i] = state
-        else
-            self.overnight_state[i] = { nights_elapsed = 0 }
+        end
+    end
+
+    if def.garden_spread then
+        local Grid = require("lua/game/grid")
+        for _, spread_type in ipairs(def.garden_spread) do
+            -- Snapshot occupied cells for this type
+            local sources = {}
+            for _, it in ipairs(self.panel:items()) do
+                if it.type_id == spread_type then
+                    sources[#sources + 1] = { it.cell_col, it.cell_row }
+                end
+            end
+            -- Collect empty orthogonal neighbors
+            local seen = {}
+            local targets = {}
+            for _, src in ipairs(sources) do
+                local neighbors = {
+                    { src[1]-1, src[2] },
+                    { src[1]+1, src[2] },
+                    { src[1],   src[2]-1 },
+                    { src[1],   src[2]+1 },
+                }
+                for _, nb in ipairs(neighbors) do
+                    local c, r = nb[1], nb[2]
+                    local key = c .. "," .. r
+                    if not seen[key]
+                        and c >= 0 and c < def.panel_cols
+                        and r >= 0 and r < def.panel_rows
+                        and not self.panel:item_at(c, r)
+                    then
+                        seen[key] = true
+                        targets[#targets + 1] = { c, r }
+                    end
+                end
+            end
+            -- Place new items (won't spread this tick — they weren't in sources)
+            for _, pos in ipairs(targets) do
+                local new_item = Item.new(spread_type)
+                if self.panel:can_place(new_item, pos[1], pos[2]) then
+                    self.panel:place(new_item, pos[1], pos[2])
+                end
+            end
         end
     end
 end

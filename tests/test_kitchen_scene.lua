@@ -1510,76 +1510,54 @@ do
     print("PASS: kitchen_scene: releasing a drag outside all grids snaps the item back to its original cell")
 end
 
--- Test 21: after a full day cycle triggered via the "Next Day" button, the
--- broccoli_garden on the floor has 4 broccoli in its panel and the
--- onion_garden has 4 onions. Verifies that kitchen_scene.lua's Next Day
--- handler calls item:refill_daily() on every grid item, and that
--- broccoli_garden/onion_garden's daily_fill definitions are wired up
--- correctly end-to-end.
+-- Test 21: after a full day cycle triggered via the "Next Day" button, an
+-- onion placed in a garden's panel spreads to its orthogonal neighbors via
+-- overnight_tick(). Verifies that kitchen_scene.lua's Next Day handler calls
+-- item:overnight_tick() on every grid item, and that the garden's spread
+-- logic is wired up end-to-end.
 
 do
     local ctx21 = runner.setup(function() return KitchenScene.new() end)
     local scene21 = ctx21.sm.current
 
-    -- Find the broccoli_garden and onion_garden placed by on_enter.
-    local broccoli_garden21, onion_garden21
+    -- Find the two garden items placed by on_enter.
+    local garden21
     for _, it in ipairs(scene21.grid:items()) do
-        if it.type_id == "broccoli_garden" then broccoli_garden21 = it end
-        if it.type_id == "onion_garden"    then onion_garden21    = it end
+        if it.type_id == "garden" then garden21 = it; break end
     end
-    assert(broccoli_garden21, "on_enter should have placed a broccoli_garden")
-    assert(onion_garden21,    "on_enter should have placed an onion_garden")
+    assert(garden21, "on_enter should have placed at least one garden")
 
-    -- Simulate the player having taken all items from each garden's panel.
-    local function drain_panel(panel)
-        local items = {}
-        for _, it in ipairs(panel:items()) do items[#items + 1] = it end
-        for _, it in ipairs(items) do panel:remove(it) end
-    end
-    drain_panel(broccoli_garden21.panel)
-    drain_panel(onion_garden21.panel)
-    assert(#broccoli_garden21.panel:items() == 0, "broccoli_garden panel should be empty after draining")
-    assert(#onion_garden21.panel:items()    == 0, "onion_garden panel should be empty after draining")
+    -- Place a single onion at the center of garden21's panel.
+    garden21.panel:place(Item.new("onion"), 1, 1)
+    assert(#garden21.panel:items() == 1, "garden panel should have 1 onion before overnight")
 
-    -- Drive the day to completion: exhaust the customer queue (on_enter
-    -- already drew one; drain whatever remains) and record the last visit.
+    -- Drive the day to completion.
     while scene21.queue:has_next() do scene21.queue:next() end
     scene21.day_state.customers_served = scene21.day_state.customers_total - 1
-    -- Dismiss the active customer without a rejection message so they go
-    -- directly into walking_out (no talking_after).
     scene21.customer:dismiss()
     scene21.day_state:record_dismiss()
     assert(scene21.day_state:day_complete(),
         "day should be complete after exhausting the queue and recording the last visit")
 
-    -- Fast-forward until the customer has fully walked off (state == "idle").
     runner.fast_forward_until(ctx21, function() return not scene21.customer:active() end, 0)
     assert(not scene21.customer:active(), "customer should have fully walked off")
     assert(scene21:_next_day_ready(), "Next Day button should be ready")
 
-    -- Replicate kitchen_scene.lua's private NEXT_DAY_BTN rect (same pattern
-    -- as Test 10 above) and click it.
+    -- Click Next Day to trigger overnight_tick on all items.
     local config21 = require("lua/game/config")
     local btn_x = config21.SCREEN_W - 170
     local btn_y = config21.SPLIT_Y - 56
     scene21:mouse_pressed(btn_x + 5, btn_y + 5)
 
-    -- Both panels must now be refilled with their daily_fill contents.
-    local broccoli_count = 0
-    for _, it in ipairs(broccoli_garden21.panel:items()) do
-        if it.type_id == "broccoli" then broccoli_count = broccoli_count + 1 end
-    end
-    assert(broccoli_count == 4,
-        "broccoli_garden panel should have 4 broccoli after Next Day, got " .. broccoli_count)
-
+    -- The onion at center (1,1) should have spread to all 4 orthogonal neighbors.
     local onion_count = 0
-    for _, it in ipairs(onion_garden21.panel:items()) do
+    for _, it in ipairs(garden21.panel:items()) do
         if it.type_id == "onion" then onion_count = onion_count + 1 end
     end
-    assert(onion_count == 4,
-        "onion_garden panel should have 4 onions after Next Day, got " .. onion_count)
+    assert(onion_count == 5,
+        "garden panel should have 5 onions after Next Day (center + 4 neighbors), got " .. onion_count)
 
-    print("PASS: kitchen_scene: broccoli_garden and onion_garden panels are refilled with 4 items each after clicking Next Day")
+    print("PASS: kitchen_scene: garden overnight_tick spreads onion to neighbors after clicking Next Day")
 end
 
 print("ALL TESTS PASSED")
