@@ -299,4 +299,66 @@ do
     print("PASS: coop: empty coop produces no eggs overnight")
 end
 
+-- Test 17: barn with 2 cows produces 1 new cow overnight.
+do
+    local barn = Item.new("barn")
+    barn.panel:place(Item.new("cow"), 0, 0)
+    barn.panel:place(Item.new("cow"), 2, 0)
+
+    barn:overnight_tick()
+
+    local cows = count_type(barn.panel, "cow")
+    assert(cows == 3, "barn with 2 cows should produce 1 new cow (total 3), got " .. cows)
+
+    print("PASS: barn: 2 cows produce 1 new cow overnight")
+end
+
+-- Test 18: barn with 4 cows produces 2 new cows overnight.
+do
+    local barn = Item.new("barn")
+    barn.panel:place(Item.new("cow"), 0, 0)
+    barn.panel:place(Item.new("cow"), 2, 0)
+    barn.panel:place(Item.new("cow"), 4, 0)
+    barn.panel:place(Item.new("cow"), 0, 2)
+
+    barn:overnight_tick()
+
+    local cows = count_type(barn.panel, "cow")
+    assert(cows == 6, "barn with 4 cows should produce 2 new cows (total 6), got " .. cows)
+
+    print("PASS: barn: 4 cows produce 2 new cows overnight")
+end
+
+-- Test 19: barn with 1 cow produces no new cows (requires 2).
+do
+    local barn = Item.new("barn")
+    barn.panel:place(Item.new("cow"), 0, 0)
+
+    barn:overnight_tick()
+
+    local cows = count_type(barn.panel, "cow")
+    assert(cows == 1, "barn with 1 cow should produce no new cows, got " .. cows)
+
+    print("PASS: barn: 1 cow produces no new cows (requirement not met)")
+end
+
+-- Test 20: barn with 8 cows and only one 2x2 free slot produces 1 new cow (space-capped).
+-- 8 cows at positions (0,0),(2,0),(4,0),(0,2),(2,2),(4,2),(0,4),(2,4) fill
+-- 32 of 36 cells; only the 2x2 block at (4,4) remains free.
+-- floor(8/2) = 4 new cows attempted; only 1 fits.
+do
+    local barn = Item.new("barn")
+    local positions = { {0,0},{2,0},{4,0},{0,2},{2,2},{4,2},{0,4},{2,4} }
+    for _, pos in ipairs(positions) do
+        barn.panel:place(Item.new("cow"), pos[1], pos[2])
+    end
+
+    barn:overnight_tick()
+
+    local cows = count_type(barn.panel, "cow")
+    assert(cows == 9, "barn with 8 cows and 1 free 2x2 slot should produce 1 new cow (total 9), got " .. cows)
+
+    print("PASS: barn: 8 cows with 1 free slot produce 1 new cow (space-capped)")
+end
+
 print("ALL OVERNIGHT TESTS PASSED")

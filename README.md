@@ -33,11 +33,13 @@ panel where you can place onions and broccoli; every night, each occupied
 cell spreads to its orthogonal empty neighbors so your supply grows
 automatically overnight.
 A **container** (2×2) has a 6×6 internal storage panel — purely passive, no actions. Use it to organize items on the floor grid.
-A **coop** (2×2) produces one egg per night for each chicken inside it —
-chickens are residents, not consumed. An **incubator** (1×1) takes one egg
-and hatches it into a chicken after two nights; removing the egg resets
-progress. A **meat machine** (3×2) has a "Process" button that converts a
-chicken into 2 raw chicken, or a cow (2×2) into 4 raw beef, on demand. One visitor per day
+A **barn** (3×3) has a 6×6 panel for housing cows — for every 2 cows inside,
+one new cow is born overnight (cows are never consumed). A **coop** (2×2)
+produces one egg per night for each chicken inside it — chickens are residents,
+not consumed. An **incubator** (1×1) takes one egg and hatches it into a
+chicken after two nights; removing the egg resets progress. A **meat machine**
+(3×2) has a "Process" button that converts a chicken into 2 raw chicken, or a
+cow (2×2) into 4 raw beef, on demand. One visitor per day
 is a merchant instead of a food order — click them to open their stock panel
 and drag free items (including water and potato) into your grid, then click
 "Leave" to send them off. Once everyone for the day is served, a "Next Day"
