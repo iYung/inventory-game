@@ -104,7 +104,7 @@ local item_defs = {
                 recipes = {
                     { requires = { raw_chicken = 1 }, produces = { baked_chicken = 1 } },
                     { requires = { raw_beef = 1 },    produces = { steak = 1 } },
-                    { requires = { broccoli = 1 }, produces = { steamed_broccoli = 1 } },
+                    { container = "pot", requires = { water = 1, broccoli = 1 }, produces = { steamed_broccoli = 1 } },
                     { requires = { potato = 1 },   produces = { baked_potato = 1 } },
                     {
                         container = "pot",
