@@ -26,9 +26,10 @@ water + potato + raw beef), then place the loaded pot itself inside the microwav
 and press Cook to turn its contents into Protein-and-Hearty-tagged chicken soup,
 Hearty-tagged onion soup, Protein-tagged boiled egg, or Filling-and-Protein-tagged
 beef stew, produced inside the pot's own panel without consuming the pot.
-Two **gardens** sit on the kitchen floor as passive suppliers: the broccoli
-garden and the onion garden each hold 4 of their ingredient in a built-in
-panel; both panels automatically refill at the start of every new day.
+Two **gardens** (3×3 each) sit on the kitchen floor. Each garden has a 3×3
+panel where you can place onions and broccoli; every night, each occupied
+cell spreads to its orthogonal empty neighbors so your supply grows
+automatically overnight.
 A **coop** (2×2) produces one egg per night for each chicken inside it —
 chickens are residents, not consumed. An **incubator** (1×1) takes one egg
 and hatches it into a chicken after two nights; removing the egg resets

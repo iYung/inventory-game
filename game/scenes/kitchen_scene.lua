@@ -110,17 +110,16 @@ function KitchenScene:on_enter()
         self.grid:place(potato, cell[1], cell[2])
     end
 
-    -- A broccoli garden and onion garden (2x2 each), pre-filled via daily_fill.
-    -- broccoli_garden at (0,3): occupies (0,3)-(1,4) - clear of all items above.
-    -- onion_garden at (4,2): occupies (4,2)-(5,3) - clear of potatoes at (2,2)/(3,2)
-    -- and the fryer at (6,0)-(7,1).
-    local broccoli_garden = Item.new("broccoli_garden")
-    assert(self.grid:can_place(broccoli_garden, 0, 3), "broccoli_garden starting cell should be free")
-    self.grid:place(broccoli_garden, 0, 3)
+    -- Two gardens (3x3 each) in the bottom band (rows 6–8, added when GRID_ROWS
+    -- was expanded to 9). Both start empty; the player seeds them with onions
+    -- and broccoli to trigger overnight spreading.
+    local garden1 = Item.new("garden")
+    assert(self.grid:can_place(garden1, 0, 6), "garden1 starting cell should be free")
+    self.grid:place(garden1, 0, 6)
 
-    local onion_garden = Item.new("onion_garden")
-    assert(self.grid:can_place(onion_garden, 4, 2), "onion_garden starting cell should be free")
-    self.grid:place(onion_garden, 4, 2)
+    local garden2 = Item.new("garden")
+    assert(self.grid:can_place(garden2, 3, 6), "garden2 starting cell should be free")
+    self.grid:place(garden2, 3, 6)
 
     -- Animal production chain (rows 4-5):
     -- coop (2x2) at (2,4)-(3,5); incubator (1x1) at (4,4);

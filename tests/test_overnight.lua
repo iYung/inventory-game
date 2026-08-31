@@ -145,4 +145,98 @@ do
     print("PASS: boiled egg: water + egg in pot microwaved produces boiled_egg (Protein)")
 end
 
+-- Test 8: a single onion at center (1,1) spreads to all 4 orthogonal neighbors.
+do
+    local garden = Item.new("garden")
+    garden.panel:place(Item.new("onion"), 1, 1)
+
+    garden:overnight_tick()
+
+    local onions = count_type(garden.panel, "onion")
+    assert(onions == 5,
+        "onion at center should spread to 4 neighbors (5 total), got " .. onions)
+    assert(garden.panel:item_at(1, 0) ~= nil, "onion should spread to (1,0)")
+    assert(garden.panel:item_at(0, 1) ~= nil, "onion should spread to (0,1)")
+    assert(garden.panel:item_at(2, 1) ~= nil, "onion should spread to (2,1)")
+    assert(garden.panel:item_at(1, 2) ~= nil, "onion should spread to (1,2)")
+
+    print("PASS: garden spread: onion at center spreads to all 4 orthogonal neighbors")
+end
+
+-- Test 9: broccoli at corner (0,0) spreads only to its 2 in-bounds neighbors.
+do
+    local garden = Item.new("garden")
+    garden.panel:place(Item.new("broccoli"), 0, 0)
+
+    garden:overnight_tick()
+
+    local broccolis = count_type(garden.panel, "broccoli")
+    assert(broccolis == 3,
+        "broccoli at corner should spread to 2 in-bounds neighbors (3 total), got " .. broccolis)
+    assert(garden.panel:item_at(1, 0) ~= nil, "broccoli should spread to (1,0)")
+    assert(garden.panel:item_at(0, 1) ~= nil, "broccoli should spread to (0,1)")
+
+    print("PASS: garden spread: broccoli at corner spreads to exactly 2 in-bounds neighbors")
+end
+
+-- Test 10: a fully-occupied 3x3 garden (9 onions) does not error; count stays 9.
+do
+    local garden = Item.new("garden")
+    for r = 0, 2 do
+        for c = 0, 2 do
+            garden.panel:place(Item.new("onion"), c, r)
+        end
+    end
+
+    garden:overnight_tick()
+
+    local onions = count_type(garden.panel, "onion")
+    assert(onions == 9,
+        "fully-occupied garden should still have 9 onions after tick, got " .. onions)
+
+    print("PASS: garden spread: fully-occupied panel does not error and count stays 9")
+end
+
+-- Test 11: onion and broccoli spread independently without cross-type contamination.
+do
+    local garden = Item.new("garden")
+    garden.panel:place(Item.new("onion"),   0, 0)
+    garden.panel:place(Item.new("broccoli"), 2, 2)
+
+    garden:overnight_tick()
+
+    -- Verify onion positions: original (0,0) and neighbors (1,0) and (0,1).
+    local function type_at(panel, col, row)
+        local it = panel:item_at(col, row)
+        return it and it.type_id or nil
+    end
+
+    assert(type_at(garden.panel, 0, 0) == "onion",    "(0,0) should be onion")
+    assert(type_at(garden.panel, 1, 0) == "onion",    "(1,0) should be onion")
+    assert(type_at(garden.panel, 0, 1) == "onion",    "(0,1) should be onion")
+    assert(type_at(garden.panel, 2, 2) == "broccoli", "(2,2) should be broccoli")
+    assert(type_at(garden.panel, 1, 2) == "broccoli", "(1,2) should be broccoli")
+    assert(type_at(garden.panel, 2, 1) == "broccoli", "(2,1) should be broccoli")
+
+    local onions    = count_type(garden.panel, "onion")
+    local broccolis = count_type(garden.panel, "broccoli")
+    assert(onions    == 3, "should be 3 onions, got " .. onions)
+    assert(broccolis == 3, "should be 3 broccoli, got " .. broccolis)
+
+    print("PASS: garden spread: onion and broccoli spread independently without interference")
+end
+
+-- Test 12: overnight_tick on an empty garden panel is a no-op.
+do
+    local garden = Item.new("garden")
+
+    garden:overnight_tick()
+
+    local total = #garden.panel:items()
+    assert(total == 0,
+        "empty garden panel should remain empty after tick, got " .. total)
+
+    print("PASS: garden spread: overnight_tick on empty garden panel is a no-op")
+end
+
 print("ALL OVERNIGHT TESTS PASSED")
