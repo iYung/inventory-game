@@ -75,7 +75,7 @@ local item_defs = {
         name = "Steamed Broccoli",
         footprint = { { 0, 0 } },
         color = { 0.45, 0.75, 0.30, 1 },
-        tags = { "Healthy" },
+        tags = { "Healthy", "Veggie" },
     },
 
     -- Never placed via Item.new/on a Grid - used only by ItemPanel's title
@@ -188,7 +188,7 @@ local item_defs = {
         name  = "Onion Soup",
         footprint = { {0,0} },
         color = { 0.75, 0.55, 0.25, 1 },
-        tags  = { "Hearty" },
+        tags  = { "Hearty", "Veggie" },
     },
 
     boiled_egg = {

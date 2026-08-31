@@ -13,8 +13,8 @@ do
     assert(#broccoli.tags == 0, "raw broccoli should carry no tags")
 
     local steamed = Item.new("steamed_broccoli")
-    assert(#steamed.tags == 1 and steamed.tags[1] == "Healthy",
-        "steamed_broccoli should be tagged Healthy")
+    assert(#steamed.tags == 2 and steamed.tags[1] == "Healthy" and steamed.tags[2] == "Veggie",
+        "steamed_broccoli should be tagged Healthy and Veggie")
 
     print("PASS: item: raw items carry no tags, prepared items carry their def's tags")
 end
