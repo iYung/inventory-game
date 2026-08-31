@@ -189,6 +189,11 @@ function Grid:mouse_pressed(x, y)
         self:_unlist(item)
         self.drag_cursor_x, self.drag_cursor_y = x, y
         -- Pixel offset: keeps the grabbed point under the cursor visually.
+        -- Sync sprite position from its cell before computing offset (mirrors
+        -- Item:draw's cell-to-world sync, so tests without draw calls work too).
+        if item.sprite and item.cell_col and item.cell_row then
+            item.sprite.x, item.sprite.y = self:cell_to_world(item.cell_col, item.cell_row)
+        end
         if item.sprite then
             self.drag_offset_x = x - item.sprite.x
             self.drag_offset_y = y - item.sprite.y
@@ -198,7 +203,9 @@ function Grid:mouse_pressed(x, y)
         end
         self:_position_dragging_sprite()
     end
-    self.drag_preview_col, self.drag_preview_row = self:_snap_cell()
+    if self.dragging then
+        self.drag_preview_col, self.drag_preview_row = self:_snap_cell()
+    end
 end
 
 function Grid:mouse_moved(x, y)
