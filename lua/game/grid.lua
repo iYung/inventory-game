@@ -29,7 +29,7 @@ function Grid.new(cols, rows, cell_size, origin_x, origin_y)
     self.drag_preview_row  = nil
     self.drag_cursor_x     = nil -- raw world-space cursor pos while dragging
     self.drag_cursor_y     = nil
-    self.drag_offset_x     = nil -- click offset within the sprite (px from sprite top-left)
+    self.drag_offset_x     = nil -- px offset from cursor to sprite top-left
     self.drag_offset_y     = nil
 
     -- Set by an external owner (the scene) to show a drop-preview for an
@@ -57,11 +57,19 @@ function Grid:_position_dragging_sprite()
     s.y = self.drag_cursor_y - self.drag_offset_y
 end
 
-function Grid:_sprite_anchor()
-    if self.dragging and self.dragging.sprite then
-        return self.dragging.sprite.x, self.dragging.sprite.y
+-- Returns the snap target (col, row) for the item's top-left: rounds the
+-- sprite's current pixel position to the nearest cell boundary. The sprite
+-- is already positioned by the click offset, so rounding its top-left is
+-- equivalent to center-based snapping without the floor-on-boundary problem.
+function Grid:_snap_cell()
+    local item = self.dragging
+    if item and item.sprite then
+        local s = item.sprite
+        local col = math.floor((s.x - self.origin_x) / self.cell_size + 0.5)
+        local row = math.floor((s.y - self.origin_y) / self.cell_size + 0.5)
+        return col, row
     end
-    return self.drag_cursor_x, self.drag_cursor_y
+    return self:world_to_cell(self.drag_cursor_x, self.drag_cursor_y)
 end
 
 -- Coordinate conversion ----------------------------------------------------
@@ -180,8 +188,7 @@ function Grid:mouse_pressed(x, y)
         -- OTHER items don't reject its own current cells during preview.
         self:_unlist(item)
         self.drag_cursor_x, self.drag_cursor_y = x, y
-        -- Record where within the sprite the user clicked so the item
-        -- doesn't jump to center itself on the cursor.
+        -- Pixel offset: keeps the grabbed point under the cursor visually.
         if item.sprite then
             self.drag_offset_x = x - item.sprite.x
             self.drag_offset_y = y - item.sprite.y
@@ -191,7 +198,7 @@ function Grid:mouse_pressed(x, y)
         end
         self:_position_dragging_sprite()
     end
-    self.drag_preview_col, self.drag_preview_row = col, row
+    self.drag_preview_col, self.drag_preview_row = self:_snap_cell()
 end
 
 function Grid:mouse_moved(x, y)
@@ -199,16 +206,14 @@ function Grid:mouse_moved(x, y)
     if not self.dragging then return end
     self.drag_cursor_x, self.drag_cursor_y = x, y
     self:_position_dragging_sprite()
-    local sx, sy = self:_sprite_anchor()
-    self.drag_preview_col, self.drag_preview_row = self:world_to_cell(sx, sy)
+    self.drag_preview_col, self.drag_preview_row = self:_snap_cell()
 end
 
 function Grid:mouse_released(x, y)
     if not self.dragging then return end
     local item = self.dragging
 
-    local sx, sy = self:_sprite_anchor()
-    local col, row = self:world_to_cell(sx, sy)
+    local col, row = self:_snap_cell()
     self.drag_preview_col, self.drag_preview_row = col, row
 
     if self:can_place(item, col, row) then
