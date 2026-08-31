@@ -155,12 +155,16 @@ function KitchenScene:on_enter()
     barn.panel:place(Item.new("cow"), 0, 0)
     barn.panel:place(Item.new("cow"), 2, 0)
 
-    -- Container (2x2) at (0,3)-(1,4): empty passive storage, sits in the
-    -- open space between the cooking appliances (rows 0-2) and the animal
-    -- production chain (rows 4-5).
+    -- Container (2x2) at (0,3)-(1,4): holds the milking center and cheese cave.
     local container = Item.new("container")
     assert(self.grid:can_place(container, 0, 3), "container starting cell should be free")
     self.grid:place(container, 0, 3)
+
+    -- Milking center (3x3) inside container at (0,0): cows placed inside produce 2 milk each overnight.
+    container.panel:place(Item.new("milking_center"), 0, 0)
+
+    -- Cheese cave (2x2) inside container at (3,0): milk inside converts to cheese overnight.
+    container.panel:place(Item.new("cheese_cave"), 3, 0)
 
     self._scene_bg = love.graphics.newImage("assets/images/scene/bg.png")
     self._scene_fg = love.graphics.newImage("assets/images/scene/fg.png")
