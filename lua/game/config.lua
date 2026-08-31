@@ -25,7 +25,7 @@ config.COLORS = {
     grid_line    = { 0.00, 0.80, 0.80, 1 },  -- bright cyan drop-preview
     stage_bg     = { 0.04, 0.04, 0.06, 1 },
     button       = { 0.10, 0.32, 0.10, 1 },
-    button_text  = { 0.40, 1.00, 0.40, 1 },
+    button_text  = { 1.00, 1.00, 1.00, 1 },
     panel_bg     = { 0.05, 0.05, 0.07, 0.97 },
     panel_border = { 0.90, 0.82, 0.40, 1 },  -- bright amber
 }
