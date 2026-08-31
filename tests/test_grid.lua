@@ -264,56 +264,56 @@ do
     print("PASS: grid: drag preserves click offset (item does not snap to center)")
 end
 
--- Test: drop cell uses sprite center, not cursor or sprite top-left ---------
+-- Test: snap keeps the clicked cell under the cursor (cell-offset logic) ----
 
 do
     local g = Grid.new(10, 6, CELL, 0, 0)
-    local a = make_item({ ONE_BY_ONE })
-    a.sprite = { x = 0, y = 0, width = CELL, height = CELL }
-    g:place(a, 0, 0)
+    -- 2x1 item placed at col 2, row 0.
+    local a = make_item({ { {0,0}, {1,0} } })
+    a.sprite = { x = 2 * CELL, y = 0, width = 2 * CELL, height = CELL }
+    g:place(a, 2, 0)
 
-    -- Click near the right edge (offset 35 = CELL-1) so the item hangs left
-    -- of the cursor while dragging.
-    g:mouse_pressed(CELL - 1, 1)
-    assert(g.drag_offset_x == CELL - 1, "sanity: click-offset should be CELL-1")
+    -- Click on the RIGHT cell of the item: world x = 3*CELL + 1 → cursor col 3.
+    -- item.cell_col = 2, so drag_cell_offset_col = 3 - 2 = 1.
+    g:mouse_pressed(3 * CELL + 1, 1)
+    assert(g.drag_cell_offset_col == 1 and g.drag_cell_offset_row == 0,
+        "drag_cell_offset should record which cell within the item was clicked")
 
-    -- Move cursor to (3*CELL + 1, 1) = (109, 1).
-    --   cursor_x = 109  → floor(109/36) = 3   (cursor in cell 3)
-    --   sprite.x = 109 - 35 = 74
-    --   sprite center_x = 74 + 18 = 92 → floor(92/36) = 2  (center in cell 2)
-    -- Snapping by center should place the item at col 2.
-    g:mouse_moved(3 * CELL + 1, 1)
-    assert(g.drag_preview_col == 2,
-        "preview col should use sprite center (cell 2), not cursor (cell 3), got " .. tostring(g.drag_preview_col))
+    -- Move cursor to col 5 (5*CELL + 1).
+    -- Snap = cursor_col - cell_offset = 5 - 1 = 4 → item top-left at col 4.
+    g:mouse_moved(5 * CELL + 1, 1)
+    assert(g.drag_preview_col == 4,
+        "preview col should be cursor_col - cell_offset (col 4), got " .. tostring(g.drag_preview_col))
 
-    g:mouse_released(3 * CELL + 1, 1)
-    assert(a.cell_col == 2 and a.cell_row == 0,
-        "item should land at col 2 (center snap), not col 3 (cursor), got col=" .. tostring(a.cell_col))
-    assert(g:item_at(2, 0) == a, "item_at(2,0) should return the dropped item")
+    g:mouse_released(5 * CELL + 1, 1)
+    assert(a.cell_col == 4 and a.cell_row == 0,
+        "item should land at col 4 (cell-offset snap), got col=" .. tostring(a.cell_col))
+    assert(g.drag_cell_offset_col == nil, "cell offset should be cleared after release")
 
-    print("PASS: grid: drop cell uses sprite center, not cursor or sprite top-left")
+    print("PASS: grid: snap keeps the clicked cell under the cursor")
 end
 
--- Test: _sprite_anchor falls back to cursor when no sprite ----------------
+-- Test: snap with no sprite falls back to raw cursor cell -----------------
 
 do
     local g = Grid.new(10, 6, CELL, 0, 0)
     local a = make_item({ ONE_BY_ONE }) -- no sprite
     g:place(a, 0, 0)
 
+    -- Click at (1,1) → cursor col 0, cell_offset = 0 - 0 = 0.
     g:mouse_pressed(1, 1)
     assert(g.dragging == a, "should be dragging")
 
-    -- Without a sprite the anchor should fall back to the cursor position.
+    -- Move to col 4: snap = 4 - 0 = 4.
     g:mouse_moved(4 * CELL + 1, 1)
     assert(g.drag_preview_col == 4,
-        "fallback: preview col should equal cursor cell when item has no sprite, got " .. tostring(g.drag_preview_col))
+        "no-sprite: preview col should equal cursor cell, got " .. tostring(g.drag_preview_col))
 
     g:mouse_released(4 * CELL + 1, 1)
     assert(a.cell_col == 4 and a.cell_row == 0,
-        "fallback: item should drop at cursor cell when item has no sprite")
+        "no-sprite: item should drop at cursor cell")
 
-    print("PASS: grid: _sprite_anchor falls back to cursor when item has no sprite")
+    print("PASS: grid: snap with no sprite falls back to raw cursor cell")
 end
 
 -- Test 8: draw() does not error under the headless love.graphics stub ----
@@ -355,7 +355,7 @@ do
     assert(g.drag_cursor_x == nil and g.drag_cursor_y == nil,
         "mouse_released should clear drag cursor tracking")
 
-    print("PASS: grid: dragging preserves click offset; snap uses sprite center")
+    print("PASS: grid: dragging preserves click offset; no jump on pickup")
 end
 
 -- Test 10: preview_override / clear_preview_override ---------------------
