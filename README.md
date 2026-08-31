@@ -25,7 +25,9 @@ its own right: load it with water + raw chicken (or water + onion, or water + eg
 water + potato + raw beef), then place the loaded pot itself inside the microwave's panel
 and press Cook to turn its contents into Protein-and-Hearty-tagged chicken soup,
 Hearty-tagged onion soup, Protein-tagged boiled egg, or Filling-and-Protein-tagged
-beef stew, produced inside the pot's own panel without consuming the pot.
+beef stew, produced inside the pot's own panel without consuming the pot. You can
+also load the pot after it is already inside the open microwave panel by dropping
+ingredients directly onto it there (provided the microwave is not running).
 Two **gardens** (3×3 each) sit on the kitchen floor. Each garden has a 3×3
 panel where you can place onions and broccoli; every night, each occupied
 cell spreads to its orthogonal empty neighbors so your supply grows
