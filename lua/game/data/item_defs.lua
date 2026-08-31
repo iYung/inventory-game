@@ -143,6 +143,37 @@ local item_defs = {
         color = { 0.40, 0.65, 0.90, 1 },
     },
 
+    roasted_coffee_bean = {
+        name = "Roasted Coffee Bean",
+        footprint = { { 0, 0 } },
+        color = { 0.35, 0.22, 0.10, 1 },
+    },
+
+    black_coffee = {
+        name = "Black Coffee",
+        footprint = { { 0, 0 } },
+        color = { 0.12, 0.08, 0.05, 1 },
+        tags = { "Caffeine", "Bitter" },
+    },
+
+    coffee_machine = {
+        name = "Coffee Machine",
+        footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },
+        color = { 0.25, 0.22, 0.20, 1 },
+        has_panel = true,
+        panel_cols = 2,
+        panel_rows = 2,
+        actions = {
+            {
+                name = "Run",
+                duration = 3.0,
+                recipes = {
+                    { requires = { water = 1, roasted_coffee_bean = 1 }, produces = { black_coffee = 1 } },
+                },
+            },
+        },
+    },
+
     fries = {
         name = "Fries",
         footprint = { { 0, 0 } },
