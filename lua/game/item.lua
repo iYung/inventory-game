@@ -408,6 +408,12 @@ function Item:overnight_tick()
             end
         end
     end
+
+    -- Recurse so items nested inside this panel (e.g. milking_center inside
+    -- a container) are ticked even though the scene loop only walks the main grid.
+    for _, child in ipairs(self.panel:items()) do
+        child:overnight_tick()
+    end
 end
 
 -- Ticks the panel grid (so nested items' own timers keep running) and any
