@@ -51,6 +51,7 @@ COLORS = {
     "merchant":         (77,  230, 230),
     "pump":             (89,  140, 191),
     "garden":           (64,  122, 46),
+    "container":        (153, 128, 89),
 }
 
 
@@ -462,6 +463,25 @@ def gen_garden():
 
 # ── people ────────────────────────────────────────────────────────────────────
 
+def gen_container():
+    img = new_img(); d = ImageDraw.Draw(img)
+    base, dk, lt = shades("container")
+    # outer crate body
+    d.rectangle([3, 3, 29, 29], fill=dk)
+    d.rectangle([4, 4, 28, 28], fill=base)
+    # horizontal and vertical board lines
+    d.line([(3, 16), (29, 16)], fill=dk, width=1)
+    d.line([(16, 3), (16, 29)], fill=dk, width=1)
+    # corner nail dots
+    for cx, cy in [(6,6),(26,6),(6,26),(26,26)]:
+        d.point((cx, cy), fill=dk)
+    # highlight
+    d.point((5, 5), fill=lt)
+    d.point((5, 17), fill=lt)
+    d.point((17, 5), fill=lt)
+    save(img, "container")
+
+
 def gen_pump():
     img = new_img(); d = ImageDraw.Draw(img)
     base, dk, lt = shades("pump")
@@ -508,6 +528,7 @@ GENERATORS = [
     gen_broccoli_garden, gen_onion_garden, gen_garden,
     gen_pump,
     gen_customer, gen_merchant,
+    gen_container,
 ]
 
 if __name__ == "__main__":
