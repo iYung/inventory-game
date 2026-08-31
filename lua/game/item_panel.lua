@@ -245,7 +245,13 @@ function ItemPanel:mouse_pressed(x, y)
     end
 
     if self:_point_in_grid(x, y) then
-        self.item.panel:mouse_pressed(x, y)
+        local locked = false
+        for _, state in pairs(self.item.action_state or {}) do
+            if state.running then locked = true; break end
+        end
+        if not locked then
+            self.item.panel:mouse_pressed(x, y)
+        end
         return true
     end
 

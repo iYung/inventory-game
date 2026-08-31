@@ -439,4 +439,50 @@ do
     print("PASS: item_panel: is_action_enabled is true for the plain potato recipe")
 end
 
+-- Test 19: clicking inside the panel grid while an action is running does ----
+-- NOT start a drag (items are locked during processing).
+
+do
+    local microwave = Item.new("microwave")
+    local panel = ItemPanel.new(microwave)
+
+    local meat = Item.new("raw_chicken")
+    microwave.panel:place(meat, 0, 0)
+
+    -- Start the Cook action.
+    local rect = panel.buttons["Cook"]
+    panel:mouse_pressed(rect.x + rect.w / 2, rect.y + rect.h / 2)
+    assert(microwave.action_state["Cook"] and microwave.action_state["Cook"].running,
+        "Cook should be running after clicking the button")
+
+    -- Click inside the grid while Cook is running — drag must NOT start.
+    local px, py = microwave.panel:cell_to_world(0, 0)
+    panel:mouse_pressed(px + 1, py + 1)
+    assert(microwave.panel.dragging == nil,
+        "clicking in the panel grid while an action is running should not start a drag")
+
+    print("PASS: item_panel: grid drag is blocked while an action is running")
+end
+
+-- Test 20: clicking inside the panel grid while NO action is running --------
+-- still starts a drag (normal behaviour unaffected by the guard).
+
+do
+    local microwave = Item.new("microwave")
+    local panel = ItemPanel.new(microwave)
+
+    local meat = Item.new("raw_chicken")
+    microwave.panel:place(meat, 0, 0)
+
+    -- No action running — drag should start normally.
+    local px, py = microwave.panel:cell_to_world(0, 0)
+    panel:mouse_pressed(px + 1, py + 1)
+    assert(microwave.panel.dragging == meat,
+        "clicking in the panel grid with no running action should start a drag")
+
+    panel:mouse_released(px + 1, py + 1)
+
+    print("PASS: item_panel: grid drag still works normally when no action is running")
+end
+
 print("ALL TESTS PASSED")
