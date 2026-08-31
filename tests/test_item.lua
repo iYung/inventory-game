@@ -205,7 +205,7 @@ do
 end
 
 -- Test 6: container recipe, happy path. A loaded pot sitting inside
--- the microwave's panel cooks into soup inside the pot's OWN
+-- the microwave's panel cooks into chicken_soup inside the pot's OWN
 -- panel, not the microwave's - and the pot itself is never consumed.
 do
     local microwave = Item.new("microwave")
@@ -223,14 +223,14 @@ do
     microwave:update(3.5) -- past the 3.0s duration
 
     local soup_items = pot.panel:items()
-    assert(#soup_items == 1 and soup_items[1].type_id == "soup",
-        "pot's own panel should contain exactly one soup after cooking")
+    assert(#soup_items == 1 and soup_items[1].type_id == "chicken_soup",
+        "pot's own panel should contain exactly one chicken_soup after cooking")
 
     local microwave_items = microwave.panel:items()
     assert(#microwave_items == 1 and microwave_items[1].type_id == "pot" and microwave_items[1] == pot,
         "microwave's own panel should still contain only the same (uneaten) pot item")
 
-    print("PASS: item: container recipe cooks a loaded pot's contents into soup inside its own panel")
+    print("PASS: item: container recipe cooks a loaded pot's contents into chicken_soup inside its own panel")
 end
 
 -- Test 7: container recipe, not satisfied - a pot missing one
