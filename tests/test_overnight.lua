@@ -239,4 +239,17 @@ do
     print("PASS: garden spread: overnight_tick on empty garden panel is a no-op")
 end
 
+-- Test 13: potato spreads in the garden like onion/broccoli.
+do
+    local garden = Item.new("garden")
+    garden.panel:place(Item.new("potato"), 1, 1)
+
+    garden:overnight_tick()
+
+    local potatoes = count_type(garden.panel, "potato")
+    assert(potatoes == 5, "potato at center should spread to 4 neighbors (5 total), got " .. potatoes)
+
+    print("PASS: garden spread: potato at center spreads to all 4 orthogonal neighbors")
+end
+
 print("ALL OVERNIGHT TESTS PASSED")

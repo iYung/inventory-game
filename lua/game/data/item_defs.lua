@@ -307,7 +307,7 @@ local item_defs = {
         has_panel  = true,
         panel_cols = 3,
         panel_rows = 3,
-        garden_spread = { "onion", "broccoli" },
+        garden_spread = { "onion", "broccoli", "potato" },
     },
 
     pot = {
