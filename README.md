@@ -11,21 +11,21 @@ their order panel, dragging the item carrying their requested tag into its
 one matching item) — or press **Skip** to send them away empty-handed,
 which returns any item(s) in the grid to your floor inventory. Pressing a
 container's action button fires every recipe its
-panel's contents currently satisfy, not just one — so raw chicken and broccoli
+panel's contents currently satisfy, not just one — so raw chicken and potato
 dropped in together both cook from a single press. The microwave alone
 handles raw chicken -> Protein-tagged baked chicken, raw beef -> Protein-tagged steak,
-broccoli -> Healthy-tagged steamed broccoli, and potato -> Filling-tagged baked potato;
+and potato -> Filling-tagged baked potato;
 the fryer turns potato into Greasy-tagged fries, onion into Greasy-tagged blooming onion, and
 raw chicken into Greasy-and-Protein-tagged fried chicken.
 A **pump** (1×2) has a 1×1 panel and a "Pump" button that produces one water
 per press, no ingredients required; if the panel is already full the action
 runs but produces nothing.
 A **pot** is a movable container in
-its own right: load it with water + raw chicken (or water + onion, or water + egg, or
-water + potato + raw beef), then place the loaded pot itself inside the microwave's panel
-and press Cook to turn its contents into Protein-and-Hearty-tagged chicken soup,
-Hearty-tagged onion soup, Protein-tagged boiled egg, or Filling-and-Protein-tagged
-beef stew, produced inside the pot's own panel without consuming the pot. You can
+its own right: load it with water + an ingredient, then place the loaded pot itself inside the microwave's panel
+and press Cook to turn its contents into: water + broccoli -> Healthy-tagged steamed broccoli;
+water + raw chicken -> Protein-and-Hearty-tagged chicken soup; water + onion -> Hearty-tagged onion soup;
+water + egg -> Protein-tagged boiled egg; water + potato + raw beef -> Filling-and-Protein-tagged beef stew.
+All outputs land in the pot's own panel without consuming the pot. You can
 also load the pot after it is already inside the open microwave panel by dropping
 ingredients directly onto it there (provided the microwave is not running).
 Two **gardens** (3×3 each) sit on the kitchen floor. Each garden has a 3×3

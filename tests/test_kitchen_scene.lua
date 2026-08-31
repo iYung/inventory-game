@@ -1110,32 +1110,30 @@ do
     scene15.panels = { ItemPanel.new(microwave15) }
     local microwave_panel15 = scene15.panels[1]
 
-    -- Move a raw broccoli item from the floor into the panel and steam it,
-    -- the same way Test 2/Test 4 already cover the transfer itself.
-    local broccoli15
-    for _, it in ipairs(scene15.grid:items()) do
-        if it.type_id == "broccoli" then broccoli15 = it end
-    end
-    assert(broccoli15, "on_enter should have placed raw broccoli")
+    -- The new steamed_broccoli recipe requires water + broccoli inside a pot,
+    -- microwaved. Place the pot programmatically (same pattern as Test 17/22),
+    -- then load it with water and broccoli before starting Cook.
+    local pot15 = Item.new("pot")
+    assert(microwave15.panel:can_place(pot15, 0, 0), "pot should fit in the microwave's 2-wide panel")
+    microwave15.panel:place(pot15, 0, 0)
 
-    local bx, by = scene15.grid:cell_to_world(broccoli15.cell_col, broccoli15.cell_row)
-    scene15:mouse_pressed(bx + 1, by + 1)
-    local px, py = microwave15.panel:cell_to_world(0, 0)
-    scene15:mouse_moved(px + 1, py + 1)
-    scene15:mouse_released(px + 1, py + 1)
-    assert(broccoli15.grid == microwave15.panel, "sanity check: broccoli should now be in the panel")
+    local broccoli15 = Item.new("broccoli")
+    local water15    = Item.new("water")
+    assert(pot15.panel:can_place(broccoli15, 0, 0), "broccoli should fit in the pot's panel")
+    pot15.panel:place(broccoli15, 0, 0)
+    assert(pot15.panel:can_place(water15, 1, 0), "water should fit in the pot's panel")
+    pot15.panel:place(water15, 1, 0)
 
-    assert(microwave15:start_action("Cook"), "should be able to start cooking with broccoli in the panel")
+    assert(microwave15:start_action("Cook"), "should be able to start cooking with water+broccoli in the pot")
     microwave15:update(3.5) -- past the 3.0s duration
 
-    -- Cooking replaces the broccoli item with a brand new steamed_broccoli
-    -- Item in the freed cell (see lua/game/item.lua's complete_action)
-    -- rather than mutating broccoli15 in place, so look the result up fresh.
+    -- Cooking produces steamed_broccoli inside the pot's own panel
+    -- (container recipe outputs land in the container, not the microwave).
     local steamed15
-    for _, it in ipairs(microwave15.panel:items()) do
+    for _, it in ipairs(pot15.panel:items()) do
         if it.type_id == "steamed_broccoli" then steamed15 = it end
     end
-    assert(steamed15, "sanity check: panel should contain a steamed_broccoli item after steaming")
+    assert(steamed15, "sanity check: pot's panel should contain a steamed_broccoli item after steaming")
 
     local currency_before = scene15.day_state.currency
     local served_before   = scene15.day_state.customers_served
@@ -1155,18 +1153,26 @@ do
     microwave_panel15:_layout(50, 50)
     order_panel15:_layout(800, 50)
 
-    -- Drag the now-steamed item directly from the microwave's open panel
-    -- into the order panel's own grid (cross-panel drag, same mechanics
-    -- Test 9 already covers between two open panels).
-    local smx, smy = microwave15.panel:cell_to_world(steamed15.cell_col, steamed15.cell_row)
+    -- Open the pot's sub-panel by double-clicking it in the microwave panel,
+    -- then drag steamed_broccoli out of the pot into the order panel.
+    local pot_dx, pot_dy = microwave15.panel:cell_to_world(0, 0)
+    scene15:mouse_pressed(pot_dx + 1, pot_dy + 1)
+    scene15:mouse_released(pot_dx + 1, pot_dy + 1)
+    scene15:mouse_pressed(pot_dx + 1, pot_dy + 1)
+    scene15:mouse_released(pot_dx + 1, pot_dy + 1)
+    assert(#scene15.panels == 3, "double-clicking the pot should open a third panel (pot's sub-panel)")
+    local pot_panel15 = scene15.panels[3]
+    pot_panel15:_layout(400, 50)
+
+    local smx, smy = pot15.panel:cell_to_world(steamed15.cell_col, steamed15.cell_row)
     scene15:mouse_pressed(smx + 1, smy + 1)
-    assert(microwave15.panel.dragging == steamed15, "should be dragging the steamed item out of the microwave's panel")
+    assert(pot15.panel.dragging == steamed15, "should be dragging steamed_broccoli out of the pot's panel")
 
     local opx15, opy15 = order_panel15.item.panel:cell_to_world(0, 0)
     scene15:mouse_moved(opx15 + 1, opy15 + 1)
     scene15:mouse_released(opx15 + 1, opy15 + 1)
 
-    assert(microwave15.panel.dragging == nil, "dropping into the order panel should clear the microwave panel's drag state")
+    assert(pot15.panel.dragging == nil, "dropping into the order panel should clear the pot panel's drag state")
     assert(steamed15.grid == order_panel15.item.panel, "the steamed item should now be in the order panel's grid")
 
     -- Click the order panel's Serve button.
@@ -1176,18 +1182,18 @@ do
     assert(serve15, "order panel should have a Serve button")
     scene15:mouse_pressed(serve15.x + serve15.w / 2, serve15.y + serve15.h / 2)
 
-    assert(#scene15.panels == 1, "clicking Serve should close the order panel, leaving the microwave's open")
+    assert(#scene15.panels == 2, "clicking Serve should close the order panel, leaving the microwave and pot panels open")
     assert(scene15.day_state.currency == currency_before + 10,
         "currency should increase by 10 when serving a Healthy-tagged item for a Healthy request")
     assert(scene15.day_state.customers_served == served_before + 1,
         "customers_served should increment when serving directly from the panel")
     assert(not scene15.customer.dismissed, "the customer should be served, not dismissed")
 
-    local still_in_panel = false
-    for _, it in ipairs(microwave15.panel:items()) do
-        if it == steamed15 then still_in_panel = true end
+    local still_in_pot = false
+    for _, it in ipairs(pot15.panel:items()) do
+        if it == steamed15 then still_in_pot = true end
     end
-    assert(not still_in_panel, "the served item should be removed from the microwave's panel")
+    assert(not still_in_pot, "the served item should be removed from the pot's panel")
 
     print("PASS: kitchen_scene: the broccoli/Cook/steamed_broccoli pipeline serves a Healthy-tag request end-to-end")
 end

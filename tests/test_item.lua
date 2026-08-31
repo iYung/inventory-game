@@ -134,21 +134,25 @@ end
 
 -- Test 3d: the microwave's single "Cook" button handles more than one
 -- recipe - it auto-matches whichever ingredient is actually present
--- (raw_chicken or broccoli) rather than needing a separate button per recipe.
+-- (raw_chicken or broccoli+water in a pot) rather than needing a separate button per recipe.
 do
     local microwave = Item.new("microwave")
-    local broccoli = Item.new("broccoli")
-    microwave.panel:place(broccoli, 0, 0)
+    local pot       = Item.new("pot")
+    local broccoli  = Item.new("broccoli")
+    local water     = Item.new("water")
+    pot.panel:place(broccoli, 0, 0)
+    pot.panel:place(water,    1, 0)
+    microwave.panel:place(pot, 0, 0)
 
     local started = microwave:start_action("Cook")
-    assert(started == true, "Cook should start with broccoli in the panel too, not just raw_chicken")
+    assert(started == true, "Cook should start with a pot of water+broccoli in the microwave")
     assert(microwave.action_state["Cook"].matches[1].recipe.produces.steamed_broccoli == 1,
         "the matched recipe should be the broccoli->steamed_broccoli one")
 
     microwave:update(3.5) -- past the 3.0s duration
-    local items = microwave.panel:items()
-    assert(#items == 1 and items[1].type_id == "steamed_broccoli",
-        "broccoli should have cooked into steamed_broccoli via the same Cook button")
+    local pot_items = pot.panel:items()
+    assert(#pot_items == 1 and pot_items[1].type_id == "steamed_broccoli",
+        "broccoli+water in the pot should have cooked into steamed_broccoli")
 
     print("PASS: item: Cook auto-matches whichever recipe the panel's contents satisfy")
 end
@@ -275,33 +279,34 @@ do
     print("PASS: item: container recipe never fires without an actual container item present")
 end
 
--- Test 9: multiple recipes fire in one press - raw_chicken and broccoli
--- together in the microwave's (now 2-wide) panel both cook from a single
--- Cook press.
+-- Test 9: multiple recipes fire in one press - raw_chicken and potato
+-- together in the microwave's (2-wide) panel both cook from a single Cook press.
+-- (Broccoli now requires a pot+water and takes the full 2-wide panel on its own,
+-- so we use two 1-cell direct recipes to test multi-recipe firing.)
 do
     local microwave = Item.new("microwave")
     local meat      = Item.new("raw_chicken")
-    local broccoli  = Item.new("broccoli")
-    microwave.panel:place(meat, 0, 0)
-    microwave.panel:place(broccoli, 1, 0)
+    local potato    = Item.new("potato")
+    microwave.panel:place(meat,   0, 0)
+    microwave.panel:place(potato, 1, 0)
 
     local started = microwave:start_action("Cook")
-    assert(started == true, "Cook should start with both raw_chicken and broccoli present")
+    assert(started == true, "Cook should start with both raw_chicken and potato present")
 
     microwave:update(3.5) -- past the 3.0s duration
 
     local items = microwave.panel:items()
     assert(#items == 2, "panel should contain exactly two items after both recipes fire, got " .. #items)
 
-    local has_baked_chicken, has_steamed_broccoli = false, false
+    local has_baked_chicken, has_baked_potato = false, false
     for _, it in ipairs(items) do
         if it.type_id == "baked_chicken" then has_baked_chicken = true end
-        if it.type_id == "steamed_broccoli" then has_steamed_broccoli = true end
+        if it.type_id == "baked_potato"  then has_baked_potato  = true end
     end
     assert(has_baked_chicken, "panel should contain baked_chicken after the single Cook press")
-    assert(has_steamed_broccoli, "panel should contain steamed_broccoli after the single Cook press")
+    assert(has_baked_potato,  "panel should contain baked_potato after the single Cook press")
 
-    print("PASS: item: a single Cook press fires every satisfied recipe (raw_chicken and broccoli together)")
+    print("PASS: item: a single Cook press fires every satisfied recipe (raw_chicken and potato together)")
 end
 
 -- Test 10: the new simple potato recipe (potato -> baked_potato) works like
