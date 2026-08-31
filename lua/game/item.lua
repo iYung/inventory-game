@@ -345,10 +345,13 @@ function Item:overnight_tick()
                             remove_matching(self.panel, type_id, count)
                         end
                     end
-                    for type_id, count in pairs(action.produces or {}) do
-                        for _ = 1, count do
-                            local new_item = Item.new(type_id)
-                            place_first_fit(self.panel, new_item, def.panel_cols, def.panel_rows)
+                    local repeats = action.per_item and (counts[action.per_item] or 1) or 1
+                    for _ = 1, repeats do
+                        for type_id, count in pairs(action.produces or {}) do
+                            for _ = 1, count do
+                                local new_item = Item.new(type_id)
+                                place_first_fit(self.panel, new_item, def.panel_cols, def.panel_rows)
+                            end
                         end
                     end
                     state.nights_elapsed = 0

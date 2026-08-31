@@ -225,7 +225,7 @@ local item_defs = {
         panel_rows = 2,
         overnight_actions = {
             -- preserve = true: chicken stays in the coop, only the egg is added.
-            { requires = { chicken = 1 }, produces = { egg = 1 }, nights = 1, preserve = true },
+            { requires = { chicken = 1 }, produces = { egg = 1 }, nights = 1, preserve = true, per_item = "chicken" },
         },
     },
 
