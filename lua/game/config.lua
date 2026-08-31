@@ -7,7 +7,7 @@ config.SPLIT_Y  = 360
 config.U = 36 -- grid cell size in px
 
 config.GRID_COLS     = 10
-config.GRID_ROWS     = 12
+config.GRID_ROWS     = 9
 config.GRID_ORIGIN_X = (config.SCREEN_W - config.GRID_COLS * config.U) / 2
 config.GRID_ORIGIN_Y = config.SPLIT_Y + 12
 
