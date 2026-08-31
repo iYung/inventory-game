@@ -125,6 +125,7 @@ function KitchenScene:on_enter()
     -- coop (2x2) at (2,4)-(3,5); incubator (1x1) at (4,4);
     -- cow (2x2) at (5,4)-(6,5); meat_machine (3x2) at (7,4)-(9,5);
     -- two starting chickens at (0,5) and (1,5).
+    -- barn (3x3) at (6,6)-(8,8); 2 starting cows inside.
     local coop = Item.new("coop")
     assert(self.grid:can_place(coop, 2, 4), "coop starting cell should be free")
     self.grid:place(coop, 2, 4)
@@ -147,6 +148,12 @@ function KitchenScene:on_enter()
         assert(self.grid:can_place(chicken, cell[1], cell[2]), "chicken starting cell should be free")
         self.grid:place(chicken, cell[1], cell[2])
     end
+
+    local barn = Item.new("barn")
+    assert(self.grid:can_place(barn, 6, 6), "barn starting cell should be free")
+    self.grid:place(barn, 6, 6)
+    barn.panel:place(Item.new("cow"), 0, 0)
+    barn.panel:place(Item.new("cow"), 2, 0)
 
     -- Container (2x2) at (0,3)-(1,4): empty passive storage, sits in the
     -- open space between the cooking appliances (rows 0-2) and the animal

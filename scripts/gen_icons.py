@@ -52,6 +52,7 @@ COLORS = {
     "pump":             (89,  140, 191),
     "garden":           (64,  122, 46),
     "container":        (153, 128, 89),
+    "barn":             (166, 89,  51),
 }
 
 
@@ -482,6 +483,25 @@ def gen_container():
     save(img, "container")
 
 
+def gen_barn():
+    img = new_img(); d = ImageDraw.Draw(img)
+    base, dk, lt = shades("barn")
+    # main body
+    d.rectangle([4, 16, 28, 28], fill=base)
+    # gambrel roof: lower slopes (dk) + upper peak (base)
+    d.polygon([(4,16),(4,10),(10,13),(22,13),(28,10),(28,16)], fill=dk)
+    d.polygon([(10,13),(22,13),(20,6),(12,6)], fill=base)
+    # door arch
+    d.rectangle([13, 20, 19, 28], fill=dk)
+    d.ellipse([13, 17, 19, 22], fill=dk)
+    # horizontal siding lines
+    d.line([(4,20),(28,20)], fill=dk, width=1)
+    d.line([(4,24),(28,24)], fill=dk, width=1)
+    # highlight
+    d.point((6, 17), fill=lt)
+    save(img, "barn")
+
+
 def gen_pump():
     img = new_img(); d = ImageDraw.Draw(img)
     base, dk, lt = shades("pump")
@@ -526,7 +546,7 @@ GENERATORS = [
     gen_chicken, gen_cow,
     gen_microwave, gen_fryer, gen_pot, gen_coop, gen_meat_machine, gen_incubator,
     gen_broccoli_garden, gen_onion_garden, gen_garden,
-    gen_pump,
+    gen_pump, gen_barn,
     gen_customer, gen_merchant,
     gen_container,
 ]

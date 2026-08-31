@@ -345,7 +345,10 @@ function Item:overnight_tick()
                             remove_matching(self.panel, type_id, count)
                         end
                     end
-                    local repeats = action.per_item and (counts[action.per_item] or 1) or 1
+                    local step = action.per_item_step or 1
+                    local repeats = action.per_item
+                        and math.floor((counts[action.per_item] or 0) / step)
+                        or 1
                     for _ = 1, repeats do
                         for type_id, count in pairs(action.produces or {}) do
                             for _ = 1, count do

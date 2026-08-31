@@ -329,6 +329,29 @@ local item_defs = {
         -- No `actions` field: the pot is never clicked/cooked directly -
         -- see the microwave's `container` recipe above.
     },
+
+    barn = {
+        name      = "Barn",
+        footprint = {
+            {0,0},{1,0},{2,0},
+            {0,1},{1,1},{2,1},
+            {0,2},{1,2},{2,2},
+        },
+        color     = { 0.65, 0.35, 0.20, 1 },
+        has_panel  = true,
+        panel_cols = 6,
+        panel_rows = 6,
+        overnight_actions = {
+            {
+                requires      = { cow = 2 },
+                produces      = { cow = 1 },
+                nights        = 1,
+                preserve      = true,
+                per_item      = "cow",
+                per_item_step = 2,
+            },
+        },
+    },
 }
 
 return item_defs
