@@ -264,32 +264,31 @@ do
     print("PASS: grid: drag preserves click offset (item does not snap to center)")
 end
 
--- Test: snap uses item center, not cursor or top-left ----------------------
+-- Test: snap centers item on the cell the center is over -------------------
 
 do
     local g = Grid.new(10, 6, CELL, 0, 0)
-    -- 2x1 item; sprite width = 2*CELL.
+    -- 2x1 item; sprite width = 2*CELL, height = CELL.
     local a = make_item({ { {0,0}, {1,0} } })
     a.sprite = { x = 0, y = 0, width = 2 * CELL, height = CELL }
     g:place(a, 0, 0)
 
-    -- Grab at the far right of the item (pixel offset = 2*CELL-1 from left).
-    -- Sprite starts at x=0, so offset_x = 2*CELL - 1.
+    -- Grab at the far right edge (offset = 2*CELL-1 from sprite left = x=0).
     g:mouse_pressed(2 * CELL - 1, 1)
 
-    -- Move cursor to x = 5*CELL (col 5). Sprite.x = cursor - offset =
-    -- 5*CELL - (2*CELL-1) = 3*CELL + 1.
-    -- Sprite center_x = 3*CELL + 1 + CELL = 4*CELL + 1 → col 4.
-    -- Snap col = 4, top-left of 2x1 item lands at col 4.
+    -- Move cursor to x = 5*CELL. Sprite.x = 5*CELL - (2*CELL-1) = 3*CELL+1.
+    -- Sprite center_x = 3*CELL+1 + CELL = 4*CELL+1 → center_col = 4.
+    -- w_cells = 2, so snap_col = 4 - floor(2/2) = 4 - 1 = 3.
+    -- Item top-left at col 3, covering cols 3 and 4 — centered on col 4.
     g:mouse_moved(5 * CELL, 1)
-    assert(g.drag_preview_col == 4,
-        "snap should use sprite center (col 4), not cursor (col 5), got " .. tostring(g.drag_preview_col))
+    assert(g.drag_preview_col == 3,
+        "snap_col should be center_col - floor(w/2) = 3, got " .. tostring(g.drag_preview_col))
 
     g:mouse_released(5 * CELL, 1)
-    assert(a.cell_col == 4 and a.cell_row == 0,
-        "item should land at col 4 (center snap), got col=" .. tostring(a.cell_col))
+    assert(a.cell_col == 3 and a.cell_row == 0,
+        "item top-left should land at col 3 (centered on col 4), got col=" .. tostring(a.cell_col))
 
-    print("PASS: grid: snap uses item center, not cursor or top-left")
+    print("PASS: grid: snap centers item on the cell its center is over")
 end
 
 -- Test: snap with no sprite falls back to cursor cell ---------------------
