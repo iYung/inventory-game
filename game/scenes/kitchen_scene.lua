@@ -203,6 +203,42 @@ function KitchenScene:_open_or_focus_panel(item)
     end
 end
 
+-- Returns true when `grid` is the active merchant customer's stock panel
+-- (kind "restock" or "program"). Used to guard panel-open and drag actions.
+function KitchenScene:_is_merchant_grid(grid)
+    if not self.customer:active() then return false end
+    local kind = self.customer.kind
+    if kind ~= "restock" and kind ~= "program" then return false end
+    return grid == self.customer.panel
+end
+
+-- Returns true if the player can afford to drag the merchant item at (x,y).
+-- Only meaningful when _is_merchant_grid(self.customer.panel) is true.
+function KitchenScene:_can_afford_merchant_item(x, y)
+    local col, row = self.customer.panel:world_to_cell(x, y)
+    local item = self.customer.panel:item_at(col, row)
+    if not item then return true end
+
+    if self.customer.kind == "restock" then
+        return self.day_state.currency >= config.RESTOCK_ITEM_COST
+    elseif self.customer.kind == "program" then
+        if item.is_extra then
+            return self.day_state.currency >= config.RESTOCK_ITEM_COST
+        elseif item.program_id then
+            local prog_id = item.program_id
+            if self.program_state:owns(prog_id) then return true end
+            local src_panel = self:_panel_for(self.customer)
+            if src_panel and src_panel._paid_programs[prog_id] then return true end
+            for _, p in ipairs(self.customer.offer or {}) do
+                if p.id == prog_id then
+                    return self.day_state.currency >= p.cost
+                end
+            end
+        end
+    end
+    return true
+end
+
 -- Returns the open ItemPanel whose inner grid matches `grid`, or nil.
 function KitchenScene:_open_panel_for_grid(grid)
     for _, panel in ipairs(self.panels) do
@@ -344,6 +380,9 @@ function KitchenScene:_try_double_click_open(grid, x, y)
             if ancestor_processing(item) then
                 return false
             end
+            if self:_is_merchant_grid(grid) then
+                return false
+            end
 
             local is_double_click = self._last_click_time
                 and (now - self._last_click_time) <= DOUBLE_CLICK_WINDOW
@@ -380,6 +419,7 @@ function KitchenScene:_open_container_at(grid, x, y)
     local def = item_defs[item.type_id]
     if not (def and def.has_panel) then return end
     if ancestor_processing(item) then return end
+    if self:_is_merchant_grid(grid) then return end
     self:_open_or_focus_panel(item)
 end
 
@@ -414,6 +454,10 @@ function KitchenScene:mouse_pressed(x, y)
             self:_bring_to_front(panel)
             if panel:_point_in_grid(x, y) then
                 if self:_try_double_click_open(panel.item.panel, x, y) then return end
+                if self:_is_merchant_grid(panel.item.panel)
+                   and not self:_can_afford_merchant_item(x, y) then
+                    return
+                end
             end
             panel:mouse_pressed(x, y)
             -- "Leave" (merchant-only) sets should_close AND should_leave
@@ -640,6 +684,11 @@ function KitchenScene:mouse_released(x, y)
     -- started on, or just let it resolve normally (place/snap-back) if
     -- dropped back where it came from.
     if hover ~= nil and hover ~= owner then
+        -- Never allow dropping onto the merchant's own stock panel.
+        if self:_is_merchant_grid(hover) then
+            owner:mouse_released(x, y)
+            return
+        end
         -- Merchant panels: check currency before transferring to the floor.
         if hover == self.grid then
             local src_panel = self:_open_panel_for_grid(owner)
