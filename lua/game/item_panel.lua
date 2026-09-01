@@ -229,10 +229,14 @@ function ItemPanel:is_action_enabled(name)
 end
 
 -- Whether "Serve" is currently clickable: order-kind only, exactly one item
--- sitting in the panel. Any food can be served regardless of trait tags.
+-- sitting in the panel, and that item must have at least one tag (i.e. it is
+-- cooked/processed food). Containers and raw ingredients carry no tags, so
+-- they never enable Serve.
 function ItemPanel:_serve_enabled()
     if self.item.kind ~= "order" then return false end
-    return #self.item.panel:items() == 1
+    local panel_items = self.item.panel:items()
+    if #panel_items ~= 1 then return false end
+    return #panel_items[1].tags > 0
 end
 
 -- Input forwarding ------------------------------------------------------
