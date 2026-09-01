@@ -134,15 +134,22 @@ function ItemPanel.new(item)
     self.should_serve    = false
     self.should_skip     = false
     self._dragging_panel = false
+    -- Program merchant: tracks which program ids have been paid for this visit,
+    -- and how many machines from each have been placed on the floor.
+    self._paid_programs    = {}
+    self._machines_placed  = {}
 
     local panel = item.panel
     self.grid_w = panel.cols * panel.cell_size
     self.grid_h = panel.rows * panel.cell_size
 
-    -- Reminder height: dynamic for orders (scales with rule count).
+    -- Reminder height: dynamic for orders (scales with rule count); small
+    -- header for restock panels (shows per-item cost).
     self._reminder_h = 0
     if item.kind == "order" then
         self._reminder_h = order_reminder_h(#(item.order_rules or {}))
+    elseif item.kind == "restock" then
+        self._reminder_h = RULE_ROW_H + RULE_PAD
     end
 
     -- Button row sizing: any def.actions plus one more slot for "Leave" when
@@ -174,7 +181,7 @@ function ItemPanel.new(item)
     -- Default position: centered horizontally, sitting just above the
     -- split line so it doesn't overlap the main floor grid.
     local default_x = (config.SCREEN_W - self.bg_w) / 2
-    local default_y = config.SPLIT_Y - self.bg_h - 12
+    local default_y = math.max(8, config.SPLIT_Y - self.bg_h - 12)
 
     self:_layout(default_x, default_y)
 
@@ -432,6 +439,11 @@ function ItemPanel:draw(skip_dragging)
     love.graphics.rectangle("line", tb.x, tb.y, tb.w, tb.h)
     love.graphics.setColor(colors.button_text or { 1, 1, 1, 1 })
     love.graphics.print((self.def and self.def.name) or self.item.type_id, tb.x + 8, tb.y + 6)
+
+    if self.item.kind == "restock" then
+        love.graphics.setColor(COLOR_NEUTRAL)
+        love.graphics.print("$" .. config.RESTOCK_ITEM_COST .. " per item", self.bg.x + MARGIN, tb.y + TITLE_H + 4)
+    end
 
     if self.item.kind == "order" and self._reminder_h > 0 then
         local panel_items = self.item.panel:items()

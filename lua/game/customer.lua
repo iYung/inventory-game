@@ -88,6 +88,8 @@ function Customer.new(target_x, exit_x, y)
     self.order_rules      = {}
     self.order_item_count = 1
     self.payout           = 10
+    self.offer            = {}
+    self._program_state   = nil
     self.messages         = {}
     self.msg_index        = 1
     self.done_talking     = true
@@ -125,7 +127,56 @@ function Customer:show(cfg)
     elseif self.kind == "program" then
         self.type_id = "merchant"
         self.panel   = Grid.new(config.MERCHANT_PANEL_COLS, config.MERCHANT_PANEL_ROWS, config.U, 0, 0)
-        -- panel contents handled by scene (Task 12)
+        self.offer          = cfg.offer or {}
+        self._program_state = cfg.program_state  -- may be nil; item_panel reads it
+
+        -- Returns the bounding-box width and height (in cells) of item's footprint.
+        local function item_size(it)
+            local cells = it:footprint()
+            local max_dx, max_dy = 0, 0
+            for _, c in ipairs(cells) do
+                if c[1] > max_dx then max_dx = c[1] end
+                if c[2] > max_dy then max_dy = c[2] end
+            end
+            return max_dx + 1, max_dy + 1
+        end
+
+        -- Populate panel row by row. col advances by each item's width; when a
+        -- row would overflow, advance row by the tallest item seen so far.
+        -- Programs are separated by one blank row.
+        local row = 0
+        for _, prog in ipairs(self.offer) do
+            local col       = 0
+            local row_max_h = 1
+
+            local function place_item(it)
+                local iw, ih = item_size(it)
+                if col + iw > config.MERCHANT_PANEL_COLS then
+                    row       = row + row_max_h
+                    col       = 0
+                    row_max_h = 1
+                end
+                if self.panel:can_place(it, col, row) then
+                    self.panel:place(it, col, row)
+                    col = col + iw
+                    if ih > row_max_h then row_max_h = ih end
+                end
+            end
+
+            for _, type_id in ipairs(prog.machines or {}) do
+                local it = Item.new(type_id)
+                it.program_id = prog.id
+                place_item(it)
+            end
+            for _, type_id in ipairs(prog.extras or {}) do
+                local it = Item.new(type_id)
+                it.is_extra = true
+                place_item(it)
+            end
+            row = row + row_max_h + 1  -- advance past this program's last row + blank separator
+        end
+        -- Shrink the panel to its actual content (trim the trailing blank separator row).
+        self.panel.rows = math.max(1, row - 1)
     elseif self.kind == "order" then
         self.type_id = "order_customer"
         self.panel   = Grid.new(config.ORDER_PANEL_COLS, config.ORDER_PANEL_ROWS, config.U, 0, 0)
