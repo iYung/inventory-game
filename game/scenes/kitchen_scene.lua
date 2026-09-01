@@ -305,6 +305,14 @@ function KitchenScene:_open_or_focus_panel(item)
     end
 end
 
+-- Returns the open ItemPanel whose inner grid matches `grid`, or nil.
+function KitchenScene:_open_panel_for_grid(grid)
+    for _, panel in ipairs(self.panels) do
+        if panel.item.panel == grid then return panel end
+    end
+    return nil
+end
+
 -- self.grid plus every open panel's inner Grid, in the same back-to-front
 -- order as self.panels.
 function KitchenScene:_all_grids()
@@ -734,6 +742,38 @@ function KitchenScene:mouse_released(x, y)
     -- started on, or just let it resolve normally (place/snap-back) if
     -- dropped back where it came from.
     if hover ~= nil and hover ~= owner then
+        -- Merchant panels: check currency before transferring to the floor.
+        if hover == self.grid then
+            local src_panel = self:_open_panel_for_grid(owner)
+            if src_panel and src_panel.item.kind == "restock" then
+                local cost = config.RESTOCK_ITEM_COST
+                if self.day_state.currency < cost then
+                    owner:mouse_released(x, y)  -- snap back
+                    return
+                end
+                self.day_state.currency = self.day_state.currency - cost
+            elseif src_panel and src_panel.item.kind == "program" then
+                local prog_id = item.program_id
+                if prog_id then
+                    local paid = src_panel._paid_programs[prog_id]
+                        or self.program_state:owns(prog_id)
+                    if not paid then
+                        -- Find program cost from offer list.
+                        local cost = 0
+                        for _, prog in ipairs(src_panel.item.offer or {}) do
+                            if prog.id == prog_id then cost = prog.cost; break end
+                        end
+                        if self.day_state.currency < cost then
+                            owner:mouse_released(x, y)  -- snap back
+                            return
+                        end
+                        self.day_state.currency = self.day_state.currency - cost
+                        self.program_state:buy(prog_id)
+                        src_panel._paid_programs[prog_id] = true
+                    end
+                end
+            end
+        end
         transfer_drag(owner, hover, item, x, y)
     else
         owner:mouse_released(x, y)

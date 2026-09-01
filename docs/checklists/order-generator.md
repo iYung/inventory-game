@@ -62,9 +62,9 @@ Tasks are ordered by dependency — each one builds on the last.
 
 ### UI — merchant panels
 
-- [ ] Task 11 — `game/scenes/kitchen_scene.lua` — Implement the restock merchant panel (kind = "restock"): render the 6×4 grid stocked from `RestockGen` output. Show per-item cost label on each cell. On drag-to-floor: check `day_state.currency >= item_cost`; if yes deduct and place; if no reject with a visual shake/dim. "Leave" closes as before.
+- [x] Task 11 — `game/scenes/kitchen_scene.lua` — Implement the restock merchant panel (kind = "restock"): render the 6×4 grid stocked from `RestockGen` output. Show per-item cost label on each cell. On drag-to-floor: check `day_state.currency >= item_cost`; if yes deduct and place; if no reject with a visual shake/dim. "Leave" closes as before.
 
-- [ ] Task 12 — `game/scenes/kitchen_scene.lua` — Implement the program merchant panel (kind = "program"): render one labeled section per offered program (from `MerchantGen.offer`). Each section shows the program name, cost, and all its `machines` + `stock` items as draggable cells. Dragging the first item from a section deducts the full program cost and calls `program_state:buy(id)`. Dragging subsequent items from the same already-paid section is free. If `currency < program.cost`, the entire section's items are non-draggable (dimmed). "Leave" closes.
+- [x] Task 12 — `game/scenes/kitchen_scene.lua` — Implement the program merchant panel (kind = "program"): render one labeled section per offered program (from `MerchantGen.offer`). Each section shows the program name, cost, and all its `machines` + `stock` items as draggable cells. Dragging the first item from a section deducts the full program cost and calls `program_state:buy(id)`. Dragging subsequent items from the same already-paid section is free. If `currency < program.cost`, the entire section's items are non-draggable (dimmed). "Leave" closes.
 
 ---
 

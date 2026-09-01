@@ -14,6 +14,8 @@ config.GRID_ORIGIN_Y = config.SPLIT_Y + 12
 config.MIN_CUSTOMERS_PER_DAY = 4
 config.MAX_CUSTOMERS_PER_DAY = 6
 
+config.RESTOCK_ITEM_COST = 5  -- currency per item dragged from a restock merchant
+
 config.MERCHANT_PANEL_COLS = 6
 config.MERCHANT_PANEL_ROWS = 4
 

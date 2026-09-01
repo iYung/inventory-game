@@ -88,6 +88,8 @@ function Customer.new(target_x, exit_x, y)
     self.order_rules      = {}
     self.order_item_count = 1
     self.payout           = 10
+    self.offer            = {}
+    self._program_state   = nil
     self.messages         = {}
     self.msg_index        = 1
     self.done_talking     = true
@@ -125,7 +127,27 @@ function Customer:show(cfg)
     elseif self.kind == "program" then
         self.type_id = "merchant"
         self.panel   = Grid.new(config.MERCHANT_PANEL_COLS, config.MERCHANT_PANEL_ROWS, config.U, 0, 0)
-        -- panel contents handled by scene (Task 12)
+        self.offer          = cfg.offer or {}
+        self._program_state = cfg.program_state  -- may be nil; item_panel reads it
+        -- Populate panel: each program's stock on its own row, items tagged
+        -- with program_id so the scene can identify them on drag.
+        local row = 0
+        for _, prog in ipairs(self.offer) do
+            local col = 0
+            for _, type_id in ipairs(prog.stock or {}) do
+                local it = Item.new(type_id)
+                it.program_id = prog.id
+                if self.panel:can_place(it, col, row) then
+                    self.panel:place(it, col, row)
+                    col = col + 1
+                    if col >= config.MERCHANT_PANEL_COLS then
+                        col = 0
+                        row = row + 1
+                    end
+                end
+            end
+            row = row + 1  -- blank row between programs
+        end
     elseif self.kind == "order" then
         self.type_id = "order_customer"
         self.panel   = Grid.new(config.ORDER_PANEL_COLS, config.ORDER_PANEL_ROWS, config.U, 0, 0)

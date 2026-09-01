@@ -134,15 +134,20 @@ function ItemPanel.new(item)
     self.should_serve    = false
     self.should_skip     = false
     self._dragging_panel = false
+    -- Program merchant: tracks which program ids have been paid for this visit.
+    self._paid_programs  = {}
 
     local panel = item.panel
     self.grid_w = panel.cols * panel.cell_size
     self.grid_h = panel.rows * panel.cell_size
 
-    -- Reminder height: dynamic for orders (scales with rule count).
+    -- Reminder height: dynamic for orders (scales with rule count); small
+    -- header for restock panels (shows per-item cost).
     self._reminder_h = 0
     if item.kind == "order" then
         self._reminder_h = order_reminder_h(#(item.order_rules or {}))
+    elseif item.kind == "restock" then
+        self._reminder_h = RULE_ROW_H + RULE_PAD
     end
 
     -- Button row sizing: any def.actions plus one more slot for "Leave" when
@@ -433,6 +438,11 @@ function ItemPanel:draw(skip_dragging)
     love.graphics.setColor(colors.button_text or { 1, 1, 1, 1 })
     love.graphics.print((self.def and self.def.name) or self.item.type_id, tb.x + 8, tb.y + 6)
 
+    if self.item.kind == "restock" then
+        love.graphics.setColor(COLOR_NEUTRAL)
+        love.graphics.print("$" .. config.RESTOCK_ITEM_COST .. " per item", self.bg.x + MARGIN, tb.y + TITLE_H + 4)
+    end
+
     if self.item.kind == "order" and self._reminder_h > 0 then
         local panel_items = self.item.panel:items()
         local rules       = self.item.order_rules or {}
@@ -488,6 +498,32 @@ function ItemPanel:draw(skip_dragging)
 
             love.graphics.setColor(colors.button_text or { 1, 1, 1, 1 })
             love.graphics.print(action.name, rect.x + 6, rect.y + 6)
+        end
+    end
+
+    -- Program merchant: draw section headers (one per offered program).
+    if self.item.kind == "program" then
+        local program_state = self.item._program_state
+        for _, prog in ipairs(self.item.offer or {}) do
+            local can_afford = not program_state
+                or program_state:owns(prog.id)
+                or self._paid_programs[prog.id]
+
+            -- Find the first row this program occupies in the panel grid.
+            local min_row = math.huge
+            for _, it in ipairs(self.item.panel:items()) do
+                if it.program_id == prog.id and it.cell_row and it.cell_row < min_row then
+                    min_row = it.cell_row
+                end
+            end
+            if min_row < math.huge then
+                local label_y = self.grid_y + min_row * self.item.panel.cell_size - RULE_ROW_H - 2
+                local owned = program_state and (program_state:owns(prog.id) or self._paid_programs[prog.id])
+                local label = prog.name .. "  $" .. prog.cost
+                if owned then label = prog.name .. "  [owned]" end
+                love.graphics.setColor(owned and COLOR_PASS or COLOR_NEUTRAL)
+                love.graphics.print(label, self.bg.x + MARGIN, label_y)
+            end
         end
     end
 

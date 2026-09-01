@@ -25,11 +25,12 @@ end
 
 local function make_program_cfg(program_state)
     return {
-        kind     = "program",
-        name     = "Program Merchant",
-        messages = { "Looking to expand? Take a look." },
-        offer    = MerchantGen.offer(program_state),
-        walk_speed = 80,
+        kind           = "program",
+        name           = "Program Merchant",
+        messages       = { "Looking to expand? Take a look." },
+        offer          = MerchantGen.offer(program_state),
+        program_state  = program_state,
+        walk_speed     = 80,
     }
 end
 
