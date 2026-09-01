@@ -538,4 +538,43 @@ do
     print("PASS: item_panel: pot panel drag blocked when parent microwave is cooking")
 end
 
+-- Test 23: _serve_enabled() rejects containers and tagless items, and --------
+-- accepts tagged cooked food. Regression guard for the bug where a pot with
+-- food inside it could be dropped into the order panel and trigger Serve.
+
+do
+    local Customer = require("lua/game/customer")
+
+    -- Build an order-kind customer and open their panel.
+    local c = Customer.new(500, 100, 200)
+    c:show({ name = "Test Customer", messages = {} })
+    local order_panel = ItemPanel.new(c)
+
+    -- Panel is empty: Serve must be disabled.
+    assert(order_panel:_serve_enabled() == false,
+        "Serve should be disabled with an empty order panel")
+
+    -- Place a pot (container, no tags) into the order panel.
+    local pot = Item.new("pot")
+    c.panel:place(pot, 0, 0)
+    assert(order_panel:_serve_enabled() == false,
+        "Serve should be disabled when the panel holds a container (pot has no tags)")
+    c.panel:remove(pot)
+
+    -- Place a raw ingredient (no tags) into the order panel.
+    local raw = Item.new("raw_chicken")
+    c.panel:place(raw, 0, 0)
+    assert(order_panel:_serve_enabled() == false,
+        "Serve should be disabled when the panel holds a tagless raw ingredient")
+    c.panel:remove(raw)
+
+    -- Place a tagged cooked food item: Serve must be enabled.
+    local cooked = Item.new("baked_chicken")
+    c.panel:place(cooked, 0, 0)
+    assert(order_panel:_serve_enabled() == true,
+        "Serve should be enabled when the panel holds a tagged cooked food item")
+
+    print("PASS: item_panel: _serve_enabled rejects containers and raw items, accepts tagged food")
+end
+
 print("ALL TESTS PASSED")

@@ -29,7 +29,7 @@
 - Order panel reminder row (between title bar and grid): replaced "Order: [tag]" with three labeled rows showing each tier, e.g. "❤ Loved: Healthy, Protein  |  ✓ Liked: Filling  |  ✗ Disliked: Greasy".
 
 ### Serve gate
-- `ItemPanel:_serve_enabled()`: enabled when `item.kind == "order"` and exactly 1 item is in the panel. No tag check. (Reward differentiation is future work.)
+- `ItemPanel:_serve_enabled()`: enabled when `item.kind == "order"`, exactly 1 item is in the panel, **and that item has at least one tag** (`#item.tags > 0`). Containers and raw/uncooked ingredients carry no tags and leave Serve disabled.
 
 ### Visual feedback on food placement
 - When the order panel has exactly 1 item in it, each tier row in the reminder area highlights dynamically:

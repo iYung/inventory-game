@@ -78,6 +78,7 @@ assets/images/
 scripts/
   gen_scene_art.py   Regenerates all scene/character PNGs (requires Pillow): python3 scripts/gen_scene_art.py
   gen_icons.py       Generates item icon PNGs
+  item_graph.html    Dev tool — open in any browser to browse all items and their recipe/machine connections as an interactive graph
 conf.lua             Window config; suppresses graphics/audio modules under --headless
 main.lua             Entry point — canvas rendering with letterboxing, pixel-art filter, mouse/keyboard wiring
 ```
