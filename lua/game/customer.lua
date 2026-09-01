@@ -175,6 +175,8 @@ function Customer:show(cfg)
             end
             row = row + row_max_h + 1  -- advance past this program's last row + blank separator
         end
+        -- Shrink the panel to its actual content (trim the trailing blank separator row).
+        self.panel.rows = math.max(1, row - 1)
     elseif self.kind == "order" then
         self.type_id = "order_customer"
         self.panel   = Grid.new(config.ORDER_PANEL_COLS, config.ORDER_PANEL_ROWS, config.U, 0, 0)
