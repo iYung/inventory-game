@@ -181,7 +181,7 @@ function ItemPanel.new(item)
     -- Default position: centered horizontally, sitting just above the
     -- split line so it doesn't overlap the main floor grid.
     local default_x = (config.SCREEN_W - self.bg_w) / 2
-    local default_y = config.SPLIT_Y - self.bg_h - 12
+    local default_y = math.max(8, config.SPLIT_Y - self.bg_h - 12)
 
     self:_layout(default_x, default_y)
 
