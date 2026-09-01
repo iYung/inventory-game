@@ -830,15 +830,15 @@ do
     print("PASS: kitchen_scene: Next Day is not ready until the day's last customer has actually left")
 end
 
--- Test 11: dropping the WRONG item in the order panel must actually be
--- rejected (Serve stays disabled; Skip must be used instead), and shows a
--- clear rejection message before the customer walks out - not just silently
--- leave indistinguishably from a successful serve.
+-- Test 11: only tagged (cooked) food enables Serve; raw items and containers
+-- leave Serve disabled and the player must use Skip instead. Dropping a raw
+-- item into the panel is allowed but Serve stays greyed out. A tagged item
+-- placed into the panel does enable Serve and completes the visit correctly.
 
 do
-    -- With the trait-tier system, any food can be served. Verify that Serve
-    -- is enabled regardless of whether the item carries any of the customer's
-    -- trait tags, and that Serve and Skip both still work as expected.
+    local Item = require("lua/game/item")
+
+    -- Sub-test A: raw_chicken in the order panel → Serve disabled, drag works.
     local ctx11 = runner.setup(function() return KitchenScene.new() end)
     local scene11 = ctx11.sm.current
 
@@ -851,9 +851,6 @@ do
     end
     assert(meat11, "on_enter should have placed raw_chicken")
     assert(#meat11.tags == 0, "sanity check: raw_chicken carries no tags")
-
-    local currency_before = scene11.day_state.currency
-    local served_before   = scene11.day_state.customers_served
 
     local cx11, cy11 = scene11.customer.x, scene11.customer.y
     scene11:mouse_pressed(cx11, cy11)
@@ -874,19 +871,36 @@ do
     assert(scene11.grid.dragging == nil, "dropping into the order panel should clear the main grid's drag state")
     assert(meat11.grid == order_panel11.item.panel, "the raw_chicken item should now be in the order panel's grid")
 
-    -- Serve is enabled: any 1 item in the panel enables Serve regardless of tags.
-    assert(order_panel11:_serve_enabled(),
-        "Serve should be enabled with any one item in the panel (trait system is display-only)")
+    -- Serve must be disabled: raw items carry no tags.
+    assert(not order_panel11:_serve_enabled(),
+        "Serve should be disabled when the order panel holds a tagless raw item")
 
-    -- Serve the raw item; currency and served count should update.
-    local serve11 = order_panel11.buttons["Serve"]
+    -- Sub-test B: place a tagged cooked item → Serve must be enabled.
+    local ctx11b_serve = runner.setup(function() return KitchenScene.new() end)
+    local scene11b_serve = ctx11b_serve.sm.current
+    scene11b_serve.customer:show(order_cfg())
+    runner.fast_forward_until(ctx11b_serve, function() return scene11b_serve.customer:arrived() end, 0)
+
+    local cx11s, cy11s = scene11b_serve.customer.x, scene11b_serve.customer.y
+    scene11b_serve:mouse_pressed(cx11s, cy11s)
+    local order_panel11s = scene11b_serve.panels[1]
+
+    local cooked11 = Item.new("baked_chicken")
+    order_panel11s.item.panel:place(cooked11, 0, 0)
+    assert(order_panel11s:_serve_enabled(),
+        "Serve should be enabled when the order panel holds a tagged cooked food item")
+
+    local currency_before = scene11b_serve.day_state.currency
+    local served_before   = scene11b_serve.day_state.customers_served
+
+    local serve11 = order_panel11s.buttons["Serve"]
     assert(serve11, "order panel should have a Serve button")
-    scene11:mouse_pressed(serve11.x + serve11.w / 2, serve11.y + serve11.h / 2)
+    scene11b_serve:mouse_pressed(serve11.x + serve11.w / 2, serve11.y + serve11.h / 2)
 
-    assert(#scene11.panels == 0, "clicking Serve should close the order panel")
-    assert(scene11.day_state.currency == currency_before + 10, "serving should award currency")
-    assert(scene11.day_state.customers_served == served_before + 1, "customers_served should increment")
-    assert(not scene11.customer.dismissed, "customer should be served, not dismissed")
+    assert(#scene11b_serve.panels == 0, "clicking Serve should close the order panel")
+    assert(scene11b_serve.day_state.currency == currency_before + 10, "serving should award currency")
+    assert(scene11b_serve.day_state.customers_served == served_before + 1, "customers_served should increment")
+    assert(not scene11b_serve.customer.dismissed, "customer should be served, not dismissed")
 
     -- Skip test: new context, drag item in, use Skip instead.
     local ctx11b = runner.setup(function() return KitchenScene.new() end)
@@ -921,7 +935,7 @@ do
     assert(scene11b.customer.dismissed, "customer should be marked dismissed after Skip")
     assert(scene11b.customer.state == "talking_after", "skipping shows a rejection message via talking_after")
 
-    print("PASS: kitchen_scene: any item enables Serve (trait system display-only); Skip still dismisses with a visible message")
+    print("PASS: kitchen_scene: raw items disable Serve; tagged cooked food enables Serve; Skip still dismisses with a visible message")
 end
 
 -- Test 12: the microwave itself still occupies a 2x2 area on the main
@@ -1210,20 +1224,12 @@ do
     print("PASS: kitchen_scene: the broccoli/Cook/steamed_broccoli pipeline serves a Healthy-tag request end-to-end")
 end
 
--- Test 16: dropping a RAW item (no tags at all) into the order panel is
--- always rejected, regardless of what tag the customer is requesting. This
--- falls straight out of has_tag's empty-tags-list check with no
--- special-casing needed in kitchen_scene.lua itself - this test just proves
--- it holds for both raw items and both tags currently in play. Rewritten
--- (Task 8) to drive the panel/Skip flow (same shape as Test 11's rewrite)
--- rather than dropping directly on the customer's sprite body, which no
--- longer does anything special.
+-- Test 16: dropping a RAW item (no tags at all) into the order panel always
+-- leaves Serve disabled, regardless of what tag the customer is requesting.
+-- Only cooked/processed items with at least one tag enable Serve.
 
 do
-    -- With the trait-tier system, raw (untagged) items are still serveable -
-    -- Serve enables for any 1 item in the panel. Verify this holds for both
-    -- raw types on the starting floor.
-    local function assert_raw_serve_enabled(raw_type_id)
+    local function assert_raw_serve_disabled(raw_type_id)
         local ctxN = runner.setup(function() return KitchenScene.new() end)
         local sceneN = ctxN.sm.current
 
@@ -1249,14 +1255,14 @@ do
         sceneN:mouse_released(pxN + 1, pyN + 1)
 
         assert(raw_item.grid == order_panelN.item.panel, "raw item should be in the order panel")
-        assert(order_panelN:_serve_enabled(),
-            "Serve should be enabled for " .. raw_type_id .. " (any item enables serve in the trait system)")
+        assert(not order_panelN:_serve_enabled(),
+            "Serve should be disabled for " .. raw_type_id .. " (raw items carry no tags)")
     end
 
-    assert_raw_serve_enabled("raw_chicken")
-    assert_raw_serve_enabled("broccoli")
+    assert_raw_serve_disabled("raw_chicken")
+    assert_raw_serve_disabled("broccoli")
 
-    print("PASS: kitchen_scene: raw (untagged) items enable Serve in the trait-tier system (serve gate is tag-agnostic)")
+    print("PASS: kitchen_scene: raw (untagged) items leave Serve disabled (only tagged cooked food enables Serve)")
 end
 
 -- Test 17: double-click and right-click to open a container's panel also
