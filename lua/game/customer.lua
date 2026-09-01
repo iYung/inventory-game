@@ -129,12 +129,14 @@ function Customer:show(cfg)
         self.panel   = Grid.new(config.MERCHANT_PANEL_COLS, config.MERCHANT_PANEL_ROWS, config.U, 0, 0)
         self.offer          = cfg.offer or {}
         self._program_state = cfg.program_state  -- may be nil; item_panel reads it
-        -- Populate panel: each program's stock on its own row, items tagged
-        -- with program_id so the scene can identify them on drag.
+        -- Populate panel: each program's machines on its own row, tagged with
+        -- program_id so the scene can identify which program they belong to.
+        -- Stock (starting ingredients) is delivered to the floor on purchase,
+        -- not shown here.
         local row = 0
         for _, prog in ipairs(self.offer) do
             local col = 0
-            for _, type_id in ipairs(prog.stock or {}) do
+            for _, type_id in ipairs(prog.machines or {}) do
                 local it = Item.new(type_id)
                 it.program_id = prog.id
                 if self.panel:can_place(it, col, row) then

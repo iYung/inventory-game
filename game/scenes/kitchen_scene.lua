@@ -668,6 +668,10 @@ function KitchenScene:mouse_released(x, y)
                         self.day_state.currency = self.day_state.currency - cost
                         self.program_state:buy(prog_id)
                         src_panel._paid_programs[prog_id] = true
+                        -- Deliver the program's stock items to the floor.
+                        for _, stock_id in ipairs(prog.stock or {}) do
+                            self.grid:place_first_fit(Item.new(stock_id))
+                        end
                     end
                 end
             end
