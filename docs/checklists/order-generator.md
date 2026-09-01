@@ -32,15 +32,15 @@ Tasks are ordered by dependency — each one builds on the last.
 
 ### State
 
-- [ ] Task 06 — `lua/game/day_state.lua` — Update `record_serve` signature to `record_serve(items, payout)`: `items` is a list of type_id strings (increments `sold_items` for each), `payout` is the integer to add to `currency` (replaces the hardcoded `+10`). No other changes.
+- [x] Task 06 — `lua/game/day_state.lua` — Update `record_serve` signature to `record_serve(items, payout)`: `items` is a list of type_id strings (increments `sold_items` for each), `payout` is the integer to add to `currency` (replaces the hardcoded `+10`). No other changes.
 
 ---
 
 ### Config & queue
 
-- [ ] Task 07 — `lua/game/config.lua` — Update `ORDER_PANEL_COLS = 4`, `ORDER_PANEL_ROWS = 4`. Update `MERCHANT_PANEL_COLS = 6`, `MERCHANT_PANEL_ROWS = 4`. Remove `CUSTOMERS_PER_DAY` fixed constant (now computed per-day in the queue).
+- [x] Task 07 — `lua/game/config.lua` — Update `ORDER_PANEL_COLS = 4`, `ORDER_PANEL_ROWS = 4`. Update `MERCHANT_PANEL_COLS = 6`, `MERCHANT_PANEL_ROWS = 4`. Remove `CUSTOMERS_PER_DAY` fixed constant (now computed per-day in the queue).
 
-- [ ] Task 08 — `lua/game/customer_queue.lua` — Rework `CustomerQueue.new(day, program_state)` (remove `total` param; compute total as `math.random(4, 6)` internally). Build slot list: always include one restock merchant slot (random position) using `RestockGen.stock`; on even days also include one program merchant slot (different random position) using `MerchantGen.offer`; fill remaining slots with `OrderGen.generate`. Remove `assign_traits`, `make_default_cfg`, and `make_merchant_cfg`. Add `make_restock_cfg(program_state)` and `make_program_cfg(program_state)`. Expose `self.total` so callers can pass it to `DayState:start_day`.
+- [x] Task 08 — `lua/game/customer_queue.lua` — Rework `CustomerQueue.new(day, program_state)` (remove `total` param; compute total as `math.random(4, 6)` internally). Build slot list: always include one restock merchant slot (random position) using `RestockGen.stock`; on even days also include one program merchant slot (different random position) using `MerchantGen.offer`; fill remaining slots with `OrderGen.generate`. Remove `assign_traits`, `make_default_cfg`, and `make_merchant_cfg`. Add `make_restock_cfg(program_state)` and `make_program_cfg(program_state)`. Expose `self.total` so callers can pass it to `DayState:start_day`.
 
 ---
 

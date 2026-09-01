@@ -20,6 +20,7 @@ local ItemPanel       = require("lua/game/item_panel")
 local Customer        = require("lua/game/customer")
 local CustomerQueue   = require("lua/game/customer_queue")
 local DayState        = require("lua/game/day_state")
+local ProgramState    = require("lua/game/program_state")
 
 local DOUBLE_CLICK_WINDOW = 0.35
 local SKIP_MESSAGE = "Maybe next time!"
@@ -180,10 +181,10 @@ function KitchenScene:on_enter()
     self._scene_bg = love.graphics.newImage("assets/images/scene/bg.png")
     self._scene_fg = love.graphics.newImage("assets/images/scene/fg.png")
 
-    self.day_state = DayState.new()
-    local first_day_total = math.random(config.MIN_CUSTOMERS_PER_DAY, config.MAX_CUSTOMERS_PER_DAY)
-    self.day_state:start_day(first_day_total)
-    self.queue = CustomerQueue.new(first_day_total)
+    self.day_state    = DayState.new()
+    self.program_state = ProgramState.new("fryer")
+    self.queue = CustomerQueue.new(self.day_state.day, self.program_state)
+    self.day_state:start_day(self.queue.total)
 
     -- Matches ../wip's convention: customers enter from off-screen on one
     -- side and walk toward target_x, then walk back out the way they came.
@@ -483,9 +484,8 @@ function KitchenScene:mouse_pressed(x, y)
     if self._showing_summary then
         if point_in_rect(x, y, SUMMARY_BTN) then
             self.day_state:advance_day()
-            local next_day_total = math.random(config.MIN_CUSTOMERS_PER_DAY, config.MAX_CUSTOMERS_PER_DAY)
-            self.day_state:start_day(next_day_total)
-            self.queue = CustomerQueue.new(next_day_total)
+            self.queue = CustomerQueue.new(self.day_state.day, self.program_state)
+            self.day_state:start_day(self.queue.total)
             self.customer:show(self.queue:next())
             for _, item in ipairs(self.grid:items()) do
                 item:refill_daily()
