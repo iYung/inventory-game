@@ -6,7 +6,7 @@ Tasks are ordered by dependency — each one builds on the last.
 
 ### Data layer
 
-- [x] Task 01 — `lua/game/data/program_defs.lua` — Create the file. Define all 11 programs as a keyed table: `fryer`, `garden`, `pump_microwave`, `pot`, `coop`, `incubator`, `meat_machine`, `barn`, `milking_center`, `cheese_cave`, `coffee_machine`. Each entry has: `id`, `name`, `cost` (placeholder), `machines` (list of type_ids), `stock` (list of type_ids delivered on purchase), `inputs` (list of ingredient type_ids the program needs to run), `tags_unlocked` (list of tag strings), `requires` (list of program ids that must be owned first). Use the prerequisite graph and tag review from the design doc. Return the table.
+- [x] Task 01 — `lua/game/data/program_defs.lua` — Create the file. Define all 11 programs as a keyed table. Each entry has: `id`, `name`, `cost`, `machines` (type_ids; all must reach floor to complete program), `extras` (type_ids shown in merchant panel at $5 flat, don't count toward completion), `inputs` (ingredient type_ids used by RestockGen), `tags_unlocked`, `requires`. `stock` field is unused.
 
 - [x] Task 02 — `lua/game/program_state.lua` — Create `ProgramState` class. `ProgramState.new(starting_id)` marks one program as owned from the start. Methods: `owns(id) → bool`, `buy(id)` (marks owned, caller deducts currency), `available_tags() → set` (union of `tags_unlocked` across owned programs, keyed `tag → true`), `available_outputs() → list` (all `type_id`s producible from owned machines — read `produces` keys from `item_defs` actions and `overnight_actions` on owned machine type_ids). No dependency on generators yet.
 
@@ -20,7 +20,7 @@ Tasks are ordered by dependency — each one builds on the last.
 
 - [x] Task 03 — `lua/game/restock_gen.lua` — Create `RestockGen`. Single function: `RestockGen.stock(program_state) → list of {type_id, quantity}`. Implementation: collect the union of `inputs` from all owned programs (from `program_defs`), randomly pick up to 5 distinct type_ids from that pool, assign each a random quantity (1–4). Returns the list. If pool has fewer than 5 items, take all.
 
-- [x] Task 04 — `lua/game/merchant_gen.lua` — Create `MerchantGen`. Single function: `MerchantGen.offer(program_state) → list of program def tables`. Step 1: collect programs not yet owned whose `requires` are all satisfied — pick 2–3 randomly. Step 2: collect already-owned programs — pick enough to fill up to 4 total slots. Returns the combined list (2–4 entries).
+- [x] Task 04 — `lua/game/merchant_gen.lua` — Create `MerchantGen`. Single function: `MerchantGen.offer(program_state) → list of program def tables`. Step 1: collect programs not yet owned whose `requires` are all satisfied — pick 1–2 randomly. Step 2: collect already-owned programs — pick enough to fill up to 3 total slots. Returns the combined list (1–3 entries).
 
 - [x] Task 05 — `lua/game/order_gen.lua` — Create `OrderGen`. Single function: `OrderGen.generate(day, program_state) → order config table`. Implement item-count scaling (1–2 / 1–4 / 1–5 by day range), rule-count scaling (1–2 / 1–4), weighted rule-kind pool, rule generation loop (at_least / no_more / no / specific / all_unique), post-generation satisfiability validation (drop last rule and retry once if unsatisfiable). Returns `{ order_rules, order_item_count, payout }`. Payout = `item_count × 10 + (rule_count - 1) × 5`.
 
@@ -64,7 +64,7 @@ Tasks are ordered by dependency — each one builds on the last.
 
 - [x] Task 11 — `game/scenes/kitchen_scene.lua` — Implement the restock merchant panel (kind = "restock"): render the 6×4 grid stocked from `RestockGen` output. Show per-item cost label on each cell. On drag-to-floor: check `day_state.currency >= item_cost`; if yes deduct and place; if no reject with a visual shake/dim. "Leave" closes as before.
 
-- [x] Task 12 — `game/scenes/kitchen_scene.lua` — Implement the program merchant panel (kind = "program"): render one labeled section per offered program (from `MerchantGen.offer`). Each section shows the program name, cost, and all its `machines` + `stock` items as draggable cells. Dragging the first item from a section deducts the full program cost and calls `program_state:buy(id)`. Dragging subsequent items from the same already-paid section is free. If `currency < program.cost`, the entire section's items are non-draggable (dimmed). "Leave" closes.
+- [x] Task 12 — `game/scenes/kitchen_scene.lua` + `lua/game/customer.lua` + `lua/game/item_panel.lua` — Program merchant panel: shows each program's `machines` + `extras` in a shared row (no section headers visible to player). Machines tagged `program_id`; extras tagged `is_extra`. Cost charged on first machine drag; all machines placed → `program_state:buy`. Extras cost $5 flat per drag. Panel col-advances by item footprint width; shrinks to fit content. Restock merchant always slot 1; program merchant on even days.
 
 ---
 
