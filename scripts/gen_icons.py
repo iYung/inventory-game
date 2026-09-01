@@ -58,6 +58,8 @@ COLORS = {
     "milking_center":  (153, 140, 179),
     "cheese_cave":     (140, 107, 77),
     "omelette":         (230, 204, 102),
+    "coffee_bean":        (71,  51,  26),
+    "coffee_bean_garden": (56,  36,  15),
 }
 
 
@@ -454,6 +456,16 @@ def gen_onion_garden():
     save(img, "onion_garden")
 
 
+def gen_coffee_bean_garden():
+    img = new_img(); d = ImageDraw.Draw(img)
+    base, dk, lt = shades("coffee_bean_garden")
+    d.rectangle([2, 23, 30, 30], fill=dk)
+    for (cx, cy) in [(7, 18), (14, 16), (20, 18), (26, 16)]:
+        d.ellipse([cx-3, cy-2, cx+3, cy+2], fill=base)
+        d.line([(cx, cy-1), (cx, cy+1)], fill=lt, width=1)
+    save(img, "coffee_bean_garden")
+
+
 def gen_garden():
     img = new_img(); d = ImageDraw.Draw(img)
     base, dk, lt = shades("garden")
@@ -572,6 +584,15 @@ def gen_cheese_cave():
     save(img, "cheese_cave")
 
 
+def gen_coffee_bean():
+    img = new_img(); d = ImageDraw.Draw(img)
+    base, dk, lt = shades("coffee_bean")
+    d.ellipse([9, 11, 23, 21], fill=base)
+    d.line([(16, 12), (16, 20)], fill=dk, width=1)
+    d.point((11, 13), fill=lt)
+    save(img, "coffee_bean")
+
+
 def gen_omelette():
     img = new_img(); d = ImageDraw.Draw(img)
     base, dk, lt = shades("omelette")
@@ -630,7 +651,8 @@ GENERATORS = [
     gen_boiled_egg, gen_egg, gen_omelette,
     gen_chicken, gen_cow,
     gen_microwave, gen_fryer, gen_pot, gen_coop, gen_meat_machine, gen_incubator,
-    gen_broccoli_garden, gen_onion_garden, gen_garden,
+    gen_coffee_bean,
+    gen_broccoli_garden, gen_onion_garden, gen_coffee_bean_garden, gen_garden,
     gen_pump, gen_barn,
     gen_customer, gen_merchant,
     gen_container,

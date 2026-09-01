@@ -426,6 +426,25 @@ do
     print("PASS: item: pump action produces water regardless of panel state")
 end
 
+-- Coffee bean: microwave Cook action turns coffee_bean into roasted_coffee_bean.
+do
+    local microwave = Item.new("microwave")
+    local bean = Item.new("coffee_bean")
+    microwave.panel:place(bean, 0, 0)
+
+    local started = microwave:start_action("Cook")
+    assert(started == true, "Cook should start with a coffee_bean in the microwave's panel")
+
+    microwave:update(3.5) -- past the 3.0s duration
+
+    local items = microwave.panel:items()
+    assert(#items == 1 and items[1].type_id == "roasted_coffee_bean",
+        "coffee_bean should have cooked into roasted_coffee_bean, got " ..
+        (items[1] and items[1].type_id or "nothing"))
+
+    print("PASS: item: microwave Cook turns coffee_bean into roasted_coffee_bean")
+end
+
 -- Coffee machine: roasted_coffee_bean has no tags (raw ingredient).
 do
     local bean = Item.new("roasted_coffee_bean")

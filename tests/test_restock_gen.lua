@@ -93,4 +93,20 @@ do
     end
 end
 
+-- Test 6: coffee_machine program restock pool includes coffee_bean and
+-- does NOT include roasted_coffee_bean (which was replaced by coffee_bean).
+do
+    local ps = ProgramState.new("fryer")
+    ps:buy("pump_microwave")
+    ps:buy("coffee_machine")
+
+    local pool = expected_pool(ps)
+    assert(pool["coffee_bean"],
+        "restock pool should include coffee_bean when coffee_machine program is owned")
+    assert(not pool["roasted_coffee_bean"],
+        "restock pool should NOT include roasted_coffee_bean for the coffee_machine program")
+
+    print("PASS: restock_gen: coffee_machine program pools coffee_bean, not roasted_coffee_bean")
+end
+
 print("ALL TESTS PASSED")
