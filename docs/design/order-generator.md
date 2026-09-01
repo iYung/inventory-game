@@ -48,22 +48,24 @@ All rules must pass for Serve to enable. Partial satisfaction awards nothing.
 
 ### 2. Program definitions — `lua/game/data/program_defs.lua`
 
-Each entry defines a purchasable production chain. Machines and stock items are
-listed explicitly — the merchant panel dedicates one section per program showing
-all of them together.
+Each entry defines a purchasable production chain.
 
 ```lua
 {
   id            = "pump_microwave",
   name          = "Pump & Microwave",
-  machines      = { "pump", "microwave" },
-  stock         = { "potato", "potato", "raw_chicken" },
+  machines      = { "pump", "microwave" },   -- draggable machines; ALL must reach the floor to complete
+  extras        = {},                         -- purchasable alongside machines at $5 flat; don't count toward completion
+  inputs        = { "raw_chicken", "potato" }, -- ingredients consumed by this program; used by RestockGen
   tags_unlocked = { "Protein", "Filling" },  -- reachable output tags
   requires      = {},                         -- program IDs that must be owned first
-  inputs        = { "raw_chicken", "potato" }, -- ingredients this program needs to buy
-  cost          = 40,                         -- placeholder; tune during balance pass
+  cost          = 40,
 }
 ```
+
+`stock` is unused — it was originally intended to auto-deliver ingredients on purchase, but that mechanic was dropped. `inputs` feeds RestockGen instead.
+
+`extras` are additional items shown alongside machines in the program merchant panel (e.g. chickens next to the coop). They're always visible (new offer and repurchase alike), cost `RESTOCK_ITEM_COST` ($5) each, and do **not** count toward program completion.
 
 `requires` is a list of program IDs that must all be owned before this program
 can be offered for sale. Pacing is entirely driven by this graph — no fixed/random
@@ -88,21 +90,19 @@ fryer  ← starting program (pre-owned at game start)
 **Merchant inventory generator** (`MerchantGen`, lives in its own file):
 
 ```
-MerchantGen.offer(program_state) → list of up to 4 program entries
+MerchantGen.offer(program_state) → list of up to 3 program entries
 ```
 
-Two-step selection, filling up to **4 slots** total:
+Two-step selection, filling up to **3 slots** total:
 
-1. **New programs (2–3 slots)**: randomly pick 2–3 from programs that are not
-   yet owned AND have all `requires` satisfied. If fewer than 2 are available,
-   take all of them.
-2. **Repurchase programs (remaining slots, max 4 total)**: randomly pick from
+1. **New programs (1–2 slots)**: randomly pick 1–2 from programs that are not
+   yet owned AND have all `requires` satisfied.
+2. **Repurchase programs (remaining slots, max 3 total)**: randomly pick from
    already-owned programs to fill the remaining slots.
 
-Programs can be repurchased any number of times — same cost, same full contents
-(machines + stock). Duplicate machines are additional units on the floor, letting
-the player expand production capacity (extra fryer, extra coop) without special
-casing.
+Programs can be repurchased any number of times — same cost, same machines and extras.
+Duplicate machines are additional units on the floor, letting the player expand
+production capacity without special casing.
 
 The game starts with **exactly one program already owned**: `fryer`. Its machines
 are pre-placed on the floor grid at game start. Everything else requires purchase.
@@ -182,21 +182,19 @@ Simple and stable — the pool only grows as programs are purchased, never shrin
 
 #### Program merchant
 
-- Appears every **2 days** (days 2, 4, 6, …).
-- Offers 2–3 programs: next fixed-tier + 1–2 random-tier.
-- Panel: one **labeled section per program** laid out vertically. Each section
-  contains all of that program's machines and stock items as draggable grid items.
-  A cost label appears in the section header.
-- Dragging any item from a program section onto the floor deducts its share of
-  the program cost (or the whole cost on the first drag from that section — exact
-  split TBD). Player can buy across multiple programs in one visit, limited only
-  by currency.
-- When a program's machines and stock are all dragged out, the section collapses
-  or dims. The program is marked owned in `ProgramState` once the first item from
-  it is purchased (so `available_tags` expands and the order generator can
-  immediately use it next day).
-- Panel size: tall enough to fit all sections — **6 cols × (4 rows × num_programs)**,
-  scrollable if needed.
+- Appears every **2 days** (days 2, 4, 6, …). Restock merchant always goes first (slot 1).
+- Offers 1–2 new programs + fills to 3 total with repurchasable programs.
+- Panel: programs laid out row by row. Each program's `machines` are placed first,
+  then its `extras`, advancing col by each item's actual footprint width. When a
+  row overflows, it wraps and advances row by the tallest item in that row.
+  A blank separator row follows each program. Panel height shrinks to fit content.
+- **Cost**: dragging the **first machine** from a new program deducts the full program
+  cost. Subsequent machines from that program are free. Extras always cost $5 flat
+  (RESTOCK_ITEM_COST) per drag, regardless of program state.
+- **Completion**: a program is marked owned in `ProgramState` once **all** of its
+  `machines` have been dragged to the floor (tracked by `_machines_placed` on
+  `ItemPanel`). Extras never count toward completion.
+- Panel size: **8 cols × dynamic rows** (shrinks to content after placement).
 
 ### 6. DayState changes
 
@@ -237,9 +235,5 @@ Simple and stable — the pool only grows as programs are purchased, never shrin
 
 ## Open questions
 
-- **Starting program identity**: which program ships at game start? Drives the
-  entire early-game feel. Needs a decision before the starting layout is coded.
-- **Program cost split on drag**: does dragging the first item from a program
-  section charge the full program cost, or is cost split across items? Former is
-  simpler; latter is friendlier but harder to communicate.
-- **Restock item prices**: placeholder, tune during balance pass.
+- **Restock item prices**: $5 flat per item for now; tune during balance pass.
+- **Program costs**: set in program_defs but not yet balance-tuned.
