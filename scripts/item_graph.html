@@ -1,0 +1,567 @@
+<title>Item Graph</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@500;600;700&family=Syne+Mono&family=Nunito+Sans:wght@400;600&display=swap">
+
+<style>
+:root {
+  --bg:         #111114;
+  --surface:    #1a1a1f;
+  --surface-hi: #22222a;
+  --border:     #2d2d38;
+  --accent:     #e07b39;
+  --accent-dim: rgba(224,123,57,0.13);
+  --text-1:     #ede9e2;
+  --text-2:     #8a8680;
+  --text-3:     #46443f;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text-1);
+  font-family: 'Nunito Sans', system-ui, sans-serif;
+  font-size: 14px;
+  height: 100vh;
+  overflow: hidden;
+}
+#app { display: flex; height: 100vh; }
+
+/* ── Sidebar ── */
+#sidebar {
+  width: 268px; min-width: 268px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+#sb-head {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+#sb-head h1 {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700; font-size: 18px;
+  letter-spacing: -0.3px; color: var(--text-1);
+}
+#sb-head .sub {
+  font-family: 'Syne Mono', monospace;
+  font-size: 11px; color: var(--text-2); margin-top: 3px;
+}
+#search-wrap {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+#search {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 10px 7px 30px;
+  color: var(--text-1);
+  font-family: 'Nunito Sans', sans-serif; font-size: 13px;
+  outline: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%238a8680' stroke-width='2.5' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: 9px center;
+  transition: border-color 0.15s;
+}
+#search:focus { border-color: var(--accent); }
+#search::placeholder { color: var(--text-3); }
+
+#sb-scroll { flex: 1; overflow-y: auto; padding-bottom: 8px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+.sec { padding: 14px 16px 0; }
+.sec-title {
+  font-family: 'Syne', sans-serif; font-weight: 600;
+  font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-2); margin-bottom: 8px;
+}
+.legend-list { display: flex; flex-direction: column; gap: 3px; }
+.leg-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 8px; border-radius: 5px;
+  font-size: 13px; cursor: pointer;
+  transition: background 0.12s;
+  user-select: none;
+}
+.leg-item:hover { background: var(--surface-hi); }
+.leg-item.active { background: var(--accent-dim); }
+.leg-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+.tag-wrap { display: flex; flex-wrap: wrap; gap: 5px; }
+.tag-chip {
+  padding: 3px 9px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  border: 1px solid transparent;
+  transition: border-color 0.12s, filter 0.12s;
+  user-select: none;
+}
+.tag-chip:hover { filter: brightness(1.25); }
+.tag-chip.active { border-color: currentColor; }
+
+.edge-eg { display: flex; flex-direction: column; gap: 7px; }
+.edge-row { display: flex; align-items: center; gap: 9px; font-size: 12px; color: var(--text-2); }
+.e-line { width: 28px; height: 2px; flex-shrink: 0; position: relative; }
+.e-line::after {
+  content: ''; position: absolute; right: -2px; top: -3px;
+  border-left: 6px solid; border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+}
+.e-solid { background: #5a5a72; }
+.e-solid::after { border-left-color: #5a5a72; }
+.e-dashed { background: repeating-linear-gradient(90deg,#426080 0,#426080 4px,transparent 4px,transparent 8px); }
+.e-dashed::after { border-left-color: #426080; }
+.e-mod { background: repeating-linear-gradient(90deg,#383848 0,#383848 3px,transparent 3px,transparent 6px); }
+.e-mod::after { border-left-color: #383848; }
+
+#info-panel {
+  border-top: 1px solid var(--border);
+  padding: 14px 16px;
+  display: none; flex-shrink: 0;
+  max-height: 260px; overflow-y: auto;
+}
+#info-panel.vis { display: block; }
+#info-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; color: var(--text-1); }
+#info-id { font-family: 'Syne Mono', monospace; font-size: 11px; color: var(--text-2); margin: 3px 0 8px; }
+#info-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+.itag { padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+.conn-h {
+  font-family: 'Syne', sans-serif; font-weight: 600;
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-2); margin: 8px 0 4px;
+}
+.conn-list { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+.conn-list li {
+  font-family: 'Syne Mono', monospace; font-size: 11px;
+  padding: 3px 8px; background: var(--surface-hi);
+  border-radius: 4px; color: var(--text-1);
+  display: flex; align-items: center; gap: 5px;
+}
+.conn-list li span { color: var(--text-3); }
+
+#controls {
+  display: flex; gap: 6px; padding: 10px 16px 12px;
+  border-top: 1px solid var(--border); flex-shrink: 0;
+}
+.btn {
+  flex: 1; padding: 7px 8px;
+  background: var(--surface-hi); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text-2);
+  font-family: 'Nunito Sans', sans-serif; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.13s;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.on { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+/* ── Canvas ── */
+#canvas { flex: 1; position: relative; overflow: hidden; }
+
+/* ── vis tooltip ── */
+.vis-tooltip {
+  background: #1c1c22 !important;
+  border: 1px solid #38384a !important;
+  border-radius: 7px !important;
+  color: #ede9e2 !important;
+  font-family: 'Nunito Sans', sans-serif !important;
+  font-size: 12px !important; line-height: 1.55 !important;
+  padding: 8px 11px !important;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.55) !important;
+  max-width: 210px !important;
+  pointer-events: none !important;
+}
+</style>
+
+<div id="app">
+  <aside id="sidebar">
+    <div id="sb-head">
+      <h1>Item Graph</h1>
+      <div class="sub">inventory-game · 38 nodes</div>
+    </div>
+    <div id="search-wrap">
+      <input type="search" id="search" placeholder="Search items…" autocomplete="off" spellcheck="false">
+    </div>
+    <div id="sb-scroll">
+      <div class="sec">
+        <div class="sec-title">Categories</div>
+        <div class="legend-list" id="cat-legend"></div>
+      </div>
+      <div class="sec" style="margin-top:12px">
+        <div class="sec-title">Tags</div>
+        <div class="tag-wrap" id="tag-legend"></div>
+      </div>
+      <div class="sec" style="margin-top:14px">
+        <div class="sec-title">Edge Types</div>
+        <div class="edge-eg">
+          <div class="edge-row"><div class="e-line e-solid"></div> Instant recipe</div>
+          <div class="edge-row"><div class="e-line e-dashed"></div> Overnight / slow</div>
+          <div class="edge-row"><div class="e-line e-mod"></div> Container modifier</div>
+        </div>
+      </div>
+    </div>
+    <div id="info-panel">
+      <div id="info-name"></div>
+      <div id="info-id"></div>
+      <div id="info-tags"></div>
+      <div id="info-conns"></div>
+    </div>
+    <div id="controls">
+      <button class="btn" id="btn-freeze">Freeze</button>
+      <button class="btn" id="btn-fit">Fit View</button>
+    </div>
+  </aside>
+  <div id="canvas"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.2/dist/vis-network.min.js"></script>
+<script>
+// ── Item definitions (mirrors item_defs.lua) ──────────────────────────────────
+// Sync this when item_defs.lua changes.
+
+const ITEMS = {
+  raw_chicken:          { name: "Raw Chicken",          cat: "ingredient", tags: [] },
+  raw_beef:             { name: "Raw Beef",              cat: "ingredient", tags: [] },
+  broccoli:             { name: "Broccoli",              cat: "ingredient", tags: [] },
+  potato:               { name: "Potato",                cat: "ingredient", tags: [] },
+  onion:                { name: "Onion",                 cat: "ingredient", tags: [] },
+  egg:                  { name: "Egg",                   cat: "ingredient", tags: [] },
+  milk:                 { name: "Milk",                  cat: "ingredient", tags: [] },
+  chicken:              { name: "Chicken",               cat: "ingredient", tags: [] },
+  cow:                  { name: "Cow",                   cat: "ingredient", tags: [] },
+  roasted_coffee_bean:  { name: "Roasted Coffee Bean",   cat: "ingredient", tags: [] },
+  water:                { name: "Water",                 cat: "ingredient", tags: [] },
+
+  microwave:            { name: "Microwave",             cat: "machine", tags: [] },
+  fryer:                { name: "Fryer",                 cat: "machine", tags: [] },
+  coffee_machine:       { name: "Coffee Machine",        cat: "machine", tags: [] },
+  meat_machine:         { name: "Meat Machine",          cat: "machine", tags: [] },
+  pump:                 { name: "Pump",                  cat: "machine", tags: [] },
+  coop:                 { name: "Coop",                  cat: "machine", tags: [] },
+  incubator:            { name: "Incubator",             cat: "machine", tags: [] },
+  barn:                 { name: "Barn",                  cat: "machine", tags: [] },
+  milking_center:       { name: "Milking Center",        cat: "machine", tags: [] },
+  cheese_cave:          { name: "Cheese Cave",           cat: "machine", tags: [] },
+  garden:               { name: "Garden",                cat: "machine", tags: [] },
+
+  pot:                  { name: "Pot",                   cat: "utility", tags: [] },
+  container:            { name: "Container",             cat: "utility", tags: [] },
+
+  baked_chicken:        { name: "Baked Chicken",         cat: "output", tags: ["Protein"] },
+  steak:                { name: "Steak",                 cat: "output", tags: ["Protein"] },
+  fried_chicken:        { name: "Fried Chicken",         cat: "output", tags: ["Greasy", "Protein"] },
+  steamed_broccoli:     { name: "Steamed Broccoli",      cat: "output", tags: ["Healthy", "Veggie"] },
+  baked_potato:         { name: "Baked Potato",          cat: "output", tags: ["Filling"] },
+  fries:                { name: "Fries",                 cat: "output", tags: ["Greasy"] },
+  blooming_onion:       { name: "Blooming Onion",        cat: "output", tags: ["Greasy"] },
+  chicken_soup:         { name: "Chicken Soup",          cat: "output", tags: ["Protein", "Hearty"] },
+  onion_soup:           { name: "Onion Soup",            cat: "output", tags: ["Hearty", "Veggie"] },
+  boiled_egg:           { name: "Boiled Egg",            cat: "output", tags: ["Protein"] },
+  omelette:             { name: "Omelette",              cat: "output", tags: ["Protein", "Healthy"] },
+  beef_stew:            { name: "Beef Stew",             cat: "output", tags: ["Filling", "Protein"] },
+  black_coffee:         { name: "Black Coffee",          cat: "output", tags: ["Caffeine", "Bitter"] },
+  cheese:               { name: "Cheese",                cat: "output", tags: [] },
+};
+
+// ── Edge specs ────────────────────────────────────────────────────────────────
+// overnight: dashed blue   modifier: faint dashed   else: solid
+
+const EDGE_SPECS = [
+  // Microwave – instant
+  { from:"raw_chicken",  to:"microwave",       tip:"Microwave · Cook" },
+  { from:"raw_beef",     to:"microwave",       tip:"Microwave · Cook" },
+  { from:"potato",       to:"microwave",       tip:"Microwave · Cook / Cook (Pot)" },
+  { from:"water",        to:"microwave",       tip:"Microwave · Cook (Pot)" },
+  { from:"broccoli",     to:"microwave",       tip:"Microwave · Cook (Pot)" },
+  { from:"onion",        to:"microwave",       tip:"Microwave · Cook (Pot)" },
+  { from:"egg",          to:"microwave",       tip:"Microwave · Cook (Pot)" },
+  { from:"pot",          to:"microwave",       tip:"Required for Pot recipes", mod:true },
+  { from:"microwave",    to:"baked_chicken",   tip:"Microwave · Cook" },
+  { from:"microwave",    to:"steak",           tip:"Microwave · Cook" },
+  { from:"microwave",    to:"baked_potato",    tip:"Microwave · Cook" },
+  { from:"microwave",    to:"steamed_broccoli",tip:"Cook (Pot): water + broccoli", lbl:"Pot" },
+  { from:"microwave",    to:"chicken_soup",    tip:"Cook (Pot): water + raw chicken", lbl:"Pot" },
+  { from:"microwave",    to:"onion_soup",      tip:"Cook (Pot): water + onion", lbl:"Pot" },
+  { from:"microwave",    to:"boiled_egg",      tip:"Cook (Pot): water + egg", lbl:"Pot" },
+  { from:"microwave",    to:"beef_stew",       tip:"Cook (Pot): water + potato + raw beef", lbl:"Pot" },
+  { from:"microwave",    to:"omelette",        tip:"Cook (Pot): egg + broccoli", lbl:"Pot" },
+
+  // Fryer
+  { from:"potato",       to:"fryer",           tip:"Fryer · Fry" },
+  { from:"onion",        to:"fryer",           tip:"Fryer · Fry" },
+  { from:"raw_chicken",  to:"fryer",           tip:"Fryer · Fry" },
+  { from:"fryer",        to:"fries",           tip:"Fryer · Fry (potato)" },
+  { from:"fryer",        to:"blooming_onion",  tip:"Fryer · Fry (onion)" },
+  { from:"fryer",        to:"fried_chicken",   tip:"Fryer · Fry (raw chicken)" },
+
+  // Coffee Machine
+  { from:"water",              to:"coffee_machine", tip:"Coffee Machine · Run" },
+  { from:"roasted_coffee_bean",to:"coffee_machine", tip:"Coffee Machine · Run" },
+  { from:"coffee_machine",     to:"black_coffee",   tip:"Coffee Machine · Run" },
+
+  // Meat Machine
+  { from:"chicken",      to:"meat_machine",    tip:"Meat Machine · Process" },
+  { from:"cow",          to:"meat_machine",    tip:"Meat Machine · Process" },
+  { from:"meat_machine", to:"raw_chicken",     tip:"Meat Machine · Process (×2)", lbl:"×2" },
+  { from:"meat_machine", to:"raw_beef",        tip:"Meat Machine · Process (×4)", lbl:"×4" },
+
+  // Pump
+  { from:"pump", to:"water", tip:"Pump · Pump" },
+
+  // Coop – overnight
+  { from:"chicken", to:"coop", tip:"Coop · Overnight (chicken preserved)", overnight:true },
+  { from:"coop",    to:"egg",  tip:"Coop · Overnight → 1 egg per chicken", overnight:true },
+
+  // Incubator – overnight ×2
+  { from:"egg",       to:"incubator", tip:"Incubator · 2 nights", overnight:true },
+  { from:"incubator", to:"chicken",   tip:"Incubator · 2 nights → 1 chicken", overnight:true, lbl:"×2 nights" },
+
+  // Barn – overnight
+  { from:"cow",  to:"barn", tip:"Barn · Overnight (2 cows → 1 new cow)", overnight:true },
+  { from:"barn", to:"cow",  tip:"Barn · Overnight breed (cows preserved)", overnight:true, lbl:"breed" },
+
+  // Milking Center – overnight
+  { from:"cow",            to:"milking_center", tip:"Milking Center · Overnight", overnight:true },
+  { from:"milking_center", to:"milk",           tip:"Milking Center · 2 milk per cow", overnight:true, lbl:"×2" },
+
+  // Cheese Cave – overnight
+  { from:"milk",        to:"cheese_cave", tip:"Cheese Cave · Overnight", overnight:true },
+  { from:"cheese_cave", to:"cheese",      tip:"Cheese Cave · 1 milk → 1 cheese", overnight:true },
+
+  // Garden – spread (treated as overnight)
+  { from:"garden", to:"onion",    tip:"Garden · Spread overnight", overnight:true, lbl:"spread" },
+  { from:"garden", to:"broccoli", tip:"Garden · Spread overnight", overnight:true, lbl:"spread" },
+  { from:"garden", to:"potato",   tip:"Garden · Spread overnight", overnight:true, lbl:"spread" },
+];
+
+// ── Category / tag visual config ──────────────────────────────────────────────
+
+const CAT = {
+  ingredient: { bg:"#1c3530", border:"#3d7a6e", font:"#85c8be", label:"Ingredient" },
+  machine:    { bg:"#1a2742", border:"#3858a0", font:"#88aee0", label:"Machine" },
+  output:     { bg:"#361b0d", border:"#9a4e1c", font:"#d09858", label:"Output" },
+  utility:    { bg:"#1e162e", border:"#5e3e9a", font:"#aa80cc", label:"Utility" },
+};
+
+const TAGS = {
+  Protein:  { bg:"#1a2e14", color:"#66aa42" },
+  Greasy:   { bg:"#2c1e08", color:"#c09040" },
+  Healthy:  { bg:"#122618", color:"#48aa72" },
+  Veggie:   { bg:"#162610", color:"#6ab030" },
+  Filling:  { bg:"#261c0c", color:"#b07c38" },
+  Hearty:   { bg:"#260e0e", color:"#c05c5c" },
+  Caffeine: { bg:"#0e0e28", color:"#6878c0" },
+  Bitter:   { bg:"#1e1c0e", color:"#9ea060" },
+};
+
+// ── Build vis datasets ────────────────────────────────────────────────────────
+
+function makeNodeTitle(id, item) {
+  const tagLine = item.tags.length
+    ? item.tags.map(t => `<span style="color:${TAGS[t]?.color||'#aaa'}">${t}</span>`).join(' · ')
+    : '<span style="color:#444">no tags</span>';
+  return `<b style="font-size:13px">${item.name}</b><br>`
+       + `<span style="font-family:monospace;color:#666;font-size:10px">${id}</span><br>`
+       + tagLine;
+}
+
+const nodeArr = Object.entries(ITEMS).map(([id, item]) => {
+  const c = CAT[item.cat];
+  return {
+    id, label: item.name,
+    title: makeNodeTitle(id, item),
+    color: {
+      background: c.bg, border: c.border,
+      highlight: { background: c.bg, border: '#e07b39' },
+      hover:     { background: c.bg, border: c.border },
+    },
+    font: { color: c.font, face: 'Syne Mono', size: 12 },
+    shape: 'box',
+    borderWidth: 1, borderWidthSelected: 2,
+    _cat: item.cat, _tags: item.tags, _name: item.name,
+  };
+});
+
+let eid = 0;
+const edgeArr = EDGE_SPECS.map(s => {
+  const isMod = !!s.mod;
+  const isNight = !!s.overnight;
+  const e = {
+    id: `e${eid++}`, from: s.from, to: s.to,
+    title: s.tip,
+    arrows: { to: { enabled: true, scaleFactor: 0.55 } },
+    dashes: isMod ? [2,3] : isNight ? [6,4] : false,
+    color: {
+      color:     isMod ? '#30303e' : isNight ? '#3a5878' : '#525268',
+      highlight: '#e07b39',
+      hover:     '#7878a0',
+    },
+    width: isMod ? 1 : 1.5,
+    smooth: { type: 'curvedCCW', roundness: 0.2 },
+    selectionWidth: 2.5,
+    hoverWidth: 1.5,
+  };
+  if (s.lbl) {
+    e.label = s.lbl;
+    e.font = { size: 10, color: '#5a5a72', face: 'Syne Mono', align: 'middle', background: '#111114', strokeWidth: 0 };
+  }
+  return e;
+});
+
+const nodes = new vis.DataSet(nodeArr);
+const edges = new vis.DataSet(edgeArr);
+
+// ── Network ───────────────────────────────────────────────────────────────────
+
+const network = new vis.Network(
+  document.getElementById('canvas'),
+  { nodes, edges },
+  {
+    nodes: { widthConstraint: { minimum: 76, maximum: 176 } },
+    edges: { hoverWidth: 1.5 },
+    physics: {
+      solver: 'barnesHut',
+      barnesHut: {
+        gravitationalConstant: -3800,
+        centralGravity: 0.28,
+        springLength: 150,
+        springConstant: 0.04,
+        damping: 0.09,
+        avoidOverlap: 0.3,
+      },
+      stabilization: { iterations: 280, updateInterval: 10 },
+    },
+    interaction: {
+      hover: true, tooltipDelay: 60,
+      zoomSpeed: 0.7,
+      navigationButtons: false, keyboard: false,
+    },
+  }
+);
+
+// Freeze after first stabilization
+let frozen = false;
+network.once('stabilizationIterationsDone', () => {
+  network.setOptions({ physics: { enabled: false } });
+  frozen = true;
+  btnFreeze.textContent = 'Unfreeze';
+  btnFreeze.classList.add('on');
+});
+
+// ── Sidebar: category legend ──────────────────────────────────────────────────
+
+const activeCats = new Set();
+const catLegend = document.getElementById('cat-legend');
+
+Object.entries(CAT).forEach(([cat, c]) => {
+  const el = document.createElement('div');
+  el.className = 'leg-item';
+  el.innerHTML = `<span class="leg-swatch" style="background:${c.border}"></span>${c.label}`;
+  el.addEventListener('click', () => {
+    if (activeCats.has(cat)) activeCats.delete(cat), el.classList.remove('active');
+    else activeCats.add(cat), el.classList.add('active');
+    applyFilters();
+  });
+  catLegend.appendChild(el);
+});
+
+// ── Sidebar: tag chips ────────────────────────────────────────────────────────
+
+const activeTags = new Set();
+const tagLegend = document.getElementById('tag-legend');
+
+Object.entries(TAGS).forEach(([tag, tc]) => {
+  const el = document.createElement('div');
+  el.className = 'tag-chip';
+  el.textContent = tag;
+  el.style.cssText = `background:${tc.bg};color:${tc.color}`;
+  el.addEventListener('click', () => {
+    if (activeTags.has(tag)) activeTags.delete(tag), el.classList.remove('active');
+    else activeTags.add(tag), el.classList.add('active');
+    applyFilters();
+  });
+  tagLegend.appendChild(el);
+});
+
+// ── Search ────────────────────────────────────────────────────────────────────
+
+let searchQ = '';
+document.getElementById('search').addEventListener('input', e => {
+  searchQ = e.target.value.trim().toLowerCase();
+  applyFilters();
+});
+
+// ── Filter engine ─────────────────────────────────────────────────────────────
+
+function applyFilters() {
+  const updates = [];
+  nodes.forEach(n => {
+    const catOk    = activeCats.size === 0 || activeCats.has(n._cat);
+    const tagOk    = activeTags.size === 0 || n._tags.some(t => activeTags.has(t));
+    const searchOk = !searchQ || n._name.toLowerCase().includes(searchQ) || n.id.toLowerCase().includes(searchQ);
+    const vis_     = catOk && tagOk && searchOk;
+    const c = CAT[n._cat];
+    updates.push({
+      id: n.id,
+      color: vis_
+        ? { background: c.bg, border: c.border, highlight: { background: c.bg, border: '#e07b39' }, hover: { background: c.bg, border: c.border } }
+        : { background: '#161619', border: '#24242c', highlight: { background: '#161619', border: '#2e2e36' }, hover: { background: '#161619', border: '#24242c' } },
+      font: { color: vis_ ? c.font : '#2c2c35', face: 'Syne Mono', size: 12 },
+    });
+  });
+  nodes.update(updates);
+}
+
+// ── Selected node info panel ──────────────────────────────────────────────────
+
+const infoPanel = document.getElementById('info-panel');
+
+network.on('selectNode', ({ nodes: sel }) => {
+  if (sel.length !== 1) return;
+  const id = sel[0], item = ITEMS[id];
+  if (!item) return;
+
+  document.getElementById('info-name').textContent = item.name;
+  document.getElementById('info-id').textContent   = id;
+
+  const tagsEl = document.getElementById('info-tags');
+  tagsEl.innerHTML = item.tags.map(t => {
+    const tc = TAGS[t] || { bg: '#222', color: '#aaa' };
+    return `<span class="itag" style="background:${tc.bg};color:${tc.color}">${t}</span>`;
+  }).join('');
+
+  const incoming = [], outgoing = [];
+  edges.forEach(e => {
+    if (e.to   === id) incoming.push(e.from);
+    if (e.from === id) outgoing.push(e.to);
+  });
+  const uniq = a => [...new Set(a)];
+
+  let html = '';
+  if (incoming.length) {
+    html += `<div class="conn-h">Receives from</div><ul class="conn-list">`;
+    uniq(incoming).forEach(nid => { html += `<li><span>←</span>${ITEMS[nid]?.name || nid}</li>`; });
+    html += `</ul>`;
+  }
+  if (outgoing.length) {
+    html += `<div class="conn-h">Sends to</div><ul class="conn-list">`;
+    uniq(outgoing).forEach(nid => { html += `<li><span>→</span>${ITEMS[nid]?.name || nid}</li>`; });
+    html += `</ul>`;
+  }
+  document.getElementById('info-conns').innerHTML = html;
+  infoPanel.classList.add('vis');
+});
+
+network.on('deselectNode', () => infoPanel.classList.remove('vis'));
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+
+const btnFreeze = document.getElementById('btn-freeze');
+btnFreeze.addEventListener('click', () => {
+  frozen = !frozen;
+  network.setOptions({ physics: { enabled: !frozen } });
+  btnFreeze.textContent = frozen ? 'Unfreeze' : 'Freeze';
+  btnFreeze.classList.toggle('on', frozen);
+});
+
+document.getElementById('btn-fit').addEventListener('click', () => {
+  network.fit({ animation: { duration: 500, easingFunction: 'easeInOutQuad' } });
+});
+</script>
