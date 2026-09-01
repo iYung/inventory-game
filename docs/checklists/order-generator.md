@@ -46,7 +46,7 @@ Tasks are ordered by dependency — each one builds on the last.
 
 ### Customer model
 
-- [ ] Task 09 — `lua/game/customer.lua` — In `Customer:show(cfg)`: remove `loved_tags`, `liked_tags`, `disliked_tags`. Add `self.order_rules = cfg.order_rules or {}` and `self.order_item_count = cfg.order_item_count or 1`. Add support for `cfg.kind = "restock"` (same panel mechanic as current merchant but uses restock stock list) and `cfg.kind = "program"` (new — panel will be handled in Task 11). The `type_id` for restock kind is `"merchant"`, for program kind is `"merchant"` (reuses existing icon). Customer data model only — no rendering changes here.
+- [x] Task 09 — `lua/game/customer.lua` — In `Customer:show(cfg)`: remove `loved_tags`, `liked_tags`, `disliked_tags`. Add `self.order_rules = cfg.order_rules or {}` and `self.order_item_count = cfg.order_item_count or 1`. Add support for `cfg.kind = "restock"` (same panel mechanic as current merchant but uses restock stock list) and `cfg.kind = "program"` (new — panel will be handled in Task 11). The `type_id` for restock kind is `"merchant"`, for program kind is `"merchant"` (reuses existing icon). Customer data model only — no rendering changes here.
 
 ---
 

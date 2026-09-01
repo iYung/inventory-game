@@ -558,7 +558,7 @@ function KitchenScene:mouse_pressed(x, y)
         -- greeting - clicking their body opens their stock panel instead
         -- (or brings it to front if it's already open, e.g. buried behind
         -- another panel).
-        if self.customer.kind == "merchant" and self.customer:arrived() then
+        if (self.customer.kind == "restock" or self.customer.kind == "program") and self.customer:arrived() then
             self:_open_or_focus_panel(self.customer)
             return
         end

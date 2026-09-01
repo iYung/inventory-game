@@ -87,7 +87,7 @@ function ItemPanel.new(item)
     -- simple branch is fine.
     local actions = (self.def and self.def.actions) or {}
     local extra_buttons = 0
-    if item.kind == "merchant" then
+    if item.kind == "merchant" or item.kind == "restock" or item.kind == "program" then
         extra_buttons = 1
     elseif item.kind == "order" then
         extra_buttons = 2
@@ -159,7 +159,7 @@ function ItemPanel:_layout(bg_x, bg_y)
     -- NOT a def.actions entry - there's no action def to look it up by, it's
     -- purely an ItemPanel-level button for merchant-kind items. "Serve" and
     -- "Skip" are the order-kind equivalent, occupying the next two slots.
-    if self.item.kind == "merchant" then
+    if self.item.kind == "merchant" or self.item.kind == "restock" or self.item.kind == "program" then
         local bx = start_x + slot * (BUTTON_W + BUTTON_GAP)
         self.buttons["Leave"] = { x = bx, y = by, w = BUTTON_W, h = BUTTON_H }
         slot = slot + 1
