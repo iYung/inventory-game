@@ -75,16 +75,17 @@ function CustomerQueue.new(day, program_state)
     self._index = 0
 
     -- Decide which slots are merchants.
+    -- Restock merchant is always first (slot 1).
+    -- Program merchant appears on even days at a random slot after the first.
     local has_program = (day % 2 == 0)
-    local merchant_count = has_program and 2 or 1
-
-    local merchant_slots = pick_slots(merchant_count, total)
-    local restock_slot = merchant_slots[1]
-    local program_slot = merchant_slots[2]  -- nil if has_program is false
+    local program_slot = nil
+    if has_program then
+        program_slot = math.random(2, total)
+    end
 
     self._configs = {}
     for i = 1, total do
-        if i == restock_slot then
+        if i == 1 then
             self._configs[i] = make_restock_cfg(program_state)
         elseif i == program_slot then
             self._configs[i] = make_program_cfg(program_state)
