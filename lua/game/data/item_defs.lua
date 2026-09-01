@@ -106,6 +106,7 @@ local item_defs = {
                     { requires = { raw_beef = 1 },    produces = { steak = 1 } },
                     { container = "pot", requires = { water = 1, broccoli = 1 }, produces = { steamed_broccoli = 1 } },
                     { requires = { potato = 1 },   produces = { baked_potato = 1 } },
+                    { requires = { coffee_bean = 1 }, produces = { roasted_coffee_bean = 1 } },
                     {
                         container = "pot",
                         requires  = { water = 1, raw_chicken = 1 },
@@ -146,6 +147,12 @@ local item_defs = {
         name = "Water",
         footprint = { { 0, 0 } },
         color = { 0.40, 0.65, 0.90, 1 },
+    },
+
+    coffee_bean = {
+        name     = "Coffee Bean",
+        footprint = { { 0, 0 } },
+        color    = { 0.28, 0.20, 0.10, 1 },
     },
 
     roasted_coffee_bean = {
@@ -350,7 +357,7 @@ local item_defs = {
         has_panel  = true,
         panel_cols = 3,
         panel_rows = 3,
-        garden_spread = { "onion", "broccoli", "potato" },
+        garden_spread = { "onion", "broccoli", "potato", "coffee_bean" },
     },
 
     container = {
