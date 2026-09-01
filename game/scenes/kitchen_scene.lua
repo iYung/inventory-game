@@ -651,26 +651,34 @@ function KitchenScene:mouse_released(x, y)
                 end
                 self.day_state.currency = self.day_state.currency - cost
             elseif src_panel and src_panel.item.kind == "program" then
-                local prog_id = item.program_id
-                if prog_id then
-                    local paid = src_panel._paid_programs[prog_id]
-                        or self.program_state:owns(prog_id)
-                    if not paid then
-                        -- Find program cost from offer list.
-                        local cost = 0
-                        for _, prog in ipairs(src_panel.item.offer or {}) do
-                            if prog.id == prog_id then cost = prog.cost; break end
+                if item.is_extra then
+                    -- Extras: flat restock cost, always buyable, no completion tracking.
+                    local cost = config.RESTOCK_ITEM_COST
+                    if self.day_state.currency < cost then
+                        owner:mouse_released(x, y)
+                        return
+                    end
+                    self.day_state.currency = self.day_state.currency - cost
+                elseif item.program_id then
+                    local prog_id = item.program_id
+                    local prog = nil
+                    for _, p in ipairs(src_panel.item.offer or {}) do
+                        if p.id == prog_id then prog = p; break end
+                    end
+                    if prog and not self.program_state:owns(prog_id) then
+                        -- Charge full program cost on the first machine drag.
+                        if not src_panel._paid_programs[prog_id] then
+                            if self.day_state.currency < prog.cost then
+                                owner:mouse_released(x, y)
+                                return
+                            end
+                            self.day_state.currency = self.day_state.currency - prog.cost
+                            src_panel._paid_programs[prog_id] = true
                         end
-                        if self.day_state.currency < cost then
-                            owner:mouse_released(x, y)  -- snap back
-                            return
-                        end
-                        self.day_state.currency = self.day_state.currency - cost
-                        self.program_state:buy(prog_id)
-                        src_panel._paid_programs[prog_id] = true
-                        -- Deliver the program's stock items to the floor.
-                        for _, stock_id in ipairs(prog.stock or {}) do
-                            self.grid:place_first_fit(Item.new(stock_id))
+                        -- Complete program when every machine has been placed.
+                        src_panel._machines_placed[prog_id] = (src_panel._machines_placed[prog_id] or 0) + 1
+                        if src_panel._machines_placed[prog_id] >= #prog.machines then
+                            self.program_state:buy(prog_id)
                         end
                     end
                 end

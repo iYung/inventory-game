@@ -143,8 +143,18 @@ function Customer:show(cfg)
                     self.panel:place(it, col, row)
                     col = col + 1
                     if col >= config.MERCHANT_PANEL_COLS then
-                        col = 0
-                        row = row + 1
+                        col = 0; row = row + 1
+                    end
+                end
+            end
+            for _, type_id in ipairs(prog.extras or {}) do
+                local it = Item.new(type_id)
+                it.is_extra = true
+                if self.panel:can_place(it, col, row) then
+                    self.panel:place(it, col, row)
+                    col = col + 1
+                    if col >= config.MERCHANT_PANEL_COLS then
+                        col = 0; row = row + 1
                     end
                 end
             end

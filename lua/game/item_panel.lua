@@ -134,8 +134,10 @@ function ItemPanel.new(item)
     self.should_serve    = false
     self.should_skip     = false
     self._dragging_panel = false
-    -- Program merchant: tracks which program ids have been paid for this visit.
-    self._paid_programs  = {}
+    -- Program merchant: tracks which program ids have been paid for this visit,
+    -- and how many machines from each have been placed on the floor.
+    self._paid_programs    = {}
+    self._machines_placed  = {}
 
     local panel = item.panel
     self.grid_w = panel.cols * panel.cell_size
@@ -498,32 +500,6 @@ function ItemPanel:draw(skip_dragging)
 
             love.graphics.setColor(colors.button_text or { 1, 1, 1, 1 })
             love.graphics.print(action.name, rect.x + 6, rect.y + 6)
-        end
-    end
-
-    -- Program merchant: draw section headers (one per offered program).
-    if self.item.kind == "program" then
-        local program_state = self.item._program_state
-        for _, prog in ipairs(self.item.offer or {}) do
-            local can_afford = not program_state
-                or program_state:owns(prog.id)
-                or self._paid_programs[prog.id]
-
-            -- Find the first row this program occupies in the panel grid.
-            local min_row = math.huge
-            for _, it in ipairs(self.item.panel:items()) do
-                if it.program_id == prog.id and it.cell_row and it.cell_row < min_row then
-                    min_row = it.cell_row
-                end
-            end
-            if min_row < math.huge then
-                local label_y = self.grid_y + min_row * self.item.panel.cell_size - RULE_ROW_H - 2
-                local owned = program_state and (program_state:owns(prog.id) or self._paid_programs[prog.id])
-                local label = prog.name .. "  $" .. prog.cost
-                if owned then label = prog.name .. "  [owned]" end
-                love.graphics.setColor(owned and COLOR_PASS or COLOR_NEUTRAL)
-                love.graphics.print(label, self.bg.x + MARGIN, label_y)
-            end
         end
     end
 

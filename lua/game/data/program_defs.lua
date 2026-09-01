@@ -6,8 +6,11 @@
 --   id            string   unique program identifier
 --   name          string   display name
 --   cost          number   currency cost (used for first purchase and repurchase)
---   machines      list     type_ids of machines delivered on purchase
---   stock         list     type_ids of ingredient items delivered alongside machines
+--   machines      list     type_ids of machines that define program completion;
+--                          all must be dragged to the floor to complete the program
+--   extras        list     additional items shown alongside machines in the program
+--                          merchant panel, purchasable at flat cost (RESTOCK_ITEM_COST);
+--                          do NOT count toward program completion
 --   inputs        list     ingredient type_ids this program's machines consume;
 --                          used by RestockGen to build the daily restock pool
 --   tags_unlocked list     tag strings that become producible once this program
@@ -21,7 +24,7 @@ local program_defs = {
         name          = "Fryer",
         cost          = 30,
         machines      = { "fryer" },
-        stock         = { "raw_chicken", "raw_chicken", "potato", "potato", "onion", "onion" },
+        extras        = { "raw_chicken", "raw_chicken", "potato", "onion" },
         inputs        = { "raw_chicken", "potato", "onion" },
         tags_unlocked = { "Greasy", "Protein" },
         requires      = {},
@@ -32,7 +35,7 @@ local program_defs = {
         name          = "Garden",
         cost          = 25,
         machines      = { "garden" },
-        stock         = { "onion", "onion", "broccoli", "broccoli", "potato", "potato" },
+        extras        = { "onion", "broccoli", "potato" },
         inputs        = { "onion", "broccoli", "potato" },
         tags_unlocked = {},
         requires      = { "fryer" },
@@ -43,7 +46,7 @@ local program_defs = {
         name          = "Pump & Microwave",
         cost          = 50,
         machines      = { "pump", "microwave" },
-        stock         = { "raw_chicken", "raw_chicken", "potato", "potato" },
+        extras        = {},
         inputs        = { "raw_chicken", "potato", "water" },
         tags_unlocked = { "Filling", "Protein" },
         requires      = { "fryer" },
@@ -54,7 +57,7 @@ local program_defs = {
         name          = "Pot",
         cost          = 30,
         machines      = { "pot" },
-        stock         = { "water", "water" },
+        extras        = {},
         inputs        = { "broccoli", "onion", "raw_chicken", "egg", "water" },
         tags_unlocked = { "Healthy", "Veggie", "Hearty" },
         requires      = { "pump_microwave" },
@@ -65,7 +68,7 @@ local program_defs = {
         name          = "Coop",
         cost          = 40,
         machines      = { "coop" },
-        stock         = { "chicken", "chicken", "chicken" },
+        extras        = { "chicken", "chicken" },
         inputs        = { "chicken" },
         tags_unlocked = {},
         requires      = { "pot" },
@@ -76,7 +79,7 @@ local program_defs = {
         name          = "Incubator",
         cost          = 35,
         machines      = { "incubator" },
-        stock         = { "egg", "egg" },
+        extras        = { "egg", "egg" },
         inputs        = { "egg" },
         tags_unlocked = {},
         requires      = { "coop" },
@@ -87,7 +90,7 @@ local program_defs = {
         name          = "Meat Machine",
         cost          = 60,
         machines      = { "meat_machine" },
-        stock         = { "chicken", "chicken", "cow" },
+        extras        = {},
         inputs        = { "chicken", "cow" },
         tags_unlocked = {},
         requires      = { "pump_microwave" },
@@ -98,7 +101,7 @@ local program_defs = {
         name          = "Barn",
         cost          = 70,
         machines      = { "barn" },
-        stock         = { "cow", "cow" },
+        extras        = { "cow", "cow" },
         inputs        = { "cow" },
         tags_unlocked = {},
         requires      = { "meat_machine" },
@@ -109,7 +112,7 @@ local program_defs = {
         name          = "Milking Center",
         cost          = 55,
         machines      = { "milking_center" },
-        stock         = {},
+        extras        = {},
         inputs        = { "cow" },
         tags_unlocked = {},
         requires      = { "barn" },
@@ -120,7 +123,7 @@ local program_defs = {
         name          = "Cheese Cave",
         cost          = 45,
         machines      = { "cheese_cave" },
-        stock         = { "milk", "milk" },
+        extras        = { "milk", "milk" },
         inputs        = { "milk" },
         tags_unlocked = {},
         requires      = { "milking_center" },
@@ -131,7 +134,7 @@ local program_defs = {
         name          = "Coffee Machine",
         cost          = 65,
         machines      = { "coffee_machine" },
-        stock         = { "roasted_coffee_bean", "roasted_coffee_bean", "roasted_coffee_bean" },
+        extras        = { "roasted_coffee_bean", "roasted_coffee_bean" },
         inputs        = { "roasted_coffee_bean", "water" },
         tags_unlocked = { "Caffeine", "Bitter" },
         requires      = { "pump_microwave" },
