@@ -215,7 +215,7 @@ Simple and stable — the pool only grows as programs are purchased, never shrin
 
 `CustomerQueue.new(total, day, program_state)`:
 - Order configs built via `OrderGen.generate(day, program_state)`.
-- Total customers per day: random in **[4, 6]** (up from fixed 3).
+- Total customers per day: day-ramped — days 1–4: **3**, days 5–10: **3–4**, days 11+: **4–5**.
 - One slot is always a restock merchant (random position, same as today).
 - On even days (2, 4, 6…), one additional slot is a program merchant.
 - Remaining slots are order customers built via `OrderGen.generate`.
