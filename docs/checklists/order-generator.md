@@ -88,4 +88,4 @@ Tasks are ordered by dependency — each one builds on the last.
 
 - [x] Task 17 — `tests/test_order_gen.lua` — Tests for `OrderGen.generate`: item count within correct range for given day, rule count within range, no rule references a tag outside `available_tags`, generated order is satisfiable (a valid item combination exists), payout formula correct.
 
-- [x] Task 18 — `tests/test_customer_queue.lua` — Tests for reworked queue: total is 4–6, always contains exactly one restock merchant, even days contain exactly one program merchant, odd days contain no program merchant, all other slots are order customers.
+- [x] Task 18 — `tests/test_customer_queue.lua` — Tests for reworked queue: total respects day-based ramp (days 1–4: 3, days 5–10: 3–4, days 11+: 4–5), always contains exactly one restock merchant, even days contain exactly one program merchant, odd days contain no program merchant, all other slots are order customers.

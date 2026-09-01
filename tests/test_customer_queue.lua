@@ -1,17 +1,25 @@
 local CustomerQueue = require("lua/game/customer_queue")
 local ProgramState  = require("lua/game/program_state")
-local config        = require("lua/game/config")
 
--- Test 1: total is 4-6.
+-- Test 1: total respects day-based ramp (days 1-4: 3, days 5-10: 3-4, days 11+: 4-5).
 do
     local ps = ProgramState.new("fryer")
-    for _ = 1, 50 do
-        local q = CustomerQueue.new(1, ps)
-        assert(q.total >= config.MIN_CUSTOMERS_PER_DAY and q.total <= config.MAX_CUSTOMERS_PER_DAY,
-            "total " .. q.total .. " outside [" .. config.MIN_CUSTOMERS_PER_DAY
-            .. "," .. config.MAX_CUSTOMERS_PER_DAY .. "]")
+    local cases = {
+        { day = 1,  lo = 3, hi = 3 },
+        { day = 4,  lo = 3, hi = 3 },
+        { day = 5,  lo = 3, hi = 4 },
+        { day = 10, lo = 3, hi = 4 },
+        { day = 11, lo = 4, hi = 5 },
+        { day = 20, lo = 4, hi = 5 },
+    }
+    for _, c in ipairs(cases) do
+        for _ = 1, 30 do
+            local q = CustomerQueue.new(c.day, ps)
+            assert(q.total >= c.lo and q.total <= c.hi,
+                "day " .. c.day .. " total " .. q.total .. " outside [" .. c.lo .. "," .. c.hi .. "]")
+        end
     end
-    print("PASS: customer_queue: total is always in [4, 6]")
+    print("PASS: customer_queue: total respects day-based ramp")
 end
 
 -- Test 2: always contains exactly one restock merchant.

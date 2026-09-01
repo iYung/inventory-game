@@ -5,7 +5,6 @@
 -- On even days a program merchant also appears (different random slot).
 -- Remaining slots are rule-based food orders from OrderGen.
 
-local config       = require("lua/game/config")
 local RestockGen   = require("lua/game/restock_gen")
 local MerchantGen  = require("lua/game/merchant_gen")
 local OrderGen     = require("lua/game/order_gen")
@@ -70,7 +69,15 @@ end
 function CustomerQueue.new(day, program_state)
     local self = setmetatable({}, CustomerQueue)
 
-    local total = math.random(config.MIN_CUSTOMERS_PER_DAY, config.MAX_CUSTOMERS_PER_DAY)
+    local lo, hi
+    if day <= 4 then
+        lo, hi = 3, 3
+    elseif day <= 10 then
+        lo, hi = 3, 4
+    else
+        lo, hi = 4, 5
+    end
+    local total = math.random(lo, hi)
     self.total  = total
     self._index = 0
 
