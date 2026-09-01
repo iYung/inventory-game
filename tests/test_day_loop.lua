@@ -10,8 +10,8 @@ do
 
     -- Day 1: only a restock merchant slot (odd day)
     local q1 = CustomerQueue.new(1, ps)
-    assert(type(q1.total) == "number" and q1.total >= 4 and q1.total <= 6,
-        "queue total should be 4-6")
+    assert(type(q1.total) == "number" and q1.total >= 3 and q1.total <= 3,
+        "queue total should be 3 (day 1 bracket)")
     assert(q1:has_next(), "has_next() should be true before first next()")
 
     local kinds = {}
