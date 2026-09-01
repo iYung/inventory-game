@@ -362,22 +362,13 @@ function Customer:draw_bubble()
     end
 
     love.graphics.setColor(BUBBLE_BG)
-    love.graphics.rectangle("fill", box_x, box_y, box_w, box_h, 6, 6)
-    love.graphics.setColor(0.25, 0.25, 0.30, 1)
-    love.graphics.rectangle("line", box_x, box_y, box_w, box_h, 6, 6)
+    love.graphics.rectangle("fill", box_x, box_y, box_w, box_h)
 
     -- Small triangular tail pointing down toward the customer.
     local tail_cx = self.x
     love.graphics.setColor(BUBBLE_BG)
     love.graphics.polygon(
         "fill",
-        tail_cx - TAIL_H / 2, box_y + box_h,
-        tail_cx + TAIL_H / 2, box_y + box_h,
-        tail_cx,               box_y + box_h + TAIL_H
-    )
-    love.graphics.setColor(0.25, 0.25, 0.30, 1)
-    love.graphics.polygon(
-        "line",
         tail_cx - TAIL_H / 2, box_y + box_h,
         tail_cx + TAIL_H / 2, box_y + box_h,
         tail_cx,               box_y + box_h + TAIL_H
