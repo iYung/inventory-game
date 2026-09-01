@@ -1757,4 +1757,202 @@ do
     print("PASS: kitchen_scene: on_enter places coffee_machine at (6,2) and pre-stocks container with milking_center, cheese_cave, and 2 roasted_coffee_beans")
 end
 
+-- Test 26: merchant panel purchase guards.
+--   A) Double-click/right-click on a has_panel machine in a program merchant's
+--      panel must NOT open its sub-panel (item not yet bought).
+--   B) Dragging a merchant stock item must be blocked when the player cannot
+--      afford it (restock merchant, program merchant machine, program extra).
+--   C) Dropping a floor item onto the merchant's panel must always snap back.
+
+do
+    local ItemPanel = require("lua/game/item_panel")
+    local config26  = require("lua/game/config")
+
+    -- ── Sub-test A: cannot open sub-panel of merchant items ─────────────────
+
+    local ctx26a = runner.setup(function() return KitchenScene.new() end)
+    local scene26a = ctx26a.sm.current
+
+    -- Garden has has_panel = true and requires only "fryer" (already owned).
+    scene26a.customer:show({
+        kind          = "program",
+        name          = "Program Merchant",
+        messages      = {},
+        offer         = {
+            { id = "garden", name = "Garden", cost = 25,
+              machines = { "garden" }, extras = {}, requires = { "fryer" } },
+        },
+        program_state = scene26a.program_state,
+        walk_speed    = 1000,
+    })
+    runner.fast_forward_until(ctx26a, function() return scene26a.customer:arrived() end, 0)
+
+    -- Open the merchant's panel by clicking their body.
+    scene26a:mouse_pressed(scene26a.customer.x, scene26a.customer.y)
+    assert(#scene26a.panels == 1, "clicking the program merchant should open their panel")
+    local mpanel26a = scene26a.panels[1]
+
+    -- Find the garden machine item inside the merchant's grid.
+    local garden26a
+    for _, it in ipairs(scene26a.customer.panel:items()) do
+        if it.type_id == "garden" then garden26a = it; break end
+    end
+    assert(garden26a, "program merchant's panel should contain a garden machine")
+
+    -- Double-click the garden item inside the merchant panel.
+    local gx26a, gy26a = scene26a.customer.panel:cell_to_world(garden26a.cell_col, garden26a.cell_row)
+    gx26a, gy26a = gx26a + 1, gy26a + 1
+    scene26a:mouse_pressed(gx26a, gy26a)
+    scene26a:mouse_released(gx26a, gy26a)
+    scene26a:mouse_pressed(gx26a, gy26a)
+    scene26a:mouse_released(gx26a, gy26a)
+
+    assert(#scene26a.panels == 1,
+        "double-clicking a has_panel machine inside a merchant's panel must NOT open its sub-panel")
+
+    -- Right-click on the garden item must also not open it.
+    scene26a:mouse_right_pressed(gx26a, gy26a)
+    assert(#scene26a.panels == 1,
+        "right-clicking a has_panel machine inside a merchant's panel must NOT open its sub-panel")
+
+    print("PASS: kitchen_scene: cannot open sub-panel of unowned merchant items (double-click and right-click both blocked)")
+
+    -- ── Sub-test B: drag blocked when can't afford (restock) ────────────────
+
+    local ctx26b = runner.setup(function() return KitchenScene.new() end)
+    local scene26b = ctx26b.sm.current
+
+    scene26b.customer:show({
+        kind       = "restock",
+        name       = "Restock Merchant",
+        messages   = {},
+        stock      = { { type_id = "raw_chicken", quantity = 2 } },
+        walk_speed = 1000,
+    })
+    runner.fast_forward_until(ctx26b, function() return scene26b.customer:arrived() end, 0)
+    scene26b:mouse_pressed(scene26b.customer.x, scene26b.customer.y)
+    assert(#scene26b.panels == 1, "clicking the restock merchant should open their panel")
+
+    -- Drain all currency so we can't afford the restock item (cost = 5).
+    scene26b.day_state.currency = 0
+
+    local stock26b
+    for _, it in ipairs(scene26b.customer.panel:items()) do
+        stock26b = it; break
+    end
+    assert(stock26b, "restock merchant's panel should contain stock")
+
+    local sx26b, sy26b = scene26b.customer.panel:cell_to_world(stock26b.cell_col, stock26b.cell_row)
+    scene26b:mouse_pressed(sx26b + 1, sy26b + 1)
+
+    assert(scene26b.customer.panel.dragging == nil,
+        "drag of a restock item should be blocked when player cannot afford it (currency = 0)")
+
+    -- Give enough currency — drag should now be allowed.
+    scene26b.day_state.currency = config26.RESTOCK_ITEM_COST
+    scene26b:mouse_pressed(sx26b + 1, sy26b + 1)
+
+    assert(scene26b.customer.panel.dragging == stock26b,
+        "drag of a restock item should be allowed when player can afford it")
+
+    scene26b:mouse_released(sx26b + 1, sy26b + 1)
+
+    print("PASS: kitchen_scene: drag from restock merchant blocked when currency < RESTOCK_ITEM_COST")
+
+    -- ── Sub-test C: drag blocked when can't afford (program machine) ─────────
+
+    local ctx26c = runner.setup(function() return KitchenScene.new() end)
+    local scene26c = ctx26c.sm.current
+
+    scene26c.customer:show({
+        kind          = "program",
+        name          = "Program Merchant",
+        messages      = {},
+        offer         = {
+            { id = "garden", name = "Garden", cost = 25,
+              machines = { "garden" }, extras = {}, requires = { "fryer" } },
+        },
+        program_state = scene26c.program_state,
+        walk_speed    = 1000,
+    })
+    runner.fast_forward_until(ctx26c, function() return scene26c.customer:arrived() end, 0)
+    scene26c:mouse_pressed(scene26c.customer.x, scene26c.customer.y)
+    assert(#scene26c.panels == 1, "clicking the program merchant should open their panel")
+
+    -- Set currency below the garden program cost (25).
+    scene26c.day_state.currency = 24
+
+    local machine26c
+    for _, it in ipairs(scene26c.customer.panel:items()) do
+        if it.program_id == "garden" then machine26c = it; break end
+    end
+    assert(machine26c, "program merchant's panel should contain the garden machine")
+
+    local mx26c, my26c = scene26c.customer.panel:cell_to_world(machine26c.cell_col, machine26c.cell_row)
+    scene26c:mouse_pressed(mx26c + 1, my26c + 1)
+
+    assert(scene26c.customer.panel.dragging == nil,
+        "drag of a program machine should be blocked when player can't afford the program cost (currency = 24 < 25)")
+
+    -- With exactly enough currency, drag is allowed.
+    scene26c.day_state.currency = 25
+    scene26c:mouse_pressed(mx26c + 1, my26c + 1)
+
+    assert(scene26c.customer.panel.dragging == machine26c,
+        "drag of a program machine should be allowed when player can afford the program cost")
+
+    scene26c:mouse_released(mx26c + 1, my26c + 1)
+
+    print("PASS: kitchen_scene: drag from program merchant blocked when currency < prog.cost")
+
+    -- ── Sub-test D: cannot drop floor items into the merchant's panel ────────
+
+    local ctx26d = runner.setup(function() return KitchenScene.new() end)
+    local scene26d = ctx26d.sm.current
+
+    scene26d.customer:show({
+        kind       = "restock",
+        name       = "Restock Merchant",
+        messages   = {},
+        stock      = { { type_id = "raw_chicken", quantity = 1 } },
+        walk_speed = 1000,
+    })
+    runner.fast_forward_until(ctx26d, function() return scene26d.customer:arrived() end, 0)
+    scene26d:mouse_pressed(scene26d.customer.x, scene26d.customer.y)
+    assert(#scene26d.panels == 1, "clicking the restock merchant should open their panel")
+    local mpanel26d = scene26d.panels[1]
+
+    -- Pick up a floor item (potato).
+    local potato26d
+    for _, it in ipairs(scene26d.grid:items()) do
+        if it.type_id == "potato" then potato26d = it; break end
+    end
+    assert(potato26d, "on_enter should have placed a potato on the floor grid")
+
+    local orig_col26d, orig_row26d = potato26d.cell_col, potato26d.cell_row
+    local px26d, py26d = scene26d.grid:cell_to_world(orig_col26d, orig_row26d)
+    scene26d:mouse_pressed(px26d + 1, py26d + 1)
+    assert(scene26d.grid.dragging == potato26d, "sanity check: should be dragging the potato")
+
+    -- Drop it onto the merchant panel's grid area.
+    local drop_x26d, drop_y26d = scene26d.customer.panel:cell_to_world(0, 0)
+    scene26d:mouse_moved(drop_x26d + 1, drop_y26d + 1)
+    scene26d:mouse_released(drop_x26d + 1, drop_y26d + 1)
+
+    assert(scene26d.grid.dragging == nil, "drag state should clear after the drop attempt")
+    assert(potato26d.grid == scene26d.grid,
+        "floor item dropped onto the merchant panel should snap back to the floor grid")
+    assert(potato26d.cell_col == orig_col26d and potato26d.cell_row == orig_row26d,
+        "floor item should snap back to its original cell after a blocked drop onto the merchant panel")
+
+    local in_merchant_panel = false
+    for _, it in ipairs(scene26d.customer.panel:items()) do
+        if it == potato26d then in_merchant_panel = true end
+    end
+    assert(not in_merchant_panel,
+        "floor item should NOT have been inserted into the merchant's panel")
+
+    print("PASS: kitchen_scene: dropping a floor item onto the merchant's panel snaps it back")
+end
+
 print("ALL TESTS PASSED")
