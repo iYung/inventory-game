@@ -215,14 +215,14 @@ do
     print("PASS: customer: show() with kind == 'merchant' populates panel/type_id with first-fit stock")
 end
 
--- Test 4b: regression guard for a real bug - the merchant's actual stock
--- list (from CustomerQueue, not a hand-picked small list) must fully fit
--- in the merchant panel. place_first_fit silently drops anything past the
--- panel's capacity with no error, so a panel too small for the real stock
--- list would quietly make some purchasable items (e.g. water/potato,
+-- Test 4b: regression guard for a real bug - the restock merchant's actual
+-- stock list (from CustomerQueue, not a hand-picked small list) must fully
+-- fit in the merchant panel. place_first_fit silently drops anything past
+-- the panel's capacity with no error, so a panel too small for the real
+-- stock list would quietly make some purchasable items (e.g. water/potato,
 -- appended last) never actually appear for the player, while cfg.stock
 -- itself still "correctly" lists them. Use CustomerQueue.new(1) - which by
--- design always makes its single slot a merchant - to get the real cfg
+-- design always makes slot 1 a restock merchant - to get the real cfg
 -- rather than duplicating the stock list here, so this test can't drift
 -- out of sync with whatever customer_queue.lua actually stocks.
 do
@@ -231,7 +231,7 @@ do
     local ProgramState = require("lua/game/program_state")
     local q   = CustomerQueue.new(1, ProgramState.new("fryer"))
     local cfg = q:next()
-    assert(cfg.kind == "restock", "CustomerQueue.new(1)'s single slot should be the restock merchant")
+    assert(cfg.kind == "restock", "CustomerQueue.new(1)'s first slot should be the restock merchant")
 
     local target_x, exit_x, y = 500, 100, 200
     local c = Customer.new(target_x, exit_x, y)
@@ -253,7 +253,46 @@ do
         "every stock item should actually land in the panel, got " .. #items .. " of " .. total_qty
             .. " (place_first_fit silently drops anything that doesn't fit)")
 
-    print("PASS: customer: the real merchant stock list fully fits in the merchant panel, nothing silently dropped")
+    -- After shrink-to-fit, panel rows ≤ MERCHANT_PANEL_ROWS and ≥ 4.
+    assert(c.panel.rows >= 4,
+        "restock panel rows must be at least 4 after shrink, got " .. c.panel.rows)
+    assert(c.panel.rows <= config.MERCHANT_PANEL_ROWS,
+        "restock panel rows must not exceed MERCHANT_PANEL_ROWS, got " .. c.panel.rows)
+
+    print("PASS: customer: the real restock stock list fully fits in the merchant panel, nothing silently dropped")
+end
+
+-- Test 4c: restock panel shrinks to fit content with a minimum of 4 rows.
+do
+    local config = require("lua/game/config")
+    local target_x, exit_x, y = 500, 100, 200
+
+    -- Empty stock: panel should clamp to minimum 4 rows.
+    local c = Customer.new(target_x, exit_x, y)
+    c:show({ kind = "restock", stock = {} })
+    assert(c.panel.rows == 4,
+        "empty restock panel should have 4 rows (minimum), got " .. c.panel.rows)
+
+    -- 3 items on an 8-col panel: all fit on row 0, so rows needed = 1 → clamped to 4.
+    local c2 = Customer.new(target_x, exit_x, y)
+    c2:show({ kind = "restock", stock = {
+        { type_id = "raw_chicken", quantity = 3 },
+    }})
+    assert(c2.panel.rows == 4,
+        "3-item restock panel (fits in 1 row) should have 4 rows (minimum), got " .. c2.panel.rows)
+
+    -- Enough items to exceed the minimum: fill more than 4 rows.
+    -- 8 cols × 5 rows = 40 cells; 41 items → row 5 is occupied → rows = 6 > 4.
+    local big_stock = {}
+    for _ = 1, 41 do big_stock[#big_stock + 1] = { type_id = "raw_chicken", quantity = 1 } end
+    local c3 = Customer.new(target_x, exit_x, y)
+    c3:show({ kind = "restock", stock = big_stock })
+    assert(c3.panel.rows > 4,
+        "41-item restock panel should exceed 4 rows, got " .. c3.panel.rows)
+    assert(c3.panel.rows <= config.MERCHANT_PANEL_ROWS,
+        "restock panel rows must not exceed MERCHANT_PANEL_ROWS, got " .. c3.panel.rows)
+
+    print("PASS: customer: restock panel shrinks to fit content with minimum 4 rows")
 end
 
 -- Test 5: show() with cfg.kind omitted (a normal order-customer config) now

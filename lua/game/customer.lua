@@ -29,6 +29,7 @@ local CW = 288 -- 72 px sprite drawn at 4x
 local CH = 288 -- 72 px sprite drawn at 4x
 
 local REVEAL_SPEED = 40 -- characters per second
+local MIN_RESTOCK_ROWS = 4
 local PAD          = 10
 local MIN_BOX_W    = 100
 local MAX_BOX_W    = 320
@@ -124,6 +125,17 @@ function Customer:show(cfg)
                 place_first_fit(self.panel, Item.new(entry.type_id))
             end
         end
+        -- Shrink the panel to its actual content, minimum MIN_RESTOCK_ROWS.
+        local max_row = -1
+        for _, it in ipairs(self.panel._items) do
+            local fh = 0
+            for _, c in ipairs(it:footprint()) do
+                if c[2] > fh then fh = c[2] end
+            end
+            local bottom = it.cell_row + fh
+            if bottom > max_row then max_row = bottom end
+        end
+        self.panel.rows = math.max(MIN_RESTOCK_ROWS, max_row + 1)
     elseif self.kind == "program" then
         self.type_id = "merchant"
         self.panel   = Grid.new(config.MERCHANT_PANEL_COLS, config.MERCHANT_PANEL_ROWS, config.U, 0, 0)
