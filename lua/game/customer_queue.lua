@@ -5,6 +5,7 @@
 -- On even days a program merchant also appears (different random slot).
 -- Remaining slots are rule-based food orders from OrderGen.
 
+local config       = require("lua/game/config")
 local RestockGen   = require("lua/game/restock_gen")
 local MerchantGen  = require("lua/game/merchant_gen")
 local OrderGen     = require("lua/game/order_gen")
@@ -18,7 +19,7 @@ local function make_restock_cfg(program_state)
         name       = "Restock Merchant",
         messages   = { "Fresh supplies — help yourself!" },
         stock      = RestockGen.stock(program_state),
-        walk_speed = 80,
+        walk_speed = config.WALK_SPEED,
     }
 end
 
