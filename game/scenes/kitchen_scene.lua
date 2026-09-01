@@ -518,10 +518,14 @@ function KitchenScene:mouse_pressed(x, y)
                 self.day_state:record_dismiss()
             end
             if panel.should_serve then
-                local served_item = panel.item.panel:items()[1]
-                panel.item.panel:remove(served_item)
+                local panel_items = panel.item.panel:items()
+                local type_ids = {}
+                for _, it in ipairs(panel_items) do
+                    type_ids[#type_ids + 1] = it.type_id
+                    panel.item.panel:remove(it)
+                end
                 self.customer:serve()
-                self.day_state:record_serve({ served_item.type_id }, 10)
+                self.day_state:record_serve(type_ids, self.customer.payout)
             end
             if panel.should_skip then
                 local items = {}

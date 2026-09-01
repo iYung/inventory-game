@@ -56,7 +56,7 @@ Tasks are ordered by dependency — each one builds on the last.
 
 ### UI — order panel
 
-- [ ] Task 10 — `game/scenes/kitchen_scene.lua` — Update the order panel to 4×4. Above the grid, render the rule list: one row per rule showing a human-readable description and a live green/red indicator. Recalculate pass/fail for all rules on every drag event. `no_more` rule shows amber when at the limit, red when exceeded. Display the order's payout amount. Update Serve button logic: enable only when all rules pass AND panel has ≥ 1 item. Update the serve call: pass `items` (list of type_ids in panel) and `payout` (from order config) to `DayState:record_serve`. Remove all `loved_tags`/`liked_tags`/`disliked_tags` rendering.
+- [x] Task 10 — `game/scenes/kitchen_scene.lua` — Update the order panel to 4×4. Above the grid, render the rule list: one row per rule showing a human-readable description and a live green/red indicator. Recalculate pass/fail for all rules on every drag event. `no_more` rule shows amber when at the limit, red when exceeded. Display the order's payout amount. Update Serve button logic: enable only when all rules pass AND panel has ≥ 1 item. Update the serve call: pass `items` (list of type_ids in panel) and `payout` (from order config) to `DayState:record_serve`. Remove all `loved_tags`/`liked_tags`/`disliked_tags` rendering.
 
 ---
 
