@@ -18,11 +18,11 @@ Tasks are ordered by dependency — each one builds on the last.
 
 ### Generators
 
-- [ ] Task 03 — `lua/game/restock_gen.lua` — Create `RestockGen`. Single function: `RestockGen.stock(program_state) → list of {type_id, quantity}`. Implementation: collect the union of `inputs` from all owned programs (from `program_defs`), randomly pick up to 5 distinct type_ids from that pool, assign each a random quantity (1–4). Returns the list. If pool has fewer than 5 items, take all.
+- [x] Task 03 — `lua/game/restock_gen.lua` — Create `RestockGen`. Single function: `RestockGen.stock(program_state) → list of {type_id, quantity}`. Implementation: collect the union of `inputs` from all owned programs (from `program_defs`), randomly pick up to 5 distinct type_ids from that pool, assign each a random quantity (1–4). Returns the list. If pool has fewer than 5 items, take all.
 
-- [ ] Task 04 — `lua/game/merchant_gen.lua` — Create `MerchantGen`. Single function: `MerchantGen.offer(program_state) → list of program def tables`. Step 1: collect programs not yet owned whose `requires` are all satisfied — pick 2–3 randomly. Step 2: collect already-owned programs — pick enough to fill up to 4 total slots. Returns the combined list (2–4 entries).
+- [x] Task 04 — `lua/game/merchant_gen.lua` — Create `MerchantGen`. Single function: `MerchantGen.offer(program_state) → list of program def tables`. Step 1: collect programs not yet owned whose `requires` are all satisfied — pick 2–3 randomly. Step 2: collect already-owned programs — pick enough to fill up to 4 total slots. Returns the combined list (2–4 entries).
 
-- [ ] Task 05 — `lua/game/order_gen.lua` — Create `OrderGen`. Single function: `OrderGen.generate(day, program_state) → order config table`. Implement item-count scaling (1–2 / 1–4 / 1–5 by day range), rule-count scaling (1–2 / 1–4), weighted rule-kind pool, rule generation loop (at_least / no_more / no / specific / all_unique), post-generation satisfiability validation (drop last rule and retry once if unsatisfiable). Returns `{ order_rules, order_item_count, payout }`. Payout = `item_count × 10 + (rule_count - 1) × 5`.
+- [x] Task 05 — `lua/game/order_gen.lua` — Create `OrderGen`. Single function: `OrderGen.generate(day, program_state) → order config table`. Implement item-count scaling (1–2 / 1–4 / 1–5 by day range), rule-count scaling (1–2 / 1–4), weighted rule-kind pool, rule generation loop (at_least / no_more / no / specific / all_unique), post-generation satisfiability validation (drop last rule and retry once if unsatisfiable). Returns `{ order_rules, order_item_count, payout }`. Payout = `item_count × 10 + (rule_count - 1) × 5`.
 
 ---
 
