@@ -66,6 +66,24 @@ end
 local function is_satisfiable(rules, count, output_list)
     if #output_list == 0 then return count == 0 end
 
+    -- Cross-rule contradiction check: group rules by tag.
+    local at_least_n = {}  -- tag -> n
+    local no_more_n  = {}  -- tag -> n
+    local has_no     = {}  -- tag -> bool
+    for _, rule in ipairs(rules) do
+        if rule.kind == "at_least" then
+            at_least_n[rule.tag] = rule.n
+        elseif rule.kind == "no_more" then
+            no_more_n[rule.tag] = rule.n
+        elseif rule.kind == "no" then
+            has_no[rule.tag] = true
+        end
+    end
+    for tag, n in pairs(at_least_n) do
+        if has_no[tag] then return false end
+        if no_more_n[tag] and n > no_more_n[tag] then return false end
+    end
+
     -- Build tag index: type_id -> set of tags.
     local item_tags = {}
     for _, type_id in ipairs(output_list) do
@@ -160,17 +178,17 @@ local function build_rules(rule_count, available_tags_set, output_list, item_cou
             end
 
         elseif kind == "at_least" or kind == "no" or kind == "no_more" then
-            -- Pick a tag not already constrained by the same kind.
+            -- Pick a tag not already constrained by any rule (prevents contradictions).
             local candidates = {}
             for _, tag in ipairs(tag_list) do
-                if constrained[tag] ~= kind then
+                if not constrained[tag] then
                     candidates[#candidates + 1] = tag
                 end
             end
             if #candidates > 0 then
                 shuffle(candidates)
                 local tag = candidates[1]
-                constrained[tag] = kind
+                constrained[tag] = true
                 if kind == "at_least" then
                     rules[#rules + 1] = { kind = "at_least", tag = tag, n = math.random(1, math.min(2, item_count)) }
                 elseif kind == "no_more" then

@@ -144,4 +144,42 @@ do
     print("PASS: order_gen: result always has required fields")
 end
 
+-- Test 7: no generated rule set contains same-tag contradictions.
+do
+    local ps = ProgramState.new("fryer")
+    -- Buy every program to maximise available tags and stress the generator.
+    local program_defs = require("lua/game/data/program_defs")
+    for id, _ in pairs(program_defs) do
+        ps:buy(id)
+    end
+
+    for day = 1, 15 do
+        for _ = 1, 100 do
+            local result = OrderGen.generate(day, ps)
+            local at_least_n = {}
+            local no_more_n  = {}
+            local has_no     = {}
+            for _, rule in ipairs(result.order_rules) do
+                if rule.kind == "at_least" then
+                    at_least_n[rule.tag] = rule.n
+                elseif rule.kind == "no_more" then
+                    no_more_n[rule.tag] = rule.n
+                elseif rule.kind == "no" then
+                    has_no[rule.tag] = true
+                end
+            end
+            for tag, n in pairs(at_least_n) do
+                assert(not has_no[tag],
+                    "day " .. day .. ": at_least + no on same tag '" .. tag .. "'")
+                if no_more_n[tag] then
+                    assert(n <= no_more_n[tag],
+                        "day " .. day .. ": at_least " .. n .. " + no_more " .. no_more_n[tag]
+                        .. " on tag '" .. tag .. "'")
+                end
+            end
+        end
+    end
+    print("PASS: order_gen: no contradictory rules on the same tag")
+end
+
 print("ALL TESTS PASSED")
