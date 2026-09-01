@@ -80,12 +80,12 @@ Tasks are ordered by dependency — each one builds on the last.
 
 ### Tests
 
-- [ ] Task 14 — `tests/test_program_state.lua` — Tests for `ProgramState`: starts with one program owned, `owns()` returns correct values, `buy()` marks owned, `available_tags()` returns union across owned programs, prerequisite graph not yet tested here (that's MerchantGen's job).
+- [x] Task 14 — `tests/test_program_state.lua` — Tests for `ProgramState`: starts with one program owned, `owns()` returns correct values, `buy()` marks owned, `available_tags()` returns union across owned programs, prerequisite graph not yet tested here (that's MerchantGen's job).
 
-- [ ] Task 15 — `tests/test_restock_gen.lua` — Tests for `RestockGen.stock`: returns ≤ 5 items, all returned type_ids are in the inputs pool of owned programs, quantities are in [1,4].
+- [x] Task 15 — `tests/test_restock_gen.lua` — Tests for `RestockGen.stock`: returns ≤ 5 items, all returned type_ids are in the inputs pool of owned programs, quantities are in [1,4].
 
-- [ ] Task 16 — `tests/test_merchant_gen.lua` — Tests for `MerchantGen.offer`: returns 2–4 entries, new-program entries all have prerequisites satisfied and are not yet owned, repurchase entries are all owned, total ≤ 4.
+- [x] Task 16 — `tests/test_merchant_gen.lua` — Tests for `MerchantGen.offer`: returns 2–4 entries, new-program entries all have prerequisites satisfied and are not yet owned, repurchase entries are all owned, total ≤ 4.
 
-- [ ] Task 17 — `tests/test_order_gen.lua` — Tests for `OrderGen.generate`: item count within correct range for given day, rule count within range, no rule references a tag outside `available_tags`, generated order is satisfiable (a valid item combination exists), payout formula correct.
+- [x] Task 17 — `tests/test_order_gen.lua` — Tests for `OrderGen.generate`: item count within correct range for given day, rule count within range, no rule references a tag outside `available_tags`, generated order is satisfiable (a valid item combination exists), payout formula correct.
 
-- [ ] Task 18 — `tests/test_customer_queue.lua` — Tests for reworked queue: total is 4–6, always contains exactly one restock merchant, even days contain exactly one program merchant, odd days contain no program merchant, all other slots are order customers.
+- [x] Task 18 — `tests/test_customer_queue.lua` — Tests for reworked queue: total is 4–6, always contains exactly one restock merchant, even days contain exactly one program merchant, odd days contain no program merchant, all other slots are order customers.
