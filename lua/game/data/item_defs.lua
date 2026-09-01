@@ -453,6 +453,27 @@ local item_defs = {
             },
         },
     },
+
+    book = {
+        -- Sentinel only – never instantiated directly.
+        name = "Book",
+    },
+
+    garden_book = {
+        name           = "Garden Book",
+        footprint      = { { 0, 0 } },
+        color          = { 0.30, 0.55, 0.22, 1 },
+        has_book_panel = true,
+        book_image     = "garden_book",
+    },
+
+    microwave_book = {
+        name           = "Microwave Book",
+        footprint      = { { 0, 0 } },
+        color          = { 0.50, 0.50, 0.60, 1 },
+        has_book_panel = true,
+        book_image     = "microwave_book",
+    },
 }
 
 return item_defs

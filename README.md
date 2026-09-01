@@ -36,6 +36,7 @@ cell spreads to its orthogonal empty neighbors so your supply grows
 automatically overnight.
 A **coffee machine** (2×2) has a 2×2 panel; load it with one water and one roasted coffee bean, then press **Run** (3 s) to brew Caffeine-and-Bitter-tagged black coffee. One coffee machine starts on the floor at grid cell (6,2).
 A **container** (2×2) has a 6×6 internal storage panel — purely passive, no actions. Use it to organize items on the floor grid. The starting container comes pre-stocked with two roasted coffee beans so the coffee workflow is accessible from day one.
+**Books** are reference items that open an image panel when double-clicked or right-clicked (no grid inventory). **Garden Book** is an extra purchasable from the Garden program merchant; **Microwave Book** is an extra from the Pump & Microwave program merchant.
 A **barn** (3×3) has a 6×6 panel for housing cows — for every 2 cows inside,
 one new cow is born overnight (cows are never consumed). A **milking center**
 (3×3) has a 4×3 panel; place cows inside and every night it produces 2 milk
@@ -63,6 +64,7 @@ lua/game/           Game logic — grid inventory, items, customers, day loop
   grid.lua           Generic cell grid: occupancy, placement/collision, drag, rotate
   item.lua           Base grid item: footprint/rotation, sprite, sub-inventory panel, timed actions
   item_panel.lua      Popup sub-inventory panel (panel grid + action buttons/progress)
+  book_panel.lua      Popup image panel for book items (title bar + content image, no grid)
   customer.lua        Walk-in/wait/talk/walk-out state machine + dialogue bubbles
   customer_queue.lua  Per-day customer list/spawning
   day_state.lua       Day number, customers served/total, currency
@@ -77,7 +79,8 @@ assets/images/
   items/              Per-item icon PNGs
 scripts/
   gen_scene_art.py   Regenerates all scene/character PNGs (requires Pillow): python3 scripts/gen_scene_art.py
-  gen_icons.py       Generates item icon PNGs
+  gen_icons.py       Generates item icon PNGs (32×32, 3-shade rule)
+  gen_book_pages.py  Generates book panel content images (160×120 placeholder art)
   item_graph.html    Dev tool — open in any browser to browse all items and their recipe/machine connections as an interactive graph
 conf.lua             Window config; suppresses graphics/audio modules under --headless
 main.lua             Entry point — canvas rendering with letterboxing, pixel-art filter, mouse/keyboard wiring
