@@ -81,13 +81,18 @@ function KitchenScene:on_enter()
     self.grid:place(Item.new("broccoli"),       5, 0)
     self.grid:place(Item.new("potato"),         6, 0)
     self.grid:place(Item.new("coffee_machine"), 6, 2)
+    self.grid:place(Item.new("microwave"),      6, 4)
 
     local container = Item.new("container")
     self.grid:place(container, 4, 4)
-    container.panel:place(Item.new("roasted_coffee_bean"), 0, 0)
-    container.panel:place(Item.new("roasted_coffee_bean"), 1, 0)
-    container.panel:place(Item.new("milking_center"),      2, 0)
-    container.panel:place(Item.new("cheese_cave"),         3, 0)
+    container.panel:place(Item.new("coffee_bean"),         0, 0)
+    container.panel:place(Item.new("coffee_bean"),         1, 0)
+    container.panel:place(Item.new("coffee_bean"),         2, 0)
+    container.panel:place(Item.new("roasted_coffee_bean"), 3, 0)
+    container.panel:place(Item.new("roasted_coffee_bean"), 4, 0)
+    container.panel:place(Item.new("water"),               5, 0)
+    container.panel:place(Item.new("milking_center"),      0, 1)  -- 3x3, occupies cols 0-2, rows 1-3
+    container.panel:place(Item.new("cheese_cave"),         4, 1)  -- 2x2, occupies cols 4-5, rows 1-2
 
     self.grid:place(Item.new("garden"),         0, 4)
 
