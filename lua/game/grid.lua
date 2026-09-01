@@ -9,6 +9,8 @@
 -- Grid does NOT know about love.mouse - mouse_pressed/moved/released take
 -- already-resolved world-space x/y (same space as origin_x/origin_y).
 
+local item_defs = require("lua/game/data/item_defs")
+
 local Grid = {}
 Grid.__index = Grid
 
@@ -376,7 +378,7 @@ end
 -- Draws the name+tag label for the hovered or dragged item on this grid.
 -- Must be called AFTER all other draw layers (panels, buttons, HUD) so the
 -- label is never occluded by UI drawn on top of Grid:draw().
-function Grid:draw_labels()
+function Grid:draw_labels(context)
     local item_to_label
     if self.dragging then
         item_to_label = self.dragging
@@ -393,8 +395,20 @@ function Grid:draw_labels()
         and table.concat(item_to_label.tags, ", ") or nil
     local nw = font:getWidth(item_to_label.label)
     local tw = tag_str and font:getWidth(tag_str) or 0
-    local box_w = math.max(nw, tw) + 6
-    local box_h = th * (tag_str and 2 or 1) + 4
+    local price_str = nil
+    local price_color = nil
+    local def = item_defs[item_to_label.type_id]
+    if context == "merchant" and def and def.buy_price then
+        price_str = "Buy: $" .. def.buy_price
+        price_color = { 0.95, 0.80, 0.25, 1 }
+    elseif def and def.sell_price then
+        price_str = "Sell: $" .. def.sell_price
+        price_color = { 0.40, 0.90, 0.45, 1 }
+    end
+    local pw = price_str and font:getWidth(price_str) or 0
+    local box_w = math.max(nw, tw, pw) + 6
+    local line_count = 1 + (tag_str and 1 or 0) + (price_str and 1 or 0)
+    local box_h = th * line_count + 4
     local lx = item_to_label.sprite.x + item_to_label.sprite.width / 2
     local ly = item_to_label.sprite.y - box_h - 3
 
@@ -405,6 +419,11 @@ function Grid:draw_labels()
     if tag_str then
         love.graphics.setColor(0.95, 0.85, 0.45, 0.95)
         love.graphics.print(tag_str, lx - tw / 2, ly + th + 2)
+    end
+    if price_str then
+        local price_line = 1 + (tag_str and 1 or 0)
+        love.graphics.setColor(price_color)
+        love.graphics.print(price_str, lx - pw / 2, ly + price_line * th + 2)
     end
     love.graphics.setColor(1, 1, 1, 1)
 end

@@ -134,9 +134,8 @@ function ItemPanel.new(item)
     self.should_serve    = false
     self.should_skip     = false
     self._dragging_panel = false
-    -- Program merchant: tracks which program ids have been paid for this visit,
-    -- and how many machines from each have been placed on the floor.
-    self._paid_programs    = {}
+    -- Program merchant: tracks how many machines from each program have been
+    -- placed on the floor (used for program completion tracking).
     self._machines_placed  = {}
 
     local panel = item.panel

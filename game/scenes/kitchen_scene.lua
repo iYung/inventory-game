@@ -237,21 +237,18 @@ function KitchenScene:_can_afford_merchant_item(x, y)
     local item = self.customer.panel:item_at(col, row)
     if not item then return true end
 
+    local def = item_defs[item.type_id]
+    local price = (def and def.buy_price) or config.RESTOCK_ITEM_COST
+
     if self.customer.kind == "restock" then
-        return self.day_state.currency >= config.RESTOCK_ITEM_COST
+        return self.day_state.currency >= price
     elseif self.customer.kind == "program" then
         if item.is_extra then
-            return self.day_state.currency >= config.RESTOCK_ITEM_COST
+            return self.day_state.currency >= price
         elseif item.program_id then
             local prog_id = item.program_id
             if self.program_state:owns(prog_id) then return true end
-            local src_panel = self:_panel_for(self.customer)
-            if src_panel and src_panel._paid_programs[prog_id] then return true end
-            for _, p in ipairs(self.customer.offer or {}) do
-                if p.id == prog_id then
-                    return self.day_state.currency >= p.cost
-                end
-            end
+            return self.day_state.currency >= price
         end
     end
     return true
@@ -713,7 +710,8 @@ function KitchenScene:mouse_released(x, y)
         if hover == self.grid then
             local src_panel = self:_open_panel_for_grid(owner)
             if src_panel and src_panel.item.kind == "restock" then
-                local cost = config.RESTOCK_ITEM_COST
+                local def = item_defs[item.type_id]
+                local cost = (def and def.buy_price) or config.RESTOCK_ITEM_COST
                 if self.day_state.currency < cost then
                     owner:mouse_released(x, y)  -- snap back
                     return
@@ -721,8 +719,8 @@ function KitchenScene:mouse_released(x, y)
                 self.day_state.currency = self.day_state.currency - cost
             elseif src_panel and src_panel.item.kind == "program" then
                 if item.is_extra then
-                    -- Extras: flat restock cost, always buyable, no completion tracking.
-                    local cost = config.RESTOCK_ITEM_COST
+                    local def = item_defs[item.type_id]
+                    local cost = (def and def.buy_price) or config.RESTOCK_ITEM_COST
                     if self.day_state.currency < cost then
                         owner:mouse_released(x, y)
                         return
@@ -735,15 +733,13 @@ function KitchenScene:mouse_released(x, y)
                         if p.id == prog_id then prog = p; break end
                     end
                     if prog and not self.program_state:owns(prog_id) then
-                        -- Charge full program cost on the first machine drag.
-                        if not src_panel._paid_programs[prog_id] then
-                            if self.day_state.currency < prog.cost then
-                                owner:mouse_released(x, y)
-                                return
-                            end
-                            self.day_state.currency = self.day_state.currency - prog.cost
-                            src_panel._paid_programs[prog_id] = true
+                        local def = item_defs[item.type_id]
+                        local cost = (def and def.buy_price) or config.RESTOCK_ITEM_COST
+                        if self.day_state.currency < cost then
+                            owner:mouse_released(x, y)
+                            return
                         end
+                        self.day_state.currency = self.day_state.currency - cost
                         -- Complete program when every machine has been placed.
                         src_panel._machines_placed[prog_id] = (src_panel._machines_placed[prog_id] or 0) + 1
                         if src_panel._machines_placed[prog_id] >= #prog.machines then
@@ -838,7 +834,14 @@ function KitchenScene:draw()
     -- Labels drawn last so they appear above every other layer: panels,
     -- buttons, HUD, and the dragged item sprite itself.
     for _, grid in ipairs(self:_all_grids()) do
-        grid:draw_labels()
+        local ctx = nil
+        if grid == self.customer.panel and
+           (self.customer.kind == "restock" or
+            self.customer.kind == "program" or
+            self.customer.kind == "merchant") then
+            ctx = "merchant"
+        end
+        grid:draw_labels(ctx)
     end
 
     self.camera:detach()
