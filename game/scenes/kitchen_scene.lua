@@ -20,6 +20,7 @@ local ItemPanel       = require("lua/game/item_panel")
 local Customer        = require("lua/game/customer")
 local CustomerQueue   = require("lua/game/customer_queue")
 local DayState        = require("lua/game/day_state")
+local ProgramState    = require("lua/game/program_state")
 
 local DOUBLE_CLICK_WINDOW = 0.35
 local SKIP_MESSAGE = "Maybe next time!"
@@ -180,9 +181,10 @@ function KitchenScene:on_enter()
     self._scene_bg = love.graphics.newImage("assets/images/scene/bg.png")
     self._scene_fg = love.graphics.newImage("assets/images/scene/fg.png")
 
-    self.day_state = DayState.new()
-    self.day_state:start_day(config.CUSTOMERS_PER_DAY)
-    self.queue = CustomerQueue.new(config.CUSTOMERS_PER_DAY)
+    self.day_state    = DayState.new()
+    self.program_state = ProgramState.new("fryer")
+    self.queue = CustomerQueue.new(self.day_state.day, self.program_state)
+    self.day_state:start_day(self.queue.total)
 
     -- Matches ../wip's convention: customers enter from off-screen on one
     -- side and walk toward target_x, then walk back out the way they came.
@@ -482,8 +484,8 @@ function KitchenScene:mouse_pressed(x, y)
     if self._showing_summary then
         if point_in_rect(x, y, SUMMARY_BTN) then
             self.day_state:advance_day()
-            self.day_state:start_day(config.CUSTOMERS_PER_DAY)
-            self.queue = CustomerQueue.new(config.CUSTOMERS_PER_DAY)
+            self.queue = CustomerQueue.new(self.day_state.day, self.program_state)
+            self.day_state:start_day(self.queue.total)
             self.customer:show(self.queue:next())
             for _, item in ipairs(self.grid:items()) do
                 item:refill_daily()
@@ -516,10 +518,14 @@ function KitchenScene:mouse_pressed(x, y)
                 self.day_state:record_dismiss()
             end
             if panel.should_serve then
-                local served_item = panel.item.panel:items()[1]
-                panel.item.panel:remove(served_item)
+                local panel_items = panel.item.panel:items()
+                local type_ids = {}
+                for _, it in ipairs(panel_items) do
+                    type_ids[#type_ids + 1] = it.type_id
+                    panel.item.panel:remove(it)
+                end
                 self.customer:serve()
-                self.day_state:record_serve(served_item.type_id)
+                self.day_state:record_serve(type_ids, self.customer.payout)
             end
             if panel.should_skip then
                 local items = {}
@@ -556,7 +562,7 @@ function KitchenScene:mouse_pressed(x, y)
         -- greeting - clicking their body opens their stock panel instead
         -- (or brings it to front if it's already open, e.g. buried behind
         -- another panel).
-        if self.customer.kind == "merchant" and self.customer:arrived() then
+        if (self.customer.kind == "restock" or self.customer.kind == "program") and self.customer:arrived() then
             self:_open_or_focus_panel(self.customer)
             return
         end

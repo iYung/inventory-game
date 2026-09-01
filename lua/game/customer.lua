@@ -84,17 +84,17 @@ function Customer.new(target_x, exit_x, y)
     self.panel           = nil
     self.type_id         = nil
 
-    self.name            = "Customer"
-    self.loved_tags      = {}
-    self.liked_tags      = {}
-    self.disliked_tags   = {}
-    self.messages        = {}
-    self.msg_index       = 1
-    self.done_talking    = true
-    self.dismissed       = false
-    self.after_messages  = {}
-    self.after_msg_index = 1
-    self.done_after      = true
+    self.name             = "Customer"
+    self.order_rules      = {}
+    self.order_item_count = 1
+    self.payout           = 10
+    self.messages         = {}
+    self.msg_index        = 1
+    self.done_talking     = true
+    self.dismissed        = false
+    self.after_messages   = {}
+    self.after_msg_index  = 1
+    self.done_after       = true
 
     self.reveal_index = 0
     self.reveal_t      = 0
@@ -114,22 +114,28 @@ function Customer:show(cfg)
 
     self.panel    = nil
     self.type_id  = nil
-    if self.kind == "merchant" then
+    if self.kind == "restock" then
         self.type_id = "merchant"
         self.panel   = Grid.new(config.MERCHANT_PANEL_COLS, config.MERCHANT_PANEL_ROWS, config.U, 0, 0)
-        for _, type_id in ipairs(cfg.stock or {}) do
-            place_first_fit(self.panel, Item.new(type_id))
+        for _, entry in ipairs(cfg.stock or {}) do
+            for _ = 1, (entry.quantity or 1) do
+                place_first_fit(self.panel, Item.new(entry.type_id))
+            end
         end
+    elseif self.kind == "program" then
+        self.type_id = "merchant"
+        self.panel   = Grid.new(config.MERCHANT_PANEL_COLS, config.MERCHANT_PANEL_ROWS, config.U, 0, 0)
+        -- panel contents handled by scene (Task 12)
     elseif self.kind == "order" then
         self.type_id = "order_customer"
         self.panel   = Grid.new(config.ORDER_PANEL_COLS, config.ORDER_PANEL_ROWS, config.U, 0, 0)
     end
 
-    self.name            = cfg.name or "Customer"
-    self.loved_tags      = cfg.loved_tags    or {}
-    self.liked_tags      = cfg.liked_tags    or {}
-    self.disliked_tags   = cfg.disliked_tags or {}
-    self.messages        = cfg.messages or {}
+    self.name             = cfg.name or "Customer"
+    self.order_rules      = cfg.order_rules      or {}
+    self.order_item_count = cfg.order_item_count  or 1
+    self.payout           = cfg.payout            or 10
+    self.messages         = cfg.messages or {}
     self.msg_index       = 1
     self.done_talking    = #self.messages == 0
     self.dismissed       = false
@@ -144,7 +150,7 @@ function Customer:show(cfg)
     self.speed = cfg.walk_speed or 80
     if cfg.color then self.sprite.color = cfg.color end
 
-    local icon_id = (self.kind == "merchant") and "merchant" or "customer"
+    local icon_id = (self.kind == "restock" or self.kind == "program") and "merchant" or "customer"
     local icon = load_icon(icon_id)
     if icon then
         self.sprite.image = icon

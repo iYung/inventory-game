@@ -29,11 +29,14 @@ function DayState:start_day(total)
     self.customers_served = 0
 end
 
--- Happy path: item matched the request. Awards currency.
-function DayState:record_serve(type_id)
+-- Happy path: items matched the order. Awards payout currency.
+-- items: list of type_id strings; payout: integer currency to add.
+function DayState:record_serve(items, payout)
     self.customers_served = self.customers_served + 1
-    self.currency         = self.currency + 10
-    self.sold_items[type_id] = (self.sold_items[type_id] or 0) + 1
+    self.currency         = self.currency + (payout or 10)
+    for _, type_id in ipairs(items or {}) do
+        self.sold_items[type_id] = (self.sold_items[type_id] or 0) + 1
+    end
 end
 
 -- Failure path: wrong item / send-away. No currency awarded.
@@ -47,8 +50,8 @@ end
 
 -- Bumps the day counter and resets customers_served to 0. Does NOT touch
 -- customers_total and does NOT construct a new CustomerQueue — the caller
--- must separately build a fresh CustomerQueue.new(config.CUSTOMERS_PER_DAY)
--- and call start_day(config.CUSTOMERS_PER_DAY) to fully set up the new day.
+-- must separately build a fresh CustomerQueue.new(total) and call
+-- start_day(total) to fully set up the new day.
 function DayState:advance_day()
     self.day              = self.day + 1
     self.customers_served = 0

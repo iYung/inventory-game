@@ -35,11 +35,16 @@ local PROGRESS_H    = 6
 local CLOSE_SIZE    = 22
 local CLOSE_GAP     = 6
 local TITLE_H       = 28
-local REMINDER_H    = 58  -- order-kind only: three trait-tier rows between title bar and grid
+local RULE_ROW_H    = 18  -- height of one rule row in the order reminder area
+local RULE_PAD      = 6   -- vertical padding above/below rules
 
 local COLOR_DISABLED = { 0.35, 0.35, 0.35, 1 }
 local COLOR_CLOSE    = { 0.75, 0.25, 0.25, 1 }
 local COLOR_TITLE    = { 0.20, 0.20, 0.26, 1 }
+local COLOR_PASS     = { 0.25, 0.85, 0.35, 1 }  -- green
+local COLOR_FAIL     = { 0.90, 0.25, 0.25, 1 }  -- red
+local COLOR_WARN     = { 0.95, 0.70, 0.15, 1 }  -- amber (no_more at limit)
+local COLOR_NEUTRAL  = { 0.60, 0.60, 0.65, 1 }
 -- "Leave" (merchant-only) button: same warning-red as the close button, kept
 -- as its own constant so its meaning is self-documenting where it's used
 -- below, even though the color values are identical today.
@@ -49,12 +54,68 @@ local function point_in_rect(x, y, r)
     return x >= r.x and x < r.x + r.w and y >= r.y and y < r.y + r.h
 end
 
--- Returns true iff item carries any tag from the given list.
-local function item_has_any_tag(item, tags)
-    for _, t in ipairs(tags) do
-        if Item.has_tag(item, t) then return true end
+-- Reminder-area height for an order panel: one row per rule + payout row.
+local function order_reminder_h(rule_count)
+    return RULE_PAD + (rule_count + 1) * RULE_ROW_H + RULE_PAD
+end
+
+-- ── Rule evaluation ───────────────────────────────────────────────────────────
+
+-- Count items in the panel that carry `tag`.
+local function count_with_tag(panel_items, tag)
+    local n = 0
+    for _, it in ipairs(panel_items) do
+        if Item.has_tag(it, tag) then n = n + 1 end
     end
-    return false
+    return n
+end
+
+-- Evaluate one rule against panel_items. Returns "pass", "fail", or "warn"
+-- (no_more rule exactly at the limit). Empty panel returns "fail" for all.
+local function eval_rule(rule, panel_items)
+    if rule.kind == "at_least" then
+        local n = count_with_tag(panel_items, rule.tag)
+        return n >= rule.n and "pass" or "fail"
+    elseif rule.kind == "no_more" then
+        local n = count_with_tag(panel_items, rule.tag)
+        if n > rule.n then return "fail" end
+        if n == rule.n then return "warn" end
+        return "pass"
+    elseif rule.kind == "no" then
+        local n = count_with_tag(panel_items, rule.tag)
+        return n == 0 and "pass" or "fail"
+    elseif rule.kind == "specific" then
+        for _, it in ipairs(panel_items) do
+            if it.type_id == rule.type_id then return "pass" end
+        end
+        return "fail"
+    elseif rule.kind == "all_unique" then
+        local seen = {}
+        for _, it in ipairs(panel_items) do
+            if seen[it.type_id] then return "fail" end
+            seen[it.type_id] = true
+        end
+        return "pass"
+    end
+    return "pass"
+end
+
+-- Human-readable description of a rule.
+local function rule_label(rule, item_defs_ref)
+    if rule.kind == "at_least" then
+        return "At least " .. rule.n .. " \xc3\x97 " .. rule.tag
+    elseif rule.kind == "no_more" then
+        return "No more than " .. rule.n .. " \xc3\x97 " .. rule.tag
+    elseif rule.kind == "no" then
+        return "No " .. rule.tag
+    elseif rule.kind == "specific" then
+        local def = item_defs_ref and item_defs_ref[rule.type_id]
+        local name = def and def.name or rule.type_id
+        return "Must include: " .. name
+    elseif rule.kind == "all_unique" then
+        return "All dishes unique"
+    end
+    return rule.kind
 end
 
 -- Construction ---------------------------------------------------------------
@@ -78,6 +139,12 @@ function ItemPanel.new(item)
     self.grid_w = panel.cols * panel.cell_size
     self.grid_h = panel.rows * panel.cell_size
 
+    -- Reminder height: dynamic for orders (scales with rule count).
+    self._reminder_h = 0
+    if item.kind == "order" then
+        self._reminder_h = order_reminder_h(#(item.order_rules or {}))
+    end
+
     -- Button row sizing: any def.actions plus one more slot for "Leave" when
     -- this is a merchant-kind item, or two more slots ("Serve" + "Skip")
     -- when this is an order-kind item. Neither "Leave" nor "Serve"/"Skip"
@@ -87,7 +154,7 @@ function ItemPanel.new(item)
     -- simple branch is fine.
     local actions = (self.def and self.def.actions) or {}
     local extra_buttons = 0
-    if item.kind == "merchant" then
+    if item.kind == "merchant" or item.kind == "restock" or item.kind == "program" then
         extra_buttons = 1
     elseif item.kind == "order" then
         extra_buttons = 2
@@ -102,10 +169,7 @@ function ItemPanel.new(item)
     -- title_min_bg_w is a full bg_w: 8px left pad + text + gap + close + right gap
     local title_min_bg_w = 8 + title_text_w + CLOSE_GAP + CLOSE_SIZE + CLOSE_GAP
     self.bg_w = math.max(self.grid_w + MARGIN * 2, self._button_total_w + MARGIN * 2, title_min_bg_w)
-    self.bg_h = TITLE_H + MARGIN + self.grid_h + BUTTON_GAP + BUTTON_H + MARGIN
-    if item.kind == "order" then
-        self.bg_h = self.bg_h + REMINDER_H
-    end
+    self.bg_h = TITLE_H + MARGIN + self._reminder_h + self.grid_h + BUTTON_GAP + BUTTON_H + MARGIN
 
     -- Default position: centered horizontally, sitting just above the
     -- split line so it doesn't overlap the main floor grid.
@@ -133,10 +197,7 @@ function ItemPanel:_layout(bg_x, bg_y)
     }
 
     self.grid_x = bg_x + (self.bg_w - self.grid_w) / 2
-    self.grid_y = bg_y + TITLE_H + MARGIN
-    if self.item.kind == "order" then
-        self.grid_y = self.grid_y + REMINDER_H
-    end
+    self.grid_y = bg_y + TITLE_H + MARGIN + self._reminder_h
 
     -- Reposition the item's real panel grid to this screen location; see
     -- module comment above.
@@ -159,7 +220,7 @@ function ItemPanel:_layout(bg_x, bg_y)
     -- NOT a def.actions entry - there's no action def to look it up by, it's
     -- purely an ItemPanel-level button for merchant-kind items. "Serve" and
     -- "Skip" are the order-kind equivalent, occupying the next two slots.
-    if self.item.kind == "merchant" then
+    if self.item.kind == "merchant" or self.item.kind == "restock" or self.item.kind == "program" then
         local bx = start_x + slot * (BUTTON_W + BUTTON_GAP)
         self.buttons["Leave"] = { x = bx, y = by, w = BUTTON_W, h = BUTTON_H }
         slot = slot + 1
@@ -228,15 +289,17 @@ function ItemPanel:is_action_enabled(name)
     return #Item.matching_recipes(action, self.item.panel) > 0
 end
 
--- Whether "Serve" is currently clickable: order-kind only, exactly one item
--- sitting in the panel, and that item must have at least one tag (i.e. it is
--- cooked/processed food). Containers and raw ingredients carry no tags, so
--- they never enable Serve.
+-- Whether "Serve" is currently clickable: order-kind only, panel has ≥ 1 item
+-- and every rule passes (no rule in "fail" state; "warn" is acceptable for
+-- no_more since the item is at the limit but not exceeding it).
 function ItemPanel:_serve_enabled()
     if self.item.kind ~= "order" then return false end
     local panel_items = self.item.panel:items()
-    if #panel_items ~= 1 then return false end
-    return #panel_items[1].tags > 0
+    if #panel_items < 1 then return false end
+    for _, rule in ipairs(self.item.order_rules or {}) do
+        if eval_rule(rule, panel_items) == "fail" then return false end
+    end
+    return true
 end
 
 -- Input forwarding ------------------------------------------------------
@@ -370,43 +433,34 @@ function ItemPanel:draw(skip_dragging)
     love.graphics.setColor(colors.button_text or { 1, 1, 1, 1 })
     love.graphics.print((self.def and self.def.name) or self.item.type_id, tb.x + 8, tb.y + 6)
 
-    if self.item.kind == "order" then
-        -- Three trait-tier rows. When exactly one item is in the panel,
-        -- highlight tiers whose tags the food matches; dim when no match;
-        -- neutral gray when the panel is empty.
-        local font_h   = love.graphics.getFont():getHeight()
-        local row_gap  = (REMINDER_H - font_h * 3) / 4
-        local base_y   = tb.y + TITLE_H + row_gap
-
+    if self.item.kind == "order" and self._reminder_h > 0 then
         local panel_items = self.item.panel:items()
-        local food        = (#panel_items == 1) and panel_items[1] or nil
+        local rules       = self.item.order_rules or {}
+        local base_y      = tb.y + TITLE_H + RULE_PAD
 
-        local COLOR_NEUTRAL  = { 0.60, 0.60, 0.65, 1 }
-        local COLOR_LOVED    = { 1.00, 0.85, 0.20, 1 }  -- gold
-        local COLOR_LIKED    = { 0.30, 0.85, 0.40, 1 }  -- green
-        local COLOR_DISLIKED = { 0.90, 0.30, 0.30, 1 }  -- red
-        local COLOR_DIM      = { 0.35, 0.35, 0.38, 1 }
-
-        local tiers = {
-            { label = "\xe2\x99\xa5 Loved",   tags = self.item.loved_tags,    hit = COLOR_LOVED,    miss = COLOR_DIM },
-            { label = "\xe2\x9c\x93 Liked",   tags = self.item.liked_tags,    hit = COLOR_LIKED,    miss = COLOR_DIM },
-            { label = "\xe2\x9c\x97 Disliked", tags = self.item.disliked_tags, hit = COLOR_DISLIKED, miss = COLOR_DIM },
-        }
-
-        for i, tier in ipairs(tiers) do
-            local tag_text = #tier.tags > 0 and table.concat(tier.tags, ", ") or "(none)"
-            local row_y    = base_y + (i - 1) * (font_h + row_gap)
+        for i, rule in ipairs(rules) do
+            local status = eval_rule(rule, panel_items)
             local color
-            if food == nil then
+            if #panel_items == 0 then
                 color = COLOR_NEUTRAL
-            elseif item_has_any_tag(food, tier.tags) then
-                color = tier.hit
+            elseif status == "pass" then
+                color = COLOR_PASS
+            elseif status == "warn" then
+                color = COLOR_WARN
             else
-                color = tier.miss
+                color = COLOR_FAIL
             end
+            local indicator = (status == "pass") and "\xe2\x9c\x93 " or "\xe2\x9c\x97 "
+            if status == "warn" then indicator = "\xe2\x97\x90 " end
+            if #panel_items == 0 then indicator = "  " end
             love.graphics.setColor(color)
-            love.graphics.print(tier.label .. ": " .. tag_text, self.bg.x + MARGIN, row_y)
+            love.graphics.print(indicator .. rule_label(rule, item_defs), self.bg.x + MARGIN, base_y + (i - 1) * RULE_ROW_H)
         end
+
+        -- Payout line
+        local payout_y = base_y + #rules * RULE_ROW_H
+        love.graphics.setColor(COLOR_NEUTRAL)
+        love.graphics.print("Payout: $" .. (self.item.payout or 10), self.bg.x + MARGIN, payout_y)
     end
 
     self.item.panel:draw(skip_dragging)
