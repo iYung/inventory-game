@@ -58,6 +58,8 @@ COLORS = {
     "milking_center":  (153, 140, 179),
     "cheese_cave":     (140, 107, 77),
     "omelette":         (230, 204, 102),
+    "garden_book":      (77,  140, 56),
+    "microwave_book":   (128, 128, 153),
 }
 
 
@@ -555,6 +557,46 @@ def gen_milking_center():
     save(img, "milking_center")
 
 
+def gen_garden_book():
+    img = new_img(); d = ImageDraw.Draw(img)
+    base, dk, lt = shades("garden_book")
+    # outer cover
+    d.rectangle([3, 7, 29, 26], fill=dk)
+    # left page
+    d.rectangle([4, 8, 15, 25], fill=lt)
+    # right page
+    d.rectangle([16, 8, 28, 25], fill=base)
+    # spine
+    d.rectangle([14, 7, 17, 26], fill=dk)
+    # text lines on left page
+    for y in [12, 15, 18, 21]:
+        d.line([(6, y), (13, y)], fill=dk, width=1)
+    # text lines on right page
+    for y in [12, 15, 18, 21]:
+        d.line([(19, y), (26, y)], fill=dk, width=1)
+    save(img, "garden_book")
+
+
+def gen_microwave_book():
+    img = new_img(); d = ImageDraw.Draw(img)
+    base, dk, lt = shades("microwave_book")
+    # outer cover
+    d.rectangle([3, 7, 29, 26], fill=dk)
+    # left page
+    d.rectangle([4, 8, 15, 25], fill=lt)
+    # right page
+    d.rectangle([16, 8, 28, 25], fill=base)
+    # spine
+    d.rectangle([14, 7, 17, 26], fill=dk)
+    # text lines on left page
+    for y in [12, 15, 18, 21]:
+        d.line([(6, y), (13, y)], fill=dk, width=1)
+    # text lines on right page
+    for y in [12, 15, 18, 21]:
+        d.line([(19, y), (26, y)], fill=dk, width=1)
+    save(img, "microwave_book")
+
+
 def gen_cheese_cave():
     img = new_img(); d = ImageDraw.Draw(img)
     base, dk, lt = shades("cheese_cave")
@@ -635,6 +677,7 @@ GENERATORS = [
     gen_customer, gen_merchant,
     gen_container,
     gen_milk, gen_cheese, gen_milking_center, gen_cheese_cave,
+    gen_garden_book, gen_microwave_book,
 ]
 
 if __name__ == "__main__":

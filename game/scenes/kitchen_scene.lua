@@ -17,6 +17,7 @@ local Grid           = require("lua/game/grid")
 local Item           = require("lua/game/item")
 local item_defs      = require("lua/game/data/item_defs")
 local ItemPanel       = require("lua/game/item_panel")
+local BookPanel       = require("lua/game/book_panel")
 local Customer        = require("lua/game/customer")
 local CustomerQueue   = require("lua/game/customer_queue")
 local DayState        = require("lua/game/day_state")
@@ -214,7 +215,9 @@ function KitchenScene:_open_or_focus_panel(item)
     if existing then
         self:_bring_to_front(existing)
     else
-        self:_open_panel(ItemPanel.new(item))
+        local def = item_defs[item.type_id]
+        local panel = (def and def.has_book_panel) and BookPanel.new(item) or ItemPanel.new(item)
+        self:_open_panel(panel)
     end
 end
 
@@ -231,7 +234,9 @@ end
 function KitchenScene:_all_grids()
     local grids = { self.grid }
     for _, panel in ipairs(self.panels) do
-        grids[#grids + 1] = panel.item.panel
+        if panel.item.panel then
+            grids[#grids + 1] = panel.item.panel
+        end
     end
     return grids
 end
@@ -241,7 +246,7 @@ end
 function KitchenScene:_dragging_grid()
     if self.grid.dragging then return self.grid end
     for _, panel in ipairs(self.panels) do
-        if panel.item.panel.dragging then return panel.item.panel end
+        if panel.item.panel and panel.item.panel.dragging then return panel.item.panel end
     end
     return nil
 end
@@ -355,7 +360,7 @@ function KitchenScene:_try_double_click_open(grid, x, y)
 
     if item then
         local def = item_defs[item.type_id]
-        if def and def.has_panel then
+        if def and (def.has_panel or def.has_book_panel) then
             if ancestor_processing(item) then
                 return false
             end
@@ -393,7 +398,7 @@ function KitchenScene:_open_container_at(grid, x, y)
     local item      = grid:item_at(col, row)
     if not item then return end
     local def = item_defs[item.type_id]
-    if not (def and def.has_panel) then return end
+    if not (def and (def.has_panel or def.has_book_panel)) then return end
     if ancestor_processing(item) then return end
     self:_open_or_focus_panel(item)
 end
