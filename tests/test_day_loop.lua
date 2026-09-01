@@ -25,7 +25,7 @@ do
     end
     assert(q1:next() == nil, "next() should return nil once exhausted")
     assert(not q1:has_next(), "has_next() should be false once exhausted")
-    assert(kinds["restock"] == 1, "day 1 queue should contain exactly one restock merchant")
+    assert(kinds["restock"] == nil, "day 1 queue should not contain a restock merchant")
     assert(kinds["program"] == nil, "day 1 queue should not contain a program merchant")
 
     -- Day 2: restock + program merchant (even day)

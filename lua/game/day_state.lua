@@ -18,6 +18,8 @@ function DayState.new()
     self.customers_total  = 0
     self.currency         = 0
     self.sold_items       = {}
+    self.seen_scripts     = {}
+    self.total_sold       = {}
 
     return self
 end
@@ -36,6 +38,7 @@ function DayState:record_serve(items, payout)
     self.currency         = self.currency + (payout or 10)
     for _, type_id in ipairs(items or {}) do
         self.sold_items[type_id] = (self.sold_items[type_id] or 0) + 1
+        self.total_sold[type_id] = (self.total_sold[type_id] or 0) + 1
     end
 end
 

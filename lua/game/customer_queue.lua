@@ -1,13 +1,15 @@
 -- lua/game/customer_queue.lua
 --
 -- Builds the ordered list of customer configs for one game day.
--- One restock merchant always appears (random slot).
+-- On day 1: no restock merchant; all slots are order customers (plus any scripted character).
+-- On day 2+: a restock merchant always appears first.
 -- On even days a program merchant also appears (different random slot).
 -- Remaining slots are rule-based food orders from OrderGen.
 
-local RestockGen   = require("lua/game/restock_gen")
-local MerchantGen  = require("lua/game/merchant_gen")
-local OrderGen     = require("lua/game/order_gen")
+local RestockGen        = require("lua/game/restock_gen")
+local MerchantGen       = require("lua/game/merchant_gen")
+local OrderGen          = require("lua/game/order_gen")
+local CHARACTER_SCRIPTS = require("lua/game/data/character_scripts")
 
 local CustomerQueue = {}
 CustomerQueue.__index = CustomerQueue
@@ -62,11 +64,40 @@ local function pick_slots(count, pool_size)
     return result
 end
 
--- CustomerQueue.new(day, program_state)
+-- Returns the first CHARACTER_SCRIPTS entry that qualifies given day_state,
+-- or nil if none do.
+local function find_scripted(day_state)
+    for _, entry in ipairs(CHARACTER_SCRIPTS) do
+        local key = entry.id .. ":" .. entry.chapter
+        if not day_state.seen_scripts[key] then
+            local prior_ok = true
+            for ch = 1, entry.chapter - 1 do
+                if not day_state.seen_scripts[entry.id .. ":" .. ch] then
+                    prior_ok = false
+                    break
+                end
+            end
+            if prior_ok then
+                local t = entry.trigger
+                local item_ok = true
+                if t.item_sold then
+                    item_ok = (day_state.total_sold[t.item_sold] or 0) >= (t.count or 1)
+                end
+                if item_ok then
+                    return entry
+                end
+            end
+        end
+    end
+    return nil
+end
+
+-- CustomerQueue.new(day, program_state [, day_state])
 -- day: current game day (integer, 1-based)
 -- program_state: a ProgramState instance
+-- day_state: optional DayState; used for scripted character trigger evaluation
 -- Returns a CustomerQueue with self.total set.
-function CustomerQueue.new(day, program_state)
+function CustomerQueue.new(day, program_state, day_state)
     local self = setmetatable({}, CustomerQueue)
 
     local lo, hi
@@ -81,9 +112,7 @@ function CustomerQueue.new(day, program_state)
     self.total  = total
     self._index = 0
 
-    -- Decide which slots are merchants.
-    -- Restock merchant is always first (slot 1).
-    -- Program merchant appears on even days at a random slot after the first.
+    local has_restock = (day > 1)
     local has_program = (day % 2 == 0)
     local program_slot = nil
     if has_program then
@@ -92,12 +121,41 @@ function CustomerQueue.new(day, program_state)
 
     self._configs = {}
     for i = 1, total do
-        if i == 1 then
+        if i == 1 and has_restock then
             self._configs[i] = make_restock_cfg(program_state)
         elseif i == program_slot then
             self._configs[i] = make_program_cfg(program_state)
         else
             self._configs[i] = make_order_cfg(day, program_state)
+        end
+    end
+
+    -- Scripted character injection
+    self.scripted_key      = nil
+    self.scripted_no_dismiss = false
+    if day_state then
+        local entry = find_scripted(day_state)
+        if entry then
+            local cfg = {
+                kind           = "scripted",
+                name           = entry.name,
+                color          = entry.color,
+                icon           = entry.icon,
+                no_dismiss     = entry.no_dismiss,
+                messages       = entry.messages,
+                after_messages = entry.after_messages,
+                walk_speed     = 80,
+            }
+            local insert_at
+            if entry.slot == "after_restock" then
+                insert_at = has_restock and 2 or 1
+            else
+                insert_at = math.random(1, #self._configs + 1)
+            end
+            table.insert(self._configs, insert_at, cfg)
+            self.total             = self.total + 1
+            self.scripted_key      = entry.id .. ":" .. entry.chapter
+            self.scripted_no_dismiss = entry.no_dismiss or false
         end
     end
 

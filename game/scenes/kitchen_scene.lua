@@ -97,8 +97,9 @@ function KitchenScene:on_enter()
 
     self.day_state    = DayState.new()
     self.program_state = ProgramState.new("fryer")
-    self.queue = CustomerQueue.new(self.day_state.day, self.program_state)
+    self.queue = CustomerQueue.new(self.day_state.day, self.program_state, self.day_state)
     self.day_state:start_day(self.queue.total)
+    self._script_cooldowns = {}
 
     -- Matches ../wip's convention: customers enter from off-screen on one
     -- side and walk toward target_x, then walk back out the way they came.
@@ -130,8 +131,14 @@ function KitchenScene:update(dt)
     local was_active = self.customer:active()
     self.customer:update(dt)
 
-    if was_active and not self.customer:active() and self.queue:has_next() then
-        self.customer:show(self.queue:next())
+    if was_active and not self.customer:active() then
+        if self.queue.scripted_key and not self.customer.dismissed then
+            self.day_state.seen_scripts[self.queue.scripted_key] = true
+            self.queue.scripted_key = nil
+        end
+        if self.queue:has_next() then
+            self.customer:show(self.queue:next())
+        end
     end
 end
 
@@ -450,7 +457,15 @@ function KitchenScene:mouse_pressed(x, y)
     if self._showing_summary then
         if point_in_rect(x, y, SUMMARY_BTN) then
             self.day_state:advance_day()
-            self.queue = CustomerQueue.new(self.day_state.day, self.program_state)
+            for key, days_left in pairs(self._script_cooldowns) do
+                local remaining = days_left - 1
+                if remaining <= 0 then
+                    self._script_cooldowns[key] = nil
+                else
+                    self._script_cooldowns[key] = remaining
+                end
+            end
+            self.queue = CustomerQueue.new(self.day_state.day, self.program_state, self.day_state)
             self.day_state:start_day(self.queue.total)
             self.customer:show(self.queue:next())
             for _, item in ipairs(self.grid:items()) do
@@ -484,8 +499,14 @@ function KitchenScene:mouse_pressed(x, y)
             -- together on the same click; check should_leave first since
             -- should_close is what actually removes the panel below.
             if panel.should_leave then
-                self.customer:dismiss()
-                self.day_state:record_dismiss()
+                if not (self.queue.scripted_no_dismiss and self.customer.kind == "scripted") then
+                    self.customer:dismiss()
+                    self.day_state:record_dismiss()
+                    if self.customer.kind == "scripted" and self.queue.scripted_key then
+                        self._script_cooldowns[self.queue.scripted_key] = 2
+                        self.queue.scripted_key = nil
+                    end
+                end
             end
             if panel.should_serve then
                 local panel_items = panel.item.panel:items()
@@ -534,6 +555,11 @@ function KitchenScene:mouse_pressed(x, y)
         -- another panel).
         if (self.customer.kind == "restock" or self.customer.kind == "program" or self.customer.kind == "merchant") and self.customer:arrived() then
             self:_open_or_focus_panel(self.customer)
+            return
+        end
+        if self.customer.kind == "scripted" and self.customer:arrived() and self.customer.done_talking then
+            self.customer:serve()
+            self.day_state:record_serve({}, 0)
             return
         end
         if self.customer.kind == "order" and self.customer:arrived() and self.customer.done_talking then

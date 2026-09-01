@@ -195,6 +195,10 @@ function Customer:show(cfg)
         for _, type_id in ipairs(cfg.stock or {}) do
             place_first_fit(self.panel, Item.new(type_id))
         end
+    elseif self.kind == "scripted" then
+        self.type_id = "scripted"
+        self.panel   = nil
+        self.payout  = 0
     elseif self.kind == "order" then
         self.type_id = "order_customer"
         self.panel   = Grid.new(config.ORDER_PANEL_COLS, config.ORDER_PANEL_ROWS, config.U, 0, 0)
@@ -222,11 +226,22 @@ function Customer:show(cfg)
     self.speed = cfg.walk_speed or 80
     if cfg.color then self.sprite.color = cfg.color end
 
-    local icon_id = (self.kind == "restock" or self.kind == "program") and "merchant" or "customer"
+    local icon_id
+    if self.kind == "restock" or self.kind == "program" then
+        icon_id = "merchant"
+    elseif self.kind == "scripted" then
+        icon_id = cfg.icon or "customer"
+    else
+        icon_id = "customer"
+    end
     local icon = load_icon(icon_id)
     if icon then
         self.sprite.image = icon
-        self.sprite.color = { 1, 1, 1, 1 }
+        -- Scripted customers keep their cfg.color; others reset to white so the
+        -- sprite image renders without a tint.
+        if self.kind ~= "scripted" then
+            self.sprite.color = { 1, 1, 1, 1 }
+        end
     end
 
     self.x = self.exit_x
