@@ -519,7 +519,7 @@ function KitchenScene:mouse_pressed(x, y)
                 local served_item = panel.item.panel:items()[1]
                 panel.item.panel:remove(served_item)
                 self.customer:serve()
-                self.day_state:record_serve(served_item.type_id)
+                self.day_state:record_serve({ served_item.type_id }, 10)
             end
             if panel.should_skip then
                 local items = {}

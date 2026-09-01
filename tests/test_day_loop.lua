@@ -246,12 +246,12 @@ do
     assert(ds.customers_served == 0, "start_day should reset customers_served")
     assert(not ds:day_complete(), "day_complete() should be false right after start_day(3)")
 
-    ds:record_serve("baked_chicken")
+    ds:record_serve({"baked_chicken"}, 10)
     assert(ds.customers_served == 1, "record_serve should increment customers_served")
     assert(ds.currency == 10, "record_serve should award currency")
     assert(not ds:day_complete(), "day_complete() should still be false after 1 of 3")
 
-    ds:record_serve("baked_chicken")
+    ds:record_serve({"baked_chicken"}, 10)
     assert(ds.customers_served == 2, "record_serve should increment customers_served again")
     assert(ds.currency == 20, "currency should reflect only the 2 serves so far")
     assert(not ds:day_complete(), "day_complete() should still be false after 2 of 3")
@@ -281,9 +281,9 @@ do
     assert(type(ds.sold_items) == "table", "sold_items should be initialized as a table")
 
     ds:start_day(4)
-    ds:record_serve("baked_chicken")
-    ds:record_serve("baked_chicken")
-    ds:record_serve("steamed_broccoli")
+    ds:record_serve({"baked_chicken"}, 10)
+    ds:record_serve({"baked_chicken"}, 10)
+    ds:record_serve({"steamed_broccoli"}, 10)
     ds:record_dismiss()
 
     assert(ds.sold_items["baked_chicken"] == 2, "sold_items should tally baked_chicken × 2")

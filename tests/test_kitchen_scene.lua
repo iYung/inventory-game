@@ -796,7 +796,7 @@ do
     assert(not scene10.queue:has_next(), "sanity check: queue should be fully drained")
 
     scene10.customer:serve() -- enters talking_after (after_messages present)
-    scene10.day_state:record_serve("baked_chicken")
+    scene10.day_state:record_serve({"baked_chicken"}, 10)
 
     assert(scene10.day_state:day_complete(), "sanity check: day should now be complete by count")
     assert(scene10.customer:active(), "sanity check: the served customer should still be on stage (talking_after)")

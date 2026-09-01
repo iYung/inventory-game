@@ -29,11 +29,14 @@ function DayState:start_day(total)
     self.customers_served = 0
 end
 
--- Happy path: item matched the request. Awards currency.
-function DayState:record_serve(type_id)
+-- Happy path: items matched the order. Awards payout currency.
+-- items: list of type_id strings; payout: integer currency to add.
+function DayState:record_serve(items, payout)
     self.customers_served = self.customers_served + 1
-    self.currency         = self.currency + 10
-    self.sold_items[type_id] = (self.sold_items[type_id] or 0) + 1
+    self.currency         = self.currency + (payout or 10)
+    for _, type_id in ipairs(items or {}) do
+        self.sold_items[type_id] = (self.sold_items[type_id] or 0) + 1
+    end
 end
 
 -- Failure path: wrong item / send-away. No currency awarded.
