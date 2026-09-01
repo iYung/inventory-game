@@ -70,7 +70,7 @@ Tasks are ordered by dependency — each one builds on the last.
 
 ### Starting layout
 
-- [ ] Task 13 — `game/scenes/kitchen_scene.lua` — Update the starting layout to only place the `fryer` program's machines (remove pump, microwave, coffee machine, container, and other non-fryer machines from the initial grid). Place fryer + its starter stock. `ProgramState.new("fryer")` is constructed here and passed to `CustomerQueue` and order panel logic.
+- [x] Task 13 — `game/scenes/kitchen_scene.lua` — Update the starting layout to only place the `fryer` program's machines (remove pump, microwave, coffee machine, container, and other non-fryer machines from the initial grid). Place fryer + its starter stock. `ProgramState.new("fryer")` is constructed here and passed to `CustomerQueue` and order panel logic.
 
 ---
 

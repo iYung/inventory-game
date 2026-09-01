@@ -58,125 +58,23 @@ function KitchenScene:on_enter()
         config.GRID_ORIGIN_X, config.GRID_ORIGIN_Y
     )
 
-    -- Starting layout: one microwave (2x2, top-left area) and three raw meat
-    -- items (1x1) placed to its right. Manually verified non-overlapping:
-    -- microwave occupies (0,0)-(1,1); meat sits at (2,0), (3,0), (4,0).
-    local microwave = Item.new("microwave")
-    assert(self.grid:can_place(microwave, 0, 0), "microwave starting cell should be free")
-    self.grid:place(microwave, 0, 0)
-
-    local meat_cells = { { 2, 0 }, { 3, 0 }, { 4, 0 } }
-    for _, cell in ipairs(meat_cells) do
-        local meat = Item.new("raw_chicken")
-        assert(self.grid:can_place(meat, cell[1], cell[2]), "raw_chicken starting cell should be free")
-        self.grid:place(meat, cell[1], cell[2])
-    end
-
-    -- A couple of raw broccoli too, so the Cook recipe that produces
-    -- steamed_broccoli / the Healthy tag is actually reachable from the
-    -- starting floor layout, not just via the merchant. (2,1)/(3,1) sit
-    -- just below the meat row - clear of the microwave's (0,0)-(1,1)
-    -- footprint and the meat at (2,0)/(3,0)/(4,0).
-    local broccoli_cells = { { 2, 1 }, { 3, 1 } }
-    for _, cell in ipairs(broccoli_cells) do
-        local broccoli = Item.new("broccoli")
-        assert(self.grid:can_place(broccoli, cell[1], cell[2]), "broccoli starting cell should be free")
-        self.grid:place(broccoli, cell[1], cell[2])
-    end
-
-    -- A fryer (2x2) and a pot (2x1) so both new cooking methods are
-    -- reachable from the starting floor, plus a couple of raw potatoes to
-    -- feed them. Cells chosen clear of the microwave (0,0)-(1,1), meat
-    -- (2,0)/(3,0)/(4,0), and broccoli (2,1)/(3,1) footprints above, and of
-    -- (5,0)/(5,3) which tests/test_kitchen_scene.lua relies on being free
-    -- on the starting floor.
+    -- Starting layout: fryer program only. The player unlocks everything else
+    -- through the program merchant system.
+    -- Fryer (2x2) at (0,0); starter ingredients from the fryer's stock.
     local fryer = Item.new("fryer")
-    assert(self.grid:can_place(fryer, 6, 0), "fryer starting cell should be free")
-    self.grid:place(fryer, 6, 0)
+    self.grid:place(fryer, 0, 0)
 
-    local pot = Item.new("pot")
-    assert(self.grid:can_place(pot, 8, 0), "pot starting cell should be free")
-    self.grid:place(pot, 8, 0)
-
-    -- Pump (1x2) at (8,1): sits directly below the pot so water is easy to
-    -- drag into it. Footprint occupies (8,1)-(8,2), clear of pot (8,0)-(9,0).
-    local pump = Item.new("pump")
-    assert(self.grid:can_place(pump, 8, 1), "pump starting cell should be free")
-    self.grid:place(pump, 8, 1)
-
-    local potato_cells = { { 2, 2 }, { 3, 2 } }
-    for _, cell in ipairs(potato_cells) do
-        local potato = Item.new("potato")
-        assert(self.grid:can_place(potato, cell[1], cell[2]), "potato starting cell should be free")
-        self.grid:place(potato, cell[1], cell[2])
+    -- Starter stock: 2 raw chicken, 2 potato, 2 onion (fryer program stock).
+    local starter = { "raw_chicken", "raw_chicken", "potato", "potato", "onion", "onion" }
+    local col, row = 3, 0
+    for _, type_id in ipairs(starter) do
+        local it = Item.new(type_id)
+        if self.grid:can_place(it, col, row) then
+            self.grid:place(it, col, row)
+            col = col + 1
+            if col >= config.GRID_COLS then col = 0; row = row + 1 end
+        end
     end
-
-    -- Two gardens (3x3 each) in the bottom band (rows 6–8, added when GRID_ROWS
-    -- was expanded to 9). Both start empty; the player seeds them with onions
-    -- and broccoli to trigger overnight spreading.
-    local garden1 = Item.new("garden")
-    assert(self.grid:can_place(garden1, 0, 6), "garden1 starting cell should be free")
-    self.grid:place(garden1, 0, 6)
-
-    local garden2 = Item.new("garden")
-    assert(self.grid:can_place(garden2, 3, 6), "garden2 starting cell should be free")
-    self.grid:place(garden2, 3, 6)
-
-    -- Animal production chain (rows 4-5):
-    -- coop (2x2) at (2,4)-(3,5); incubator (1x1) at (4,4);
-    -- cow (2x2) at (5,4)-(6,5); meat_machine (3x2) at (7,4)-(9,5);
-    -- two starting chickens at (0,5) and (1,5).
-    -- barn (3x3) at (6,6)-(8,8); 2 starting cows inside.
-    local coop = Item.new("coop")
-    assert(self.grid:can_place(coop, 2, 4), "coop starting cell should be free")
-    self.grid:place(coop, 2, 4)
-
-    local incubator = Item.new("incubator")
-    assert(self.grid:can_place(incubator, 4, 4), "incubator starting cell should be free")
-    self.grid:place(incubator, 4, 4)
-
-    local cow = Item.new("cow")
-    assert(self.grid:can_place(cow, 5, 4), "cow starting cell should be free")
-    self.grid:place(cow, 5, 4)
-
-    local meat_machine = Item.new("meat_machine")
-    assert(self.grid:can_place(meat_machine, 7, 4), "meat_machine starting cell should be free")
-    self.grid:place(meat_machine, 7, 4)
-
-    local chicken_cells = { { 0, 5 }, { 1, 5 } }
-    for _, cell in ipairs(chicken_cells) do
-        local chicken = Item.new("chicken")
-        assert(self.grid:can_place(chicken, cell[1], cell[2]), "chicken starting cell should be free")
-        self.grid:place(chicken, cell[1], cell[2])
-    end
-
-    local barn = Item.new("barn")
-    assert(self.grid:can_place(barn, 6, 6), "barn starting cell should be free")
-    self.grid:place(barn, 6, 6)
-    barn.panel:place(Item.new("cow"), 0, 0)
-    barn.panel:place(Item.new("cow"), 2, 0)
-
-    -- Container (2x2) at (0,3)-(1,4): holds the milking center and cheese cave,
-    -- plus two roasted coffee beans pre-stocked so the coffee workflow is
-    -- reachable immediately. Panel layout (6x6):
-    --   milking_center (3x3) at (0,0)-(2,2)
-    --   cheese_cave    (2x2) at (3,0)-(4,1)
-    --   roasted beans  (1x1) at (5,0) and (5,1)
-    local container = Item.new("container")
-    assert(self.grid:can_place(container, 0, 3), "container starting cell should be free")
-    self.grid:place(container, 0, 3)
-    container.panel:place(Item.new("milking_center"), 0, 0)
-    container.panel:place(Item.new("cheese_cave"), 3, 0)
-    container.panel:place(Item.new("roasted_coffee_bean"), 5, 0)
-    container.panel:place(Item.new("roasted_coffee_bean"), 5, 1)
-
-    -- Coffee machine (2x2) at (6,2)-(7,3): brews black coffee from water +
-    -- roasted coffee beans. Sits directly below the fryer (6,0)-(7,1), clear
-    -- of the test-reserved cells (5,0) and (5,3) and the drop targets used by
-    -- test_kitchen_scene.lua.
-    local coffee_machine = Item.new("coffee_machine")
-    assert(self.grid:can_place(coffee_machine, 6, 2), "coffee_machine starting cell should be free")
-    self.grid:place(coffee_machine, 6, 2)
 
     self._scene_bg = love.graphics.newImage("assets/images/scene/bg.png")
     self._scene_fg = love.graphics.newImage("assets/images/scene/fg.png")
