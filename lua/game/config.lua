@@ -11,13 +11,14 @@ config.GRID_ROWS     = 9
 config.GRID_ORIGIN_X = (config.SCREEN_W - config.GRID_COLS * config.U) / 2
 config.GRID_ORIGIN_Y = config.SPLIT_Y + 12
 
-config.CUSTOMERS_PER_DAY = 3
+config.MIN_CUSTOMERS_PER_DAY = 4
+config.MAX_CUSTOMERS_PER_DAY = 6
 
-config.MERCHANT_PANEL_COLS = 3
-config.MERCHANT_PANEL_ROWS = 2
+config.MERCHANT_PANEL_COLS = 6
+config.MERCHANT_PANEL_ROWS = 4
 
-config.ORDER_PANEL_COLS = 3
-config.ORDER_PANEL_ROWS = 3
+config.ORDER_PANEL_COLS = 4
+config.ORDER_PANEL_ROWS = 4
 
 config.COLORS = {
     grid_bg      = { 0.06, 0.06, 0.08, 1 },

@@ -181,8 +181,9 @@ function KitchenScene:on_enter()
     self._scene_fg = love.graphics.newImage("assets/images/scene/fg.png")
 
     self.day_state = DayState.new()
-    self.day_state:start_day(config.CUSTOMERS_PER_DAY)
-    self.queue = CustomerQueue.new(config.CUSTOMERS_PER_DAY)
+    local first_day_total = math.random(config.MIN_CUSTOMERS_PER_DAY, config.MAX_CUSTOMERS_PER_DAY)
+    self.day_state:start_day(first_day_total)
+    self.queue = CustomerQueue.new(first_day_total)
 
     -- Matches ../wip's convention: customers enter from off-screen on one
     -- side and walk toward target_x, then walk back out the way they came.
@@ -482,8 +483,9 @@ function KitchenScene:mouse_pressed(x, y)
     if self._showing_summary then
         if point_in_rect(x, y, SUMMARY_BTN) then
             self.day_state:advance_day()
-            self.day_state:start_day(config.CUSTOMERS_PER_DAY)
-            self.queue = CustomerQueue.new(config.CUSTOMERS_PER_DAY)
+            local next_day_total = math.random(config.MIN_CUSTOMERS_PER_DAY, config.MAX_CUSTOMERS_PER_DAY)
+            self.day_state:start_day(next_day_total)
+            self.queue = CustomerQueue.new(next_day_total)
             self.customer:show(self.queue:next())
             for _, item in ipairs(self.grid:items()) do
                 item:refill_daily()

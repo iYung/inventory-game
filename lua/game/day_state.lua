@@ -50,8 +50,8 @@ end
 
 -- Bumps the day counter and resets customers_served to 0. Does NOT touch
 -- customers_total and does NOT construct a new CustomerQueue — the caller
--- must separately build a fresh CustomerQueue.new(config.CUSTOMERS_PER_DAY)
--- and call start_day(config.CUSTOMERS_PER_DAY) to fully set up the new day.
+-- must separately build a fresh CustomerQueue.new(total) and call
+-- start_day(total) to fully set up the new day.
 function DayState:advance_day()
     self.day              = self.day + 1
     self.customers_served = 0
