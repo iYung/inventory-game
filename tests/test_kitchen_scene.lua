@@ -21,6 +21,7 @@
 -- Item/ItemPanel action-timer mechanism itself is covered separately by
 -- tests/test_item.lua / tests/test_item_panel.lua.)
 
+require("lua/headless/stubs")
 local runner        = require("lua/headless/runner")
 local KitchenScene   = require("game/scenes/kitchen_scene")
 local Item           = require("lua/game/item")
@@ -30,13 +31,16 @@ local Item           = require("lua/game/item")
 -- make_default_cfg() shape.
 local function order_cfg(overrides)
     local cfg = {
-        name           = "Test Customer",
-        loved_tags     = { "Protein" },
-        liked_tags     = { "Healthy" },
-        disliked_tags  = { "Greasy" },
-        messages       = { "Could I get some food?" },
-        after_messages = { "Thanks, that's delicious!" },
-        walk_speed     = 80,
+        name             = "Test Customer",
+        loved_tags       = { "Protein" },
+        liked_tags       = { "Healthy" },
+        disliked_tags    = { "Greasy" },
+        messages         = { "Could I get some food?" },
+        after_messages   = { "Thanks, that's delicious!" },
+        order_rules      = { { kind = "at_least", tag = "Protein", n = 1 } },
+        order_item_count = 1,
+        payout           = 10,
+        walk_speed       = 80,
     }
     for k, v in pairs(overrides or {}) do
         cfg[k] = v
@@ -69,8 +73,8 @@ assert(scene.customer:arrived(), "customer should be waiting after fast-forwardi
 -- Test 4 below, and the Item-level timer mechanism itself is covered by
 -- tests/test_item.lua / tests/test_item_panel.lua.
 local cooked = Item.new("baked_chicken")
-assert(scene.grid:can_place(cooked, 5, 0), "(5,0) should be free for the test's baked_chicken item")
-scene.grid:place(cooked, 5, 0)
+assert(scene.grid:can_place(cooked, 9, 0), "(9,0) should be free for the test's baked_chicken item")
+scene.grid:place(cooked, 9, 0)
 
 local mx, my = scene.grid:cell_to_world(cooked.cell_col, cooked.cell_row)
 mx, my = mx + 1, my + 1 -- a point safely inside the item's cell
@@ -170,14 +174,14 @@ do
     local ctx2 = runner.setup(function() return KitchenScene.new() end)
     local scene2 = ctx2.sm.current
 
-    local microwave, meat2
+    local microwave2, meat2
     for _, it in ipairs(scene2.grid:items()) do
-        if it.type_id == "microwave" then microwave = it end
+        if it.type_id == "microwave" then microwave2 = it end
         if it.type_id == "raw_chicken" and not meat2 then meat2 = it end
     end
-    assert(microwave and meat2, "on_enter should have placed a microwave and raw_chicken")
+    assert(microwave2 and meat2, "on_enter should have placed a microwave and raw_chicken")
 
-    scene2.panels = { ItemPanel.new(microwave) }
+    scene2.panels = { ItemPanel.new(microwave2) }
 
     -- Start dragging the meat straight from the main grid while the panel
     -- is open; this must work exactly like it would with no panel open.
@@ -188,12 +192,12 @@ do
         "main-grid items should still be draggable while a panel is open")
 
     -- Drop it onto the open panel's inner grid: should transfer there.
-    local px, py = microwave.panel:cell_to_world(0, 0)
+    local px, py = microwave2.panel:cell_to_world(0, 0)
     scene2:mouse_moved(px + 1, py + 1)
     scene2:mouse_released(px + 1, py + 1)
 
     assert(scene2.grid.dragging == nil, "drop should clear the main grid's drag state")
-    assert(meat2.grid == microwave.panel, "item dropped on the panel grid should now belong to it")
+    assert(meat2.grid == microwave2.panel, "item dropped on the panel grid should now belong to it")
 
     local still_on_main_grid = false
     for _, it in ipairs(scene2.grid:items()) do
@@ -202,20 +206,20 @@ do
     assert(not still_on_main_grid, "transferred item should be gone from the main grid")
 
     local in_panel = false
-    for _, it in ipairs(microwave.panel:items()) do
+    for _, it in ipairs(microwave2.panel:items()) do
         if it == meat2 then in_panel = true end
     end
     assert(in_panel, "transferred item should be listed in the panel's grid")
 
     -- Drag it back out onto the main floor grid.
     scene2:mouse_pressed(px + 1, py + 1)
-    assert(microwave.panel.dragging == meat2, "should be able to pick the item back up from the panel")
+    assert(microwave2.panel.dragging == meat2, "should be able to pick the item back up from the panel")
 
     local ox, oy = scene2.grid:cell_to_world(3, 3)
     scene2:mouse_moved(ox + 1, oy + 1)
     scene2:mouse_released(ox + 1, oy + 1)
 
-    assert(microwave.panel.dragging == nil, "drop should clear the panel grid's drag state")
+    assert(microwave2.panel.dragging == nil, "drop should clear the panel grid's drag state")
     assert(meat2.grid == scene2.grid, "item dragged back out should belong to the main grid again")
     assert(meat2.cell_col == 3 and meat2.cell_row == 3, "item should land at the dropped cell on the main grid")
 
@@ -467,6 +471,10 @@ do
     assert(#scene6.panels == 1, "clicking the merchant's body should open their stock panel")
     local merchant_panel6 = scene6.panels[1]
     assert(merchant_panel6.item == scene6.customer, "the panel should wrap the customer itself")
+    -- Move the panel to the top-left corner so it doesn't overlap the drop
+    -- target at (5,3) on the main floor grid (the large merchant panel
+    -- default position extends down into the grid area).
+    merchant_panel6:_layout(0, 0)
 
     -- Step 4: drag a stock item out of the merchant's panel onto the main
     -- floor grid, at a cell free per on_enter's starting layout (microwave
@@ -791,8 +799,7 @@ do
     -- has_next() is false and KitchenScene:update won't auto-spawn a
     -- replacement once this customer goes idle).
     scene10.day_state.customers_served = scene10.day_state.customers_total - 1
-    scene10.queue:next()
-    scene10.queue:next()
+    while scene10.queue:has_next() do scene10.queue:next() end
     assert(not scene10.queue:has_next(), "sanity check: queue should be fully drained")
 
     scene10.customer:serve() -- enters talking_after (after_messages present)
@@ -1116,8 +1123,9 @@ do
     -- CustomerQueue's random merchant-slot pick queued up first for this
     -- day.
     scene15.customer:show(order_cfg({
-        loved_tags = { "Healthy" },
-        messages   = { "Could I get something healthy?" },
+        loved_tags   = { "Healthy" },
+        order_rules  = { { kind = "at_least", tag = "Healthy", n = 1 } },
+        messages     = { "Could I get something healthy?" },
     }))
     runner.fast_forward_until(ctx15, function() return scene15.customer:arrived() end, 0)
     assert(scene15.customer.loved_tags[1] == "Healthy",

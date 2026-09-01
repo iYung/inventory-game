@@ -303,6 +303,9 @@ function ItemPanel:_serve_enabled()
     if self.item.kind ~= "order" then return false end
     local panel_items = self.item.panel:items()
     if #panel_items < 1 then return false end
+    for _, it in ipairs(panel_items) do
+        if #it.tags == 0 then return false end
+    end
     for _, rule in ipairs(self.item.order_rules or {}) do
         if eval_rule(rule, panel_items) == "fail" then return false end
     end

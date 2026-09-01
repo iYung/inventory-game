@@ -58,15 +58,17 @@ function KitchenScene:on_enter()
         config.GRID_ORIGIN_X, config.GRID_ORIGIN_Y
     )
 
-    -- Starting layout: fryer program only. The player unlocks everything else
-    -- through the program merchant system.
-    -- Fryer (2x2) at (0,0); starter ingredients from the fryer's stock.
-    local fryer = Item.new("fryer")
-    self.grid:place(fryer, 0, 0)
+    -- Starting layout: microwave (0,0), fryer (0,2), starters at (2,0)-(4,0),
+    -- broccoli/potato at (5,0)/(6,0), container at (2,2), coffee_machine at (7,2),
+    -- garden at (0,4). Cell (5,3) is intentionally left free.
+    local microwave = Item.new("microwave")
+    self.grid:place(microwave, 0, 0)
 
-    -- Starter stock: 2 raw chicken, 2 potato, 2 onion (fryer program stock).
-    local starter = { "raw_chicken", "raw_chicken", "potato", "potato", "onion", "onion" }
-    local col, row = 3, 0
+    local fryer = Item.new("fryer")
+    self.grid:place(fryer, 0, 2)
+
+    local starter = { "raw_chicken", "raw_chicken", "raw_chicken" }
+    local col, row = 2, 0
     for _, type_id in ipairs(starter) do
         local it = Item.new(type_id)
         if self.grid:can_place(it, col, row) then
@@ -75,6 +77,19 @@ function KitchenScene:on_enter()
             if col >= config.GRID_COLS then col = 0; row = row + 1 end
         end
     end
+
+    self.grid:place(Item.new("broccoli"),       5, 0)
+    self.grid:place(Item.new("potato"),         6, 0)
+    self.grid:place(Item.new("coffee_machine"), 6, 2)
+
+    local container = Item.new("container")
+    self.grid:place(container, 4, 4)
+    container.panel:place(Item.new("roasted_coffee_bean"), 0, 0)
+    container.panel:place(Item.new("roasted_coffee_bean"), 1, 0)
+    container.panel:place(Item.new("milking_center"),      2, 0)
+    container.panel:place(Item.new("cheese_cave"),         3, 0)
+
+    self.grid:place(Item.new("garden"),         0, 4)
 
     self._scene_bg = love.graphics.newImage("assets/images/scene/bg.png")
     self._scene_fg = love.graphics.newImage("assets/images/scene/fg.png")
@@ -468,7 +483,7 @@ function KitchenScene:mouse_pressed(x, y)
         -- greeting - clicking their body opens their stock panel instead
         -- (or brings it to front if it's already open, e.g. buried behind
         -- another panel).
-        if (self.customer.kind == "restock" or self.customer.kind == "program") and self.customer:arrived() then
+        if (self.customer.kind == "restock" or self.customer.kind == "program" or self.customer.kind == "merchant") and self.customer:arrived() then
             self:_open_or_focus_panel(self.customer)
             return
         end

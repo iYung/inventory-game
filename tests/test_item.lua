@@ -1,3 +1,4 @@
+require("lua/headless/stubs")
 local Item = require("lua/game/item")
 
 -- Test 0: tags - raw/unprepared items carry none; prepared items do.

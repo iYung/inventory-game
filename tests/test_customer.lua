@@ -1,3 +1,4 @@
+require("lua/headless/stubs")
 local Customer      = require("lua/game/customer")
 local CustomerQueue = require("lua/game/customer_queue")
 local config        = require("lua/game/config")
@@ -227,22 +228,29 @@ end
 do
     local config = require("lua/game/config")
 
-    local q   = CustomerQueue.new(1)
+    local ProgramState = require("lua/game/program_state")
+    local q   = CustomerQueue.new(1, ProgramState.new("fryer"))
     local cfg = q:next()
-    assert(cfg.kind == "merchant", "CustomerQueue.new(1)'s single slot should be the merchant")
+    assert(cfg.kind == "restock", "CustomerQueue.new(1)'s single slot should be the restock merchant")
 
     local target_x, exit_x, y = 500, 100, 200
     local c = Customer.new(target_x, exit_x, y)
     c:show(cfg)
 
+    -- cfg.stock for "restock" kind is a list of {type_id, quantity} entries;
+    -- total items placed = sum of all quantities.
+    local total_qty = 0
+    for _, entry in ipairs(cfg.stock) do
+        total_qty = total_qty + (entry.quantity or 1)
+    end
     local capacity = config.MERCHANT_PANEL_COLS * config.MERCHANT_PANEL_ROWS
-    assert(#cfg.stock <= capacity,
+    assert(total_qty <= capacity,
         "merchant panel capacity (" .. capacity .. " cells) must fit the full real stock list ("
-            .. #cfg.stock .. " items) - grow config.MERCHANT_PANEL_COLS/ROWS if stock grows")
+            .. total_qty .. " items) - grow config.MERCHANT_PANEL_COLS/ROWS if stock grows")
 
     local items = c.panel:items()
-    assert(#items == #cfg.stock,
-        "every stock item should actually land in the panel, got " .. #items .. " of " .. #cfg.stock
+    assert(#items == total_qty,
+        "every stock item should actually land in the panel, got " .. #items .. " of " .. total_qty
             .. " (place_first_fit silently drops anything that doesn't fit)")
 
     print("PASS: customer: the real merchant stock list fully fits in the merchant panel, nothing silently dropped")

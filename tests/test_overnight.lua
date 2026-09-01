@@ -1,6 +1,7 @@
 -- tests/test_overnight.lua
 -- Tests for Item:overnight_tick() and the meat_machine Process action.
 
+require("lua/headless/stubs")
 local Item = require("lua/game/item")
 
 -- Helper: count items of a given type_id in a panel.

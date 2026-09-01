@@ -9,9 +9,9 @@ local program_defs = require("lua/game/data/program_defs")
 
 local MerchantGen = {}
 
-local MAX_SLOTS     = 3
-local MIN_NEW       = 1
-local MAX_NEW       = 2
+local MAX_SLOTS     = 4
+local MIN_NEW       = 2
+local MAX_NEW       = 3
 
 local function shuffle(t)
     for i = #t, 2, -1 do
