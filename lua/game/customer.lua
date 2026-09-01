@@ -177,12 +177,21 @@ function Customer:show(cfg)
         end
         -- Shrink the panel to its actual content (trim the trailing blank separator row).
         self.panel.rows = math.max(1, row - 1)
+    elseif self.kind == "merchant" then
+        self.type_id = "merchant"
+        self.panel   = Grid.new(config.MERCHANT_PANEL_COLS, config.MERCHANT_PANEL_ROWS, config.U, 0, 0)
+        for _, type_id in ipairs(cfg.stock or {}) do
+            place_first_fit(self.panel, Item.new(type_id))
+        end
     elseif self.kind == "order" then
         self.type_id = "order_customer"
         self.panel   = Grid.new(config.ORDER_PANEL_COLS, config.ORDER_PANEL_ROWS, config.U, 0, 0)
     end
 
     self.name             = cfg.name or "Customer"
+    self.loved_tags       = cfg.loved_tags    or {}
+    self.liked_tags       = cfg.liked_tags    or {}
+    self.disliked_tags    = cfg.disliked_tags or {}
     self.order_rules      = cfg.order_rules      or {}
     self.order_item_count = cfg.order_item_count  or 1
     self.payout           = cfg.payout            or 10

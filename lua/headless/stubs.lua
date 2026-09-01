@@ -1,6 +1,8 @@
 -- lua/headless/stubs.lua
 -- Installs no-op replacements into the `love` global before any game module
 -- loads. Required when running with --headless (love.graphics is nil).
+-- When run via plain luajit (no LÖVE2D runtime), `love` is nil — create it.
+love = love or {}
 
 local noop = function() end
 
@@ -79,6 +81,9 @@ love.window.setFullscreen = function() end
 
 love.filesystem = love.filesystem or {}
 love.filesystem.getInfo = function() return nil end
+
+love.timer = love.timer or {}
+love.timer.getTime = love.timer.getTime or function() return 0 end
 
 love.audio = love.audio or {}
 

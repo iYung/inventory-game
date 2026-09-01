@@ -6,6 +6,7 @@
 -- following the same "place an item into a panel grid" pattern as
 -- tests/test_item.lua.
 
+require("lua/headless/stubs")
 local Item      = require("lua/game/item")
 local ItemPanel = require("lua/game/item_panel")
 local Grid      = require("lua/game/grid")

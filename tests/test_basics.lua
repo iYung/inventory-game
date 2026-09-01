@@ -5,6 +5,7 @@
 -- interaction), so this just exercises the basic tick loop against a fresh
 -- KitchenScene.
 
+require("lua/headless/stubs")
 local runner = require("lua/headless/runner")
 
 -- Test 1: a fresh KitchenScene can be ticked without error.

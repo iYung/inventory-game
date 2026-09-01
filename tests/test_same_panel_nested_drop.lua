@@ -4,6 +4,7 @@
 -- Covers the bug fixed in game/scenes/kitchen_scene.lua where `hover ~= owner`
 -- in mouse_released blocked the nested-container path for same-panel drops.
 
+require("lua/headless/stubs")
 local runner     = require("lua/headless/runner")
 local KitchenScene = require("game/scenes/kitchen_scene")
 local Item       = require("lua/game/item")
@@ -13,19 +14,16 @@ do
     local ctx = runner.setup(function() return KitchenScene.new() end)
     local scene = ctx.sm.current
 
-    -- Locate the pre-placed floor container (2x2, 6x6 panel).
-    local outer
-    for _, it in ipairs(scene.grid:items()) do
-        if it.type_id == "container" then outer = it; break end
-    end
-    assert(outer, "on_enter should have placed a container on the floor grid")
+    -- Place a floor container at a free cell (10,0) — on_enter places
+    -- fryer at (0,0)-(1,1) and 6 starter items at (3,0)-(8,0), so (10,0) is free.
+    local outer = Item.new("container")
+    assert(scene.grid:can_place(outer, 10, 0), "container should fit at (10,0) on the floor grid")
+    scene.grid:place(outer, 10, 0)
 
-    -- Place a nested container (inner) inside the outer panel at (3,2).
-    -- (0,0)-(2,2) is the milking_center, (3,0)-(4,1) is the cheese_cave;
-    -- (3,2) is the first free 2x2 region: occupies (3,2)-(4,3).
+    -- Place a nested container (inner) inside the outer panel at (0,0).
     local inner = Item.new("container")
-    assert(outer.panel:can_place(inner, 3, 2), "inner container should fit at (3,2) in outer panel")
-    outer.panel:place(inner, 3, 2)
+    assert(outer.panel:can_place(inner, 0, 0), "inner container should fit at (0,0) in outer panel")
+    outer.panel:place(inner, 0, 0)
 
     -- Place a raw_chicken inside the outer panel at (5,2), clear of the inner container.
     local chicken = Item.new("raw_chicken")
