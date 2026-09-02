@@ -162,4 +162,22 @@ do
     print("PASS: customer_queue: program merchant has well-formed offer list")
 end
 
+-- Test 8: all customer configs use config.WALK_SPEED (no hardcoded 80).
+do
+    local config = require("lua/game/config")
+    local ps = ProgramState.new("fryer")
+    for _, day in ipairs({ 1, 2 }) do
+        for _ = 1, 5 do
+            local q = CustomerQueue.new(day, ps)
+            while q:has_next() do
+                local cfg = q:next()
+                assert(cfg.walk_speed == config.WALK_SPEED,
+                    "kind='" .. cfg.kind .. "' walk_speed=" .. tostring(cfg.walk_speed) ..
+                    " expected " .. config.WALK_SPEED)
+            end
+        end
+    end
+    print("PASS: customer_queue: all customer kinds use config.WALK_SPEED")
+end
+
 print("ALL TESTS PASSED")
