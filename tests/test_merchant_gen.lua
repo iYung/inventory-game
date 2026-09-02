@@ -1,6 +1,7 @@
 local MerchantGen  = require("lua/game/merchant_gen")
 local ProgramState = require("lua/game/program_state")
 local program_defs = require("lua/game/data/program_defs")
+local item_defs     = require("lua/game/data/item_defs")
 
 -- Test 1: returns 2-4 entries total.
 do
@@ -45,7 +46,13 @@ do
             -- it should only ever appear as repurchase. We just verify the table is well-formed.
             assert(type(prog.id) == "string" and prog.id ~= "", "prog.id should be a non-empty string")
             assert(type(prog.name) == "string", "prog.name should be a string")
-            assert(type(prog.cost) == "number", "prog.cost should be a number")
+            -- Program cost now lives on each machine item's own def
+            -- (buy_price), not on the program def itself.
+            for _, machine_type_id in ipairs(prog.machines or {}) do
+                local def = item_defs[machine_type_id]
+                assert(def and type(def.buy_price) == "number",
+                    "program machine '" .. machine_type_id .. "' should have a buy_price")
+            end
         end
     end
     print("PASS: merchant_gen: all offer entries have well-formed program def fields")
