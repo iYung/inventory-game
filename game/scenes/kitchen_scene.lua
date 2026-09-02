@@ -487,12 +487,15 @@ function KitchenScene:mouse_pressed(x, y)
             if panel.should_serve then
                 local panel_items = panel.item.panel:items()
                 local type_ids = {}
+                local revenue = 0
                 for _, it in ipairs(panel_items) do
                     type_ids[#type_ids + 1] = it.type_id
+                    local def = item_defs[it.type_id]
+                    revenue = revenue + ((def and def.sell_price) or 0)
                     panel.item.panel:remove(it)
                 end
                 self.customer:serve()
-                self.day_state:record_serve(type_ids, self.customer.payout)
+                self.day_state:record_serve(type_ids, revenue)
             end
             if panel.should_skip then
                 local items = {}

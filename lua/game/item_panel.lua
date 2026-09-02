@@ -54,9 +54,9 @@ local function point_in_rect(x, y, r)
     return x >= r.x and x < r.x + r.w and y >= r.y and y < r.y + r.h
 end
 
--- Reminder-area height for an order panel: one row per rule + payout row.
+-- Reminder-area height for an order panel: one row per rule.
 local function order_reminder_h(rule_count)
-    return RULE_PAD + (rule_count + 1) * RULE_ROW_H + RULE_PAD
+    return RULE_PAD + rule_count * RULE_ROW_H + RULE_PAD
 end
 
 -- ── Rule evaluation ───────────────────────────────────────────────────────────
@@ -470,11 +470,6 @@ function ItemPanel:draw(skip_dragging)
             love.graphics.setColor(color)
             love.graphics.print(indicator .. rule_label(rule, item_defs), self.bg.x + MARGIN, base_y + (i - 1) * RULE_ROW_H)
         end
-
-        -- Payout line
-        local payout_y = base_y + #rules * RULE_ROW_H
-        love.graphics.setColor(COLOR_NEUTRAL)
-        love.graphics.print("Payout: $" .. (self.item.payout or 10), self.bg.x + MARGIN, payout_y)
     end
 
     self.item.panel:draw(skip_dragging)
