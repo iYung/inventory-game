@@ -86,6 +86,8 @@ function Customer.new(target_x, exit_x, y)
     self.type_id         = nil
 
     self.name             = "Customer"
+    self.is_scripted      = false
+    self.no_dismiss       = false
     self.order_rules      = {}
     self.order_item_count = 1
     self.payout           = 10
@@ -195,16 +197,14 @@ function Customer:show(cfg)
         for _, type_id in ipairs(cfg.stock or {}) do
             place_first_fit(self.panel, Item.new(type_id))
         end
-    elseif self.kind == "scripted" then
-        self.type_id = "scripted"
-        self.panel   = nil
-        self.payout  = 0
     elseif self.kind == "order" then
         self.type_id = "order_customer"
         self.panel   = Grid.new(config.ORDER_PANEL_COLS, config.ORDER_PANEL_ROWS, config.U, 0, 0)
     end
 
     self.name             = cfg.name or "Customer"
+    self.is_scripted      = cfg.is_scripted or false
+    self.no_dismiss       = cfg.no_dismiss or false
     self.loved_tags       = cfg.loved_tags    or {}
     self.liked_tags       = cfg.liked_tags    or {}
     self.disliked_tags    = cfg.disliked_tags or {}
@@ -226,20 +226,14 @@ function Customer:show(cfg)
     self.speed = cfg.walk_speed or 80
     if cfg.color then self.sprite.color = cfg.color end
 
-    local icon_id
-    if self.kind == "restock" or self.kind == "program" then
-        icon_id = "merchant"
-    elseif self.kind == "scripted" then
-        icon_id = cfg.icon or "customer"
-    else
-        icon_id = "customer"
-    end
+    local icon_id = (self.kind == "restock" or self.kind == "program")
+        and "merchant" or (cfg.icon or "customer")
     local icon = load_icon(icon_id)
     if icon then
         self.sprite.image = icon
-        -- Scripted customers keep their cfg.color; others reset to white so the
-        -- sprite image renders without a tint.
-        if self.kind ~= "scripted" then
+        -- A scripted character with an explicit cfg.color keeps its tint;
+        -- plain generated customers reset to white so the icon renders untinted.
+        if not cfg.color then
             self.sprite.color = { 1, 1, 1, 1 }
         end
     end

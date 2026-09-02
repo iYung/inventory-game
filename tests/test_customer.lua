@@ -221,17 +221,17 @@ end
 -- the panel's capacity with no error, so a panel too small for the real
 -- stock list would quietly make some purchasable items (e.g. water/potato,
 -- appended last) never actually appear for the player, while cfg.stock
--- itself still "correctly" lists them. Use CustomerQueue.new(1) - which by
--- design always makes slot 1 a restock merchant - to get the real cfg
--- rather than duplicating the stock list here, so this test can't drift
--- out of sync with whatever customer_queue.lua actually stocks.
+-- itself still "correctly" lists them. Use CustomerQueue.new(2) - which by
+-- design always makes slot 1 a restock merchant on day 2+ (day 1 has none) -
+-- to get the real cfg rather than duplicating the stock list here, so this
+-- test can't drift out of sync with whatever customer_queue.lua actually stocks.
 do
     local config = require("lua/game/config")
 
     local ProgramState = require("lua/game/program_state")
-    local q   = CustomerQueue.new(1, ProgramState.new("fryer"))
+    local q   = CustomerQueue.new(2, ProgramState.new("fryer"))
     local cfg = q:next()
-    assert(cfg.kind == "restock", "CustomerQueue.new(1)'s first slot should be the restock merchant")
+    assert(cfg.kind == "restock", "CustomerQueue.new(2)'s first slot should be the restock merchant")
 
     local target_x, exit_x, y = 500, 100, 200
     local c = Customer.new(target_x, exit_x, y)

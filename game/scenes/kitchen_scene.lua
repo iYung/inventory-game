@@ -132,7 +132,7 @@ function KitchenScene:update(dt)
     self.customer:update(dt)
 
     if was_active and not self.customer:active() then
-        if self.queue.scripted_key and not self.customer.dismissed then
+        if self.customer.is_scripted and self.queue.scripted_key and not self.customer.dismissed then
             self.day_state.seen_scripts[self.queue.scripted_key] = true
             self.queue.scripted_key = nil
         end
@@ -495,14 +495,19 @@ function KitchenScene:mouse_pressed(x, y)
                 end
             end
             panel:mouse_pressed(x, y)
-            -- "Leave" (merchant-only) sets should_close AND should_leave
-            -- together on the same click; check should_leave first since
-            -- should_close is what actually removes the panel below.
+            -- "Leave" (merchant-only) and "Skip" (order-only) both set
+            -- should_close together with their own flag on the same click;
+            -- a no_dismiss customer (e.g. a scripted character mid-tutorial)
+            -- blocks the dismiss action AND cancels should_close, so the
+            -- click is fully absorbed as a no-op instead of closing the
+            -- panel out from under an order the player still has to fill.
             if panel.should_leave then
-                if not (self.queue.scripted_no_dismiss and self.customer.kind == "scripted") then
+                if self.customer.no_dismiss then
+                    panel.should_close = false
+                else
                     self.customer:dismiss()
                     self.day_state:record_dismiss()
-                    if self.customer.kind == "scripted" and self.queue.scripted_key then
+                    if self.customer.is_scripted and self.queue.scripted_key then
                         self._script_cooldowns[self.queue.scripted_key] = 2
                         self.queue.scripted_key = nil
                     end
@@ -519,16 +524,24 @@ function KitchenScene:mouse_pressed(x, y)
                 self.day_state:record_serve(type_ids, self.customer.payout)
             end
             if panel.should_skip then
-                local items = {}
-                for _, it in ipairs(panel.item.panel:items()) do
-                    items[#items + 1] = it
+                if self.customer.no_dismiss then
+                    panel.should_close = false
+                else
+                    local items = {}
+                    for _, it in ipairs(panel.item.panel:items()) do
+                        items[#items + 1] = it
+                    end
+                    for _, it in ipairs(items) do
+                        panel.item.panel:remove(it)
+                        self.grid:place_first_fit(it)
+                    end
+                    self.customer:dismiss(SKIP_MESSAGE)
+                    self.day_state:record_dismiss()
+                    if self.customer.is_scripted and self.queue.scripted_key then
+                        self._script_cooldowns[self.queue.scripted_key] = 2
+                        self.queue.scripted_key = nil
+                    end
                 end
-                for _, it in ipairs(items) do
-                    panel.item.panel:remove(it)
-                    self.grid:place_first_fit(it)
-                end
-                self.customer:dismiss(SKIP_MESSAGE)
-                self.day_state:record_dismiss()
             end
             if panel.should_close then
                 self:_close_panel(panel)
@@ -557,11 +570,6 @@ function KitchenScene:mouse_pressed(x, y)
             self:_open_or_focus_panel(self.customer)
             return
         end
-        if self.customer.kind == "scripted" and self.customer:arrived() and self.customer.done_talking then
-            self.customer:serve()
-            self.day_state:record_serve({}, 0)
-            return
-        end
         if self.customer.kind == "order" and self.customer:arrived() and self.customer.done_talking then
             self:_open_or_focus_panel(self.customer)
             return
@@ -570,13 +578,11 @@ function KitchenScene:mouse_pressed(x, y)
             self.customer:advance_after()
         elseif self.customer:arrived() then
             self.customer:advance()
-            -- If advancing just finished the last greeting line, act immediately
-            -- rather than leaving the player with a silent standing customer.
+            -- If advancing just finished the last greeting line, open the
+            -- order panel immediately instead of making the player click again
+            -- through a silent "customer stands there" state.
             if self.customer.kind == "order" and self.customer.done_talking then
                 self:_open_or_focus_panel(self.customer)
-            elseif self.customer.kind == "scripted" and self.customer.done_talking then
-                self.customer:serve()
-                self.day_state:record_serve({}, 0)
             end
         end
         return

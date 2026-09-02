@@ -1,6 +1,8 @@
+require("lua/headless/stubs")
 local CustomerQueue = require("lua/game/customer_queue")
 local DayState      = require("lua/game/day_state")
 local ProgramState  = require("lua/game/program_state")
+local Customer      = require("lua/game/customer")
 
 -- Helper: drain a queue and return all configs as a list.
 local function drain(q)
@@ -16,6 +18,15 @@ local function count_kind(configs, kind)
     local n = 0
     for _, c in ipairs(configs) do
         if c.kind == kind then n = n + 1 end
+    end
+    return n
+end
+
+-- Helper: count configs marked is_scripted.
+local function count_scripted(configs)
+    local n = 0
+    for _, c in ipairs(configs) do
+        if c.is_scripted then n = n + 1 end
     end
     return n
 end
@@ -42,14 +53,16 @@ do
         local q    = CustomerQueue.new(2, ps, ds)
         local cfgs = drain(q)
 
-        assert(count_kind(cfgs, "scripted") == 1,
+        assert(count_scripted(cfgs) == 1,
             "day 2 with fresh day_state should insert exactly 1 scripted customer")
         assert(cfgs[1].kind == "restock",
             "slot 1 on day 2 should be the restock merchant")
-        assert(cfgs[2].kind == "scripted",
-            "slot 2 on day 2 should be the scripted customer (after_restock)")
+        assert(cfgs[2].kind == "order" and cfgs[2].is_scripted,
+            "slot 2 on day 2 should be the scripted customer (after_restock), kind='order'")
         assert(cfgs[2].name == "The Guide",
             "scripted customer should be The Guide")
+        assert(type(cfgs[2].order_rules) == "table" and #cfgs[2].order_rules >= 1,
+            "scripted customer should carry its own order_rules")
     end
     print("PASS: character_scripts: guide ch1 inserted at slot 2 on day 2")
 end
@@ -66,11 +79,11 @@ do
 
     -- ch1 has no prerequisites and an empty trigger, so it fires.
     -- ch2 requires ch1 seen first, so it's blocked.
-    assert(count_kind(cfgs, "scripted") == 1,
+    assert(count_scripted(cfgs) == 1,
         "should have exactly 1 scripted customer when ch1 unseen")
     local scripted_cfg
     for _, c in ipairs(cfgs) do
-        if c.kind == "scripted" then scripted_cfg = c; break end
+        if c.is_scripted then scripted_cfg = c; break end
     end
     assert(scripted_cfg ~= nil, "scripted config should exist")
     assert(q.scripted_key == "guide:1",
@@ -124,6 +137,32 @@ do
         "sold_items should be 1 (day 2 only)")
 
     print("PASS: character_scripts: total_sold accumulates across advance_day; sold_items resets")
+end
+
+-- Test f: regression guard — a scripted customer gets a real order panel
+-- Grid (kind="order"), not a nil panel. This is what actually determines
+-- whether an order panel opens for them in KitchenScene; guards against
+-- ever reintroducing a panel-less "scripted" customer kind.
+do
+    local ps = ProgramState.new("fryer")
+    local ds = DayState.new()
+    local q  = CustomerQueue.new(2, ps, ds)
+    local cfgs = drain(q)
+
+    local scripted_cfg
+    for _, c in ipairs(cfgs) do
+        if c.is_scripted then scripted_cfg = c; break end
+    end
+    assert(scripted_cfg ~= nil, "scripted config should exist")
+    assert(scripted_cfg.kind == "order", "scripted customer must use kind='order' to get a panel")
+
+    local c = Customer.new(500, 100, 200)
+    c:show(scripted_cfg)
+    assert(c.panel ~= nil, "scripted customer's Customer instance should have a non-nil order panel")
+    assert(c.is_scripted == true, "Customer:show() should propagate is_scripted from cfg")
+    assert(c.no_dismiss == true, "Customer:show() should propagate no_dismiss from cfg (guide is no_dismiss)")
+
+    print("PASS: character_scripts: scripted customer gets a real order panel, not kind='scripted'")
 end
 
 print("ALL TESTS PASSED")

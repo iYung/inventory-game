@@ -2,7 +2,9 @@
 
 ## Goal
 
-Add a scripted-character system: named NPCs with custom dialogue that appear at a specific point in the run, talk through their messages like a regular customer, and walk off. No order panel — they require no item, and the player simply clicks through their lines and then they leave. The immediate test is a tutorial guide with two chapters.
+Add a scripted-character system: named NPCs with custom dialogue that appear at a specific point in the run and behave exactly like a normal order customer — dialogue, then an order panel the player fills and clicks Serve on. Scripted characters are order customers with custom name/color/dialogue/trigger; the "script" is which config gets chosen and when, not a different interaction model. The immediate test is a tutorial guide with two chapters, each requesting a specific item.
+
+**Revision note:** an earlier version of this design introduced a separate `kind = "scripted"` with no order panel. That was wrong — the player had no way to interact with the character beyond clicking through dialogue, and there was no way to specify what to bring them. Scripted characters now always use `kind = "order"`, tagged with `is_scripted = true` on the config/Customer so the queue and scene can still track triggers, cooldowns, and no-dismiss behavior.
 
 ## Affected files
 
@@ -11,7 +13,7 @@ Add a scripted-character system: named NPCs with custom dialogue that appear at 
 | `lua/game/data/character_scripts.lua` | New — data definitions |
 | `lua/game/day_state.lua` | Add `seen_scripts` and `total_sold` (lifetime counters) |
 | `lua/game/customer_queue.lua` | Insert scripted customers at their assigned slot; accept `day_state` parameter |
-| `lua/game/customer.lua` | Handle `kind = "scripted"` (no panel) |
+| `lua/game/customer.lua` | Propagate `is_scripted` / `no_dismiss` from cfg; keep custom color when an icon loads |
 | `game/scenes/kitchen_scene.lua` | Pass `day_state` to `CustomerQueue.new`; handle scripted serve; track cooldowns |
 | `tests/test_character_scripts.lua` | New — unit tests for trigger / queue logic |
 
@@ -46,8 +48,15 @@ New data file, a table of script entries. Each entry:
     -- Dialogue
     messages       = { "...", "..." },
     after_messages = { "Good luck!" },
+
+    -- Order (all optional; a customer with no rules accepts any single item for 0 payout)
+    order_rules      = { { kind = "specific", type_id = "baked_chicken" } },
+    order_item_count = 1,
+    payout           = 0,
 }
 ```
+
+Scripted characters behave exactly like a generated order customer: dialogue, then an order panel with Serve/Skip buttons. `order_rules` uses the same rule shapes as `OrderGen` (`at_least`, `no_more`, `no`, `specific`, `all_unique`).
 
 For a chapter with an empty `trigger = {}` the character is always eligible (useful for "fire this the first time any trigger criteria would accept it").
 
@@ -79,67 +88,27 @@ Signature changes to `CustomerQueue.new(day, program_state, day_state)`. The ext
 - `slot = "after_restock"` → always placed at index 2 (right after the restock merchant).
 - `slot = "random"` → placed at a random index among the remaining (non-restock, non-program-merchant) positions, same shuffle logic as the existing program merchant.
 
-At most one scripted character per day (lowest chapter of the first qualifying character found). `self.total` increments by 1.
+At most one scripted character per day (lowest chapter of the first qualifying character found). `self.total` increments by 1. The inserted config has `kind = "order"` (identical shape to a generated order customer) plus `is_scripted = true` and the script's own `name`/`color`/`icon`/`no_dismiss`/`messages`/`after_messages`/`order_rules`/`order_item_count`/`payout`.
 
 **Cooldown:** `CustomerQueue` is not responsible for cooldowns — see KitchenScene below.
 
-### `Customer` — `kind = "scripted"`
+### `Customer` — `is_scripted` / `no_dismiss`
 
-`Customer:show(cfg)` with `kind = "scripted"`:
-
-- Skips panel construction (`self.panel = nil`).
-- Sets `payout = 0`.
-- Uses `cfg.color` for body colour if provided.
-- `cfg.icon` loads `assets/images/items/<icon>.png` for the sprite image, same as the existing `load_icon()` path; falls back to the default customer sprite.
-- All message/reveal/walk-in/walk-out behaviour is identical to any other customer.
+`Customer:show(cfg)` sets `self.is_scripted = cfg.is_scripted or false` and `self.no_dismiss = cfg.no_dismiss or false` alongside the existing fields — no separate `kind`. Order-kind logic (panel construction, messages, order_rules) is unchanged and applies to scripted characters exactly as it does to generated ones. When `cfg.color` is set, the sprite keeps that tint even after an icon image loads (generated customers with no cfg.color still reset to white/untinted).
 
 ### `KitchenScene` — click handling and cooldowns
 
-**Serving a scripted customer:** in `mouse_pressed`, when clicking a scripted customer with `done_talking = true`, call `customer:serve()` (to trigger `after_messages` → walk-out) and `day_state:record_serve({}, 0)`. This is the same code path as any customer serve, just with an empty items list and zero payout. Scripted customers **do not** open an item panel.
+Scripted characters use the **same click/panel flow as any order customer** — no special-casing by kind. The same click that finishes their last message opens the order panel; Serve/Skip work exactly as they do for a generated customer.
 
-**Dismissal:** if `no_dismiss` is false and the player dismisses early, the script key goes into a `_script_cooldowns` table on the scene with a day count (default 2). On `advance_day()` the scene decrements each cooldown; entries that reach 0 are cleared, making the character eligible again. This mirrors wip's dismiss-cooldown mechanism but counted in days rather than sales.
+**Dismissal (`no_dismiss`):** the merchant "Leave" and order "Skip" buttons both set `should_close` unconditionally in `ItemPanel` (it has no concept of `no_dismiss`). The scene checks `self.customer.no_dismiss` before acting on `should_leave`/`should_skip`: if true, it sets `panel.should_close = false` so the click is fully absorbed as a no-op (panel stays open, customer stays put) instead of the dismiss firing or the panel silently closing out from under an order still in progress.
 
-**`no_dismiss` guard:** same as wip — neither the dismiss click path nor the "Back" button applies when the active script has `no_dismiss = true`.
+**Cooldown:** if `no_dismiss` is false and the player dismisses early (via Leave or Skip), `self.customer.is_scripted` gates writing the script key into `_script_cooldowns` with a day count (default 2). On `advance_day()` the scene decrements each cooldown; entries that reach 0 are cleared, making the character eligible again.
 
-**Marking seen:** when a scripted customer is fully served (walks out after `after_messages`), write `day_state.seen_scripts["id:chapter"] = true`.
+**Marking seen:** in `update()`, when the active customer stops being active (`was_active and not active()`), the scene checks `self.customer.is_scripted` (not just `self.queue.scripted_key`, which stays set for the whole day regardless of which customer is currently on stage) before writing `day_state.seen_scripts[queue.scripted_key] = true`.
 
 ### Tutorial character data (in `character_scripts.lua`)
 
-```lua
--- Chapter 1: always eligible on the first run
-{
-    id       = "guide",
-    chapter  = 1,
-    trigger  = {},                           -- no conditions; fires whenever eligible
-    slot     = "after_restock",
-    no_dismiss = true,
-    name     = "The Guide",
-    color    = { 0.4, 0.7, 0.9, 1 },
-    messages = {
-        "Welcome! I'm here to show you the ropes.",
-        "Click a machine on the counter to cook something.",
-        "Once it's ready, drag it onto the customer's tray to serve it.",
-    },
-    after_messages = { "You've got this. Good luck!" },
-},
-
--- Chapter 2: fires once the player has sold at least one fried_chicken
-{
-    id       = "guide",
-    chapter  = 2,
-    trigger  = { item_sold = "fried_chicken", count = 1 },
-    slot     = "after_restock",
-    no_dismiss = true,
-    name     = "The Guide",
-    color    = { 0.4, 0.7, 0.9, 1 },
-    messages = {
-        "Looking good! The restock merchant always visits first —",
-        "grab fresh ingredients from their stock panel.",
-        "More programs become available as you earn coin.",
-    },
-    after_messages = { "Keep it up!" },
-},
-```
+Chapter 1 (always eligible) asks for a `baked_chicken` (teaches the microwave, which sits pre-stocked with raw chicken at scene start). Chapter 2 (fires once a `fried_chicken` has been sold) asks for another `fried_chicken` and mentions the restock merchant. Both are `no_dismiss = true` and placed `after_restock`. See `lua/game/data/character_scripts.lua` for the exact dialogue and `order_rules`.
 
 ## What stays the same
 

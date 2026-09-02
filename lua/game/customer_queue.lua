@@ -137,14 +137,18 @@ function CustomerQueue.new(day, program_state, day_state)
         local entry = find_scripted(day_state)
         if entry then
             local cfg = {
-                kind           = "scripted",
-                name           = entry.name,
-                color          = entry.color,
-                icon           = entry.icon,
-                no_dismiss     = entry.no_dismiss,
-                messages       = entry.messages,
-                after_messages = entry.after_messages,
-                walk_speed     = 80,
+                kind             = "order",
+                is_scripted      = true,
+                name             = entry.name,
+                color            = entry.color,
+                icon             = entry.icon,
+                no_dismiss       = entry.no_dismiss,
+                messages         = entry.messages,
+                after_messages   = entry.after_messages,
+                order_rules      = entry.order_rules      or {},
+                order_item_count = entry.order_item_count or 1,
+                payout           = entry.payout           or 0,
+                walk_speed       = 80,
             }
             local insert_at
             if entry.slot == "after_restock" then
