@@ -26,6 +26,15 @@ local runner        = require("lua/headless/runner")
 local KitchenScene   = require("game/scenes/kitchen_scene")
 local Item           = require("lua/game/item")
 
+-- Place a microwave on the scene's grid at (col, row) and return it.
+-- Tests that need a microwave call this after scene setup; on_enter no
+-- longer seeds one (starting program is fryer-only).
+local function add_microwave(scene, col, row)
+    local mw = Item.new("microwave")
+    scene.grid:place(mw, col or 0, row or 2)
+    return mw
+end
+
 -- A deterministic food-order (kind == "order", i.e. kind omitted) customer
 -- config, with any fields overridden. Mirrors customer_queue.lua's
 -- make_default_cfg() shape.
@@ -176,10 +185,10 @@ do
 
     local microwave2, meat2
     for _, it in ipairs(scene2.grid:items()) do
-        if it.type_id == "microwave" then microwave2 = it end
+        if it.type_id == "fryer" then microwave2 = it end
         if it.type_id == "raw_chicken" and not meat2 then meat2 = it end
     end
-    assert(microwave2 and meat2, "on_enter should have placed a microwave and raw_chicken")
+    assert(microwave2 and meat2, "on_enter should have placed a fryer and raw_chicken")
 
     scene2.panels = { ItemPanel.new(microwave2) }
 
@@ -241,9 +250,9 @@ do
 
     local microwave3
     for _, it in ipairs(scene3.grid:items()) do
-        if it.type_id == "microwave" then microwave3 = it end
+        if it.type_id == "fryer" then microwave3 = it end
     end
-    assert(microwave3, "on_enter should have placed a microwave")
+    assert(microwave3, "on_enter should have placed a fryer")
 
     local panel3 = ItemPanel.new(microwave3)
     scene3.panels = { panel3 }
@@ -295,11 +304,7 @@ do
     assert(scene4.customer.loved_tags[1] == "Protein",
         "sanity check: the forced order customer should have Protein as a loved tag")
 
-    local microwave4
-    for _, it in ipairs(scene4.grid:items()) do
-        if it.type_id == "microwave" then microwave4 = it end
-    end
-    assert(microwave4, "on_enter should have placed a microwave")
+    local microwave4 = add_microwave(scene4)
 
     scene4.panels = { ItemPanel.new(microwave4) }
     local microwave_panel4 = scene4.panels[1]
@@ -558,11 +563,7 @@ do
     local ctx7 = runner.setup(function() return KitchenScene.new() end)
     local scene7 = ctx7.sm.current
 
-    local microwave7
-    for _, it in ipairs(scene7.grid:items()) do
-        if it.type_id == "microwave" then microwave7 = it end
-    end
-    assert(microwave7, "on_enter should have placed a microwave")
+    local microwave7 = add_microwave(scene7)
 
     scene7.panels = { ItemPanel.new(microwave7) }
 
@@ -652,11 +653,7 @@ do
     })
     runner.fast_forward_until(ctx8, function() return scene8.customer:arrived() end, 0)
 
-    local microwave8
-    for _, it in ipairs(scene8.grid:items()) do
-        if it.type_id == "microwave" then microwave8 = it end
-    end
-    assert(microwave8, "on_enter should have placed a microwave")
+    local microwave8 = add_microwave(scene8)
 
     -- Open the merchant's panel first (nothing else open yet, so there's no
     -- risk of an already-open panel's backdrop accidentally covering the
@@ -730,11 +727,7 @@ do
     })
     runner.fast_forward_until(ctx9, function() return scene9.customer:arrived() end, 0)
 
-    local microwave9
-    for _, it in ipairs(scene9.grid:items()) do
-        if it.type_id == "microwave" then microwave9 = it end
-    end
-    assert(microwave9, "on_enter should have placed a microwave")
+    local microwave9 = add_microwave(scene9)
 
     local panelA9 = ItemPanel.new(microwave9)
     local panelB9 = ItemPanel.new(scene9.customer)
@@ -956,19 +949,15 @@ do
     local ctx12 = runner.setup(function() return KitchenScene.new() end)
     local scene12 = ctx12.sm.current
 
-    local microwave12
-    for _, it in ipairs(scene12.grid:items()) do
-        if it.type_id == "microwave" then microwave12 = it end
-    end
-    assert(microwave12, "on_enter should have placed a microwave")
+    local microwave12 = add_microwave(scene12)
 
     assert(#microwave12:footprint() == 4, "microwave footprint should be 2x2 (4 cells), got " .. #microwave12:footprint())
-    assert(microwave12.cell_col == 0 and microwave12.cell_row == 0, "microwave should start at (0,0)")
+    assert(microwave12.cell_col == 0 and microwave12.cell_row == 2, "microwave should be at (0,2)")
 
-    -- (1,0)/(0,1)/(1,1) are still part of the microwave's 2x2 footprint on
+    -- (1,2)/(0,3)/(1,3) are still part of the microwave's 2x2 footprint on
     -- the main grid, so nothing else should be placeable there.
     local probe = Item.new("raw_chicken")
-    assert(not scene12.grid:can_place(probe, 1, 0), "(1,0) should still be occupied by the microwave's footprint")
+    assert(not scene12.grid:can_place(probe, 1, 2), "(1,2) should still be occupied by the microwave's footprint")
 
     -- Its own cooking panel, though, is 2x1 (grown from 1x1 so the pot's
     -- 2x1 footprint fits inside it).
@@ -986,12 +975,12 @@ do
     local ctx13 = runner.setup(function() return KitchenScene.new() end)
     local scene13 = ctx13.sm.current
 
-    local microwave13, meat13
+    local microwave13 = add_microwave(scene13)
+    local meat13
     for _, it in ipairs(scene13.grid:items()) do
-        if it.type_id == "microwave" then microwave13 = it end
         if it.type_id == "raw_chicken" and not meat13 then meat13 = it end
     end
-    assert(microwave13 and meat13, "on_enter should have placed a microwave and raw_chicken")
+    assert(meat13, "on_enter should have placed raw_chicken")
 
     -- Right-clicking a plain item (no has_panel) does nothing.
     local mx13, my13 = scene13.grid:cell_to_world(meat13.cell_col, meat13.cell_row)
@@ -999,7 +988,7 @@ do
     assert(#scene13.panels == 0, "right-clicking a plain item should not open anything")
 
     -- Right-clicking the microwave opens its panel in one click.
-    local wx13, wy13 = scene13.grid:cell_to_world(0, 0)
+    local wx13, wy13 = scene13.grid:cell_to_world(microwave13.cell_col, microwave13.cell_row)
     scene13:mouse_right_pressed(wx13 + 1, wy13 + 1)
     assert(#scene13.panels == 1, "right-clicking a has_panel item should open its panel")
     local panel13 = scene13.panels[1]
@@ -1041,19 +1030,22 @@ do
     local ctx14 = runner.setup(function() return KitchenScene.new() end)
     local scene14 = ctx14.sm.current
 
-    local microwave14, meatA, meatB, meatC
+    local microwave14 = add_microwave(scene14)
+    -- Add a third raw_chicken (on_enter seeds two; the panel is 2-wide so we
+    -- need three to test the snap-back-when-full case).
+    scene14.grid:place(Item.new("raw_chicken"), 6, 0)
+
+    local meatA, meatB, meatC
     for _, it in ipairs(scene14.grid:items()) do
-        if it.type_id == "microwave" then microwave14 = it end
         if it.type_id == "raw_chicken" then
             if not meatA then meatA = it
             elseif not meatB then meatB = it
             elseif not meatC then meatC = it end
         end
     end
-    assert(microwave14 and meatA and meatB and meatC,
-        "on_enter should have placed a microwave and at least three raw_chicken")
+    assert(meatA and meatB and meatC, "grid should have at least three raw_chicken items")
 
-    local wx14, wy14 = scene14.grid:cell_to_world(0, 0) -- microwave's top-left cell
+    local wx14, wy14 = scene14.grid:cell_to_world(microwave14.cell_col, microwave14.cell_row)
 
     -- Drag the first raw_chicken onto the microwave's own cell (not via its
     -- panel - it isn't even open).
@@ -1131,11 +1123,7 @@ do
     assert(scene15.customer.loved_tags[1] == "Healthy",
         "sanity check: the forced order customer should love Healthy")
 
-    local microwave15
-    for _, it in ipairs(scene15.grid:items()) do
-        if it.type_id == "microwave" then microwave15 = it end
-    end
-    assert(microwave15, "on_enter should have placed a microwave")
+    local microwave15 = add_microwave(scene15)
 
     scene15.panels = { ItemPanel.new(microwave15) }
     local microwave_panel15 = scene15.panels[1]
@@ -1287,11 +1275,7 @@ do
     local ctx17 = runner.setup(function() return KitchenScene.new() end)
     local scene17 = ctx17.sm.current
 
-    local microwave17
-    for _, it in ipairs(scene17.grid:items()) do
-        if it.type_id == "microwave" then microwave17 = it end
-    end
-    assert(microwave17, "on_enter should have placed a microwave")
+    local microwave17 = add_microwave(scene17)
 
     scene17.panels = { ItemPanel.new(microwave17) }
 
@@ -1326,11 +1310,7 @@ do
     local ctx17b = runner.setup(function() return KitchenScene.new() end)
     local scene17b = ctx17b.sm.current
 
-    local microwave17b
-    for _, it in ipairs(scene17b.grid:items()) do
-        if it.type_id == "microwave" then microwave17b = it end
-    end
-    assert(microwave17b, "on_enter should have placed a microwave")
+    local microwave17b = add_microwave(scene17b)
 
     scene17b.panels = { ItemPanel.new(microwave17b) }
 
