@@ -1,0 +1,18 @@
+# Character Scripts Checklist
+
+- [x] Task A — `lua/game/data/character_scripts.lua` — Create the new data file. Return a table with the two tutorial guide entries exactly as specified in the design doc: chapter 1 with empty trigger / `slot = "after_restock"` / `no_dismiss = true`, and chapter 2 with `trigger = { item_sold = "fried_chicken", count = 1 }` / same slot and no_dismiss. Include all fields: `id`, `chapter`, `trigger`, `name`, `color`, `icon` (omit icon for now — guide has no custom sprite), `slot`, `no_dismiss`, `messages`, `after_messages`.
+
+- [x] Task B — `lua/game/day_state.lua` — Add two new fields to `DayState.new()`: `self.seen_scripts = {}` and `self.total_sold = {}`. Neither resets in `advance_day()`. In `record_serve(items, payout)`, increment `self.total_sold[type_id]` for each type_id in the items list (in addition to the existing `sold_items` counter).
+
+- [x] Task C — `lua/game/customer_queue.lua` — Update `CustomerQueue.new` to accept a third argument `day_state` (may be nil for backwards compat). Add a local `CHARACTER_SCRIPTS = require("lua/game/data/character_scripts")`. Skip the restock merchant when `day == 1`. After computing `total` and the base configs, scan `CHARACTER_SCRIPTS` for a qualifying scripted character (trigger evaluation: not in `seen_scripts`, prior chapters seen, `item_sold` count met) and insert it at the correct slot (`"after_restock"` → index 2, or after the restock slot if it exists; `"random"` → random index among order slots). Increment `self.total`. Store the chosen script's key (`id .. ":" .. chapter`) on `self.scripted_key` and the `no_dismiss` flag on `self.scripted_no_dismiss` so the scene can read them. Do NOT mark `seen_scripts` here — that's done by the scene on successful serve.
+
+- [x] Task D — `lua/game/customer.lua` — In `Customer:show(cfg)`, add a branch for `kind = "scripted"`: set `self.panel = nil`, `self.payout = 0`, skip panel construction. Apply `cfg.color` to `self.sprite.color` if provided. Load `cfg.icon` via the existing `load_icon()` path if provided (falls back gracefully to the default sprite with `cfg.color`). All other fields (name, messages, after_messages, walk-in/out, reveal) work identically.
+
+- [x] Task E — `game/scenes/kitchen_scene.lua` — Five sub-changes, all in one file:
+  1. Pass `self.day_state` as the third argument to every `CustomerQueue.new(...)` call (on_enter and the advance-day path in mouse_pressed).
+  2. Add `self._script_cooldowns = {}` to `on_enter` (day → key mapping for dismissed scripts).
+  3. In the customer click branch of `mouse_pressed`: for `kind = "scripted"` with `done_talking = true`, call `customer:serve()` and `day_state:record_serve({}, 0)`; do not open any panel.
+  4. Guard the dismiss path: if `self.queue.scripted_no_dismiss` is true and the current customer is the scripted one, block dismiss (same no_dismiss guard as wip).
+  5. In the advance-day path (after `day_state:advance_day()`): decrement each `_script_cooldowns` entry, clearing ones that reach 0. When a scripted customer is fully served (walks out — detected in `update()` when `was_active and not customer:active()` and the served customer was scripted), write `day_state.seen_scripts[queue.scripted_key] = true`.
+
+- [x] Task F — `tests/test_character_scripts.lua` — Write headless unit tests covering: (a) a queue built on day 1 has no restock merchant; (b) a qualifying script is inserted at the right slot; (c) a chapter-2 script is blocked when chapter-1 is unseen; (d) `item_sold` count threshold gates correctly; (e) `DayState.total_sold` accumulates across `advance_day()`.

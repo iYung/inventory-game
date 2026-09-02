@@ -22,10 +22,21 @@ do
     print("PASS: customer_queue: total respects day-based ramp")
 end
 
--- Test 2: always contains exactly one restock merchant.
+-- Test 2: day 1 has no restock merchant; days 2+ always have exactly one.
 do
     local ps = ProgramState.new("fryer")
-    for day = 1, 4 do
+    -- day 1: no restock
+    for _ = 1, 10 do
+        local q = CustomerQueue.new(1, ps)
+        local restock_count = 0
+        while q:has_next() do
+            local cfg = q:next()
+            if cfg.kind == "restock" then restock_count = restock_count + 1 end
+        end
+        assert(restock_count == 0, "day 1 should have no restock merchant, got " .. restock_count)
+    end
+    -- days 2-4: exactly one restock
+    for day = 2, 4 do
         for _ = 1, 10 do
             local q = CustomerQueue.new(day, ps)
             local restock_count = 0
@@ -37,7 +48,7 @@ do
                 "day " .. day .. " should have exactly 1 restock merchant, got " .. restock_count)
         end
     end
-    print("PASS: customer_queue: always exactly one restock merchant per day")
+    print("PASS: customer_queue: day 1 no restock; days 2+ exactly one restock merchant")
 end
 
 -- Test 3: odd days have no program merchant.
@@ -86,9 +97,9 @@ do
             while q:has_next() do
                 local cfg = q:next()
                 drained = drained + 1
-                if cfg.kind ~= "restock" and cfg.kind ~= "program" then
+                if cfg.kind ~= "restock" and cfg.kind ~= "program" and cfg.kind ~= "scripted" then
                     assert(cfg.kind == "order",
-                        "non-merchant slot should have kind='order', got '" .. tostring(cfg.kind) .. "'")
+                        "non-merchant slot should have kind='order' or 'scripted', got '" .. tostring(cfg.kind) .. "'")
                     assert(type(cfg.order_rules) == "table", "order cfg should have order_rules")
                     assert(type(cfg.order_item_count) == "number", "order cfg should have order_item_count")
                     assert(type(cfg.payout) == "number", "order cfg should have payout")
@@ -100,10 +111,10 @@ do
     print("PASS: customer_queue: all non-merchant slots are well-formed order customers")
 end
 
--- Test 6: restock merchant config has well-formed stock list.
+-- Test 6: restock merchant config has well-formed stock list (day 2+ only).
 do
     local ps = ProgramState.new("fryer")
-    for day = 1, 2 do
+    for day = 2, 2 do
         for _ = 1, 10 do
             local q = CustomerQueue.new(day, ps)
             while q:has_next() do

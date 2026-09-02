@@ -86,6 +86,8 @@ function Customer.new(target_x, exit_x, y)
     self.type_id         = nil
 
     self.name             = "Customer"
+    self.is_scripted      = false
+    self.no_dismiss       = false
     self.order_rules      = {}
     self.order_item_count = 1
     self.payout           = 10
@@ -201,6 +203,8 @@ function Customer:show(cfg)
     end
 
     self.name             = cfg.name or "Customer"
+    self.is_scripted      = cfg.is_scripted or false
+    self.no_dismiss       = cfg.no_dismiss or false
     self.loved_tags       = cfg.loved_tags    or {}
     self.liked_tags       = cfg.liked_tags    or {}
     self.disliked_tags    = cfg.disliked_tags or {}
@@ -222,11 +226,16 @@ function Customer:show(cfg)
     self.speed = cfg.walk_speed or 80
     if cfg.color then self.sprite.color = cfg.color end
 
-    local icon_id = (self.kind == "restock" or self.kind == "program") and "merchant" or "customer"
+    local icon_id = (self.kind == "restock" or self.kind == "program")
+        and "merchant" or (cfg.icon or "customer")
     local icon = load_icon(icon_id)
     if icon then
         self.sprite.image = icon
-        self.sprite.color = { 1, 1, 1, 1 }
+        -- A scripted character with an explicit cfg.color keeps its tint;
+        -- plain generated customers reset to white so the icon renders untinted.
+        if not cfg.color then
+            self.sprite.color = { 1, 1, 1, 1 }
+        end
     end
 
     self.x = self.exit_x

@@ -97,8 +97,9 @@ function KitchenScene:on_enter()
 
     self.day_state    = DayState.new()
     self.program_state = ProgramState.new("fryer")
-    self.queue = CustomerQueue.new(self.day_state.day, self.program_state)
+    self.queue = CustomerQueue.new(self.day_state.day, self.program_state, self.day_state)
     self.day_state:start_day(self.queue.total)
+    self._script_cooldowns = {}
 
     -- Matches ../wip's convention: customers enter from off-screen on one
     -- side and walk toward target_x, then walk back out the way they came.
@@ -130,8 +131,14 @@ function KitchenScene:update(dt)
     local was_active = self.customer:active()
     self.customer:update(dt)
 
-    if was_active and not self.customer:active() and self.queue:has_next() then
-        self.customer:show(self.queue:next())
+    if was_active and not self.customer:active() then
+        if self.customer.is_scripted and self.queue.scripted_key and not self.customer.dismissed then
+            self.day_state.seen_scripts[self.queue.scripted_key] = true
+            self.queue.scripted_key = nil
+        end
+        if self.queue:has_next() then
+            self.customer:show(self.queue:next())
+        end
     end
 end
 
@@ -447,7 +454,15 @@ function KitchenScene:mouse_pressed(x, y)
     if self._showing_summary then
         if point_in_rect(x, y, SUMMARY_BTN) then
             self.day_state:advance_day()
-            self.queue = CustomerQueue.new(self.day_state.day, self.program_state)
+            for key, days_left in pairs(self._script_cooldowns) do
+                local remaining = days_left - 1
+                if remaining <= 0 then
+                    self._script_cooldowns[key] = nil
+                else
+                    self._script_cooldowns[key] = remaining
+                end
+            end
+            self.queue = CustomerQueue.new(self.day_state.day, self.program_state, self.day_state)
             self.day_state:start_day(self.queue.total)
             self.customer:show(self.queue:next())
             for _, item in ipairs(self.grid:items()) do
@@ -477,12 +492,23 @@ function KitchenScene:mouse_pressed(x, y)
                 end
             end
             panel:mouse_pressed(x, y)
-            -- "Leave" (merchant-only) sets should_close AND should_leave
-            -- together on the same click; check should_leave first since
-            -- should_close is what actually removes the panel below.
+            -- "Leave" (merchant-only) and "Skip" (order-only) both set
+            -- should_close together with their own flag on the same click;
+            -- a no_dismiss customer (e.g. a scripted character mid-tutorial)
+            -- blocks the dismiss action AND cancels should_close, so the
+            -- click is fully absorbed as a no-op instead of closing the
+            -- panel out from under an order the player still has to fill.
             if panel.should_leave then
-                self.customer:dismiss()
-                self.day_state:record_dismiss()
+                if self.customer.no_dismiss then
+                    panel.should_close = false
+                else
+                    self.customer:dismiss()
+                    self.day_state:record_dismiss()
+                    if self.customer.is_scripted and self.queue.scripted_key then
+                        self._script_cooldowns[self.queue.scripted_key] = 2
+                        self.queue.scripted_key = nil
+                    end
+                end
             end
             if panel.should_serve then
                 local panel_items = panel.item.panel:items()
@@ -498,16 +524,24 @@ function KitchenScene:mouse_pressed(x, y)
                 self.day_state:record_serve(type_ids, revenue)
             end
             if panel.should_skip then
-                local items = {}
-                for _, it in ipairs(panel.item.panel:items()) do
-                    items[#items + 1] = it
+                if self.customer.no_dismiss then
+                    panel.should_close = false
+                else
+                    local items = {}
+                    for _, it in ipairs(panel.item.panel:items()) do
+                        items[#items + 1] = it
+                    end
+                    for _, it in ipairs(items) do
+                        panel.item.panel:remove(it)
+                        self.grid:place_first_fit(it)
+                    end
+                    self.customer:dismiss(SKIP_MESSAGE)
+                    self.day_state:record_dismiss()
+                    if self.customer.is_scripted and self.queue.scripted_key then
+                        self._script_cooldowns[self.queue.scripted_key] = 2
+                        self.queue.scripted_key = nil
+                    end
                 end
-                for _, it in ipairs(items) do
-                    panel.item.panel:remove(it)
-                    self.grid:place_first_fit(it)
-                end
-                self.customer:dismiss(SKIP_MESSAGE)
-                self.day_state:record_dismiss()
             end
             if panel.should_close then
                 self:_close_panel(panel)
