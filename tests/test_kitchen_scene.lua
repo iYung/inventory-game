@@ -666,7 +666,7 @@ do
     -- Now double-click the microwave (on the main floor grid, well below
     -- the split line - never overlaps a panel, which always sits above it)
     -- to open a second, different panel alongside the first.
-    local mx8, my8 = scene8.grid:cell_to_world(0, 0)
+    local mx8, my8 = scene8.grid:cell_to_world(0, 2)
     scene8:mouse_pressed(mx8 + 1, my8 + 1)
     scene8:mouse_released(mx8 + 1, my8 + 1)
     scene8:mouse_pressed(mx8 + 1, my8 + 1)
@@ -1258,7 +1258,7 @@ do
     end
 
     assert_raw_serve_disabled("raw_chicken")
-    assert_raw_serve_disabled("broccoli")
+    assert_raw_serve_disabled("onion")
 
     print("PASS: kitchen_scene: raw (untagged) items leave Serve disabled (only tagged cooked food enables Serve)")
 end
@@ -1345,11 +1345,7 @@ do
     local ctx17c = runner.setup(function() return KitchenScene.new() end)
     local scene17c = ctx17c.sm.current
 
-    local microwave17c
-    for _, it in ipairs(scene17c.grid:items()) do
-        if it.type_id == "microwave" then microwave17c = it end
-    end
-    assert(microwave17c, "on_enter should have placed a microwave")
+    local microwave17c = add_microwave(scene17c)
 
     local panel17c = ItemPanel.new(microwave17c)
     scene17c.panels = { panel17c }
@@ -1496,12 +1492,8 @@ do
     local ctx21 = runner.setup(function() return KitchenScene.new() end)
     local scene21 = ctx21.sm.current
 
-    -- Find the two garden items placed by on_enter.
-    local garden21
-    for _, it in ipairs(scene21.grid:items()) do
-        if it.type_id == "garden" then garden21 = it; break end
-    end
-    assert(garden21, "on_enter should have placed at least one garden")
+    local garden21 = Item.new("garden")
+    scene21.grid:place(garden21, 0, 2)
 
     -- Place a single onion at the center of garden21's panel.
     garden21.panel:place(Item.new("onion"), 1, 1)
@@ -1551,12 +1543,11 @@ do
     local ctx22 = runner.setup(function() return KitchenScene.new() end)
     local scene22 = ctx22.sm.current
 
-    local microwave22, potato22
+    local microwave22 = add_microwave(scene22)
+    local potato22
     for _, it in ipairs(scene22.grid:items()) do
-        if it.type_id == "microwave" then microwave22 = it end
         if it.type_id == "potato" and not potato22 then potato22 = it end
     end
-    assert(microwave22, "on_enter should have placed a microwave")
     assert(potato22, "on_enter should have placed a potato")
 
     -- Open the microwave's panel.
@@ -1613,11 +1604,7 @@ do
     local ctx23 = runner.setup(function() return KitchenScene.new() end)
     local scene23 = ctx23.sm.current
 
-    local microwave23
-    for _, it in ipairs(scene23.grid:items()) do
-        if it.type_id == "microwave" then microwave23 = it end
-    end
-    assert(microwave23, "on_enter should have placed a microwave")
+    local microwave23 = add_microwave(scene23)
 
     -- Find a floor item that sits under where the panel will be, so hover
     -- would normally land on it. The microwave is at cells (0,0)-(1,1);
@@ -1665,14 +1652,12 @@ do
     local ctx24 = runner.setup(function() return KitchenScene.new() end)
     local scene24 = ctx24.sm.current
 
-    local microwave24
+    local microwave24 = add_microwave(scene24)
     local fryer24
     for _, it in ipairs(scene24.grid:items()) do
-        if it.type_id == "microwave" then microwave24 = it end
-        if it.type_id == "fryer"     then fryer24     = it end
+        if it.type_id == "fryer" then fryer24 = it end
     end
-    assert(microwave24, "on_enter should have placed a microwave")
-    assert(fryer24,     "on_enter should have placed a fryer")
+    assert(fryer24, "on_enter should have placed a fryer")
 
     local panelA24 = ItemPanel.new(microwave24)  -- will sit at back (index 1)
     local panelB24 = ItemPanel.new(fryer24)       -- will sit on top (index 2)
@@ -1704,39 +1689,37 @@ do
     print("PASS: kitchen_scene: lower panel inner grid hover is suppressed when a higher panel covers the cursor")
 end
 
--- Test 25: on_enter places a coffee_machine on the floor and pre-stocks the
--- container with two roasted_coffee_bean items.
+-- Test 25: on_enter places the fryer-only starting layout:
+-- fryer at (0,0), two raw_chicken at (2,0) and (3,0), potato at (4,0),
+-- onion at (5,0). No coffee_machine, container, or garden on day 1.
 do
     local ctx25 = runner.setup(function() return KitchenScene.new() end)
     local scene25 = ctx25.sm.current
 
-    local coffee_machine25
-    local container25
+    local counts25 = {}
+    local fryer25
     for _, it in ipairs(scene25.grid:items()) do
-        if it.type_id == "coffee_machine" then coffee_machine25 = it end
-        if it.type_id == "container"      then container25      = it end
+        counts25[it.type_id] = (counts25[it.type_id] or 0) + 1
+        if it.type_id == "fryer" then fryer25 = it end
     end
 
-    assert(coffee_machine25, "on_enter should have placed a coffee_machine on the floor grid")
-    assert(coffee_machine25.cell_col == 6 and coffee_machine25.cell_row == 2,
-        "coffee_machine should start at (6,2)")
+    assert(fryer25, "on_enter should have placed a fryer")
+    assert(fryer25.cell_col == 0 and fryer25.cell_row == 0,
+        "fryer should start at (0,0)")
+    assert((counts25["raw_chicken"] or 0) == 2,
+        "on_enter should place exactly 2 raw_chicken, got " .. (counts25["raw_chicken"] or 0))
+    assert((counts25["potato"] or 0) == 1,
+        "on_enter should place exactly 1 potato")
+    assert((counts25["onion"] or 0) == 1,
+        "on_enter should place exactly 1 onion")
+    assert(not counts25["coffee_machine"],
+        "on_enter should not place a coffee_machine in the fryer-only starting layout")
+    assert(not counts25["container"],
+        "on_enter should not place a container in the fryer-only starting layout")
+    assert(not counts25["garden"],
+        "on_enter should not place a garden in the fryer-only starting layout")
 
-    assert(container25, "on_enter should have placed a container on the floor grid")
-
-    local bean_count = 0
-    local has_milking_center = false
-    local has_cheese_cave    = false
-    for _, it in ipairs(container25.panel:items()) do
-        if it.type_id == "roasted_coffee_bean" then bean_count = bean_count + 1 end
-        if it.type_id == "milking_center"       then has_milking_center = true end
-        if it.type_id == "cheese_cave"          then has_cheese_cave    = true end
-    end
-    assert(bean_count == 2,
-        "container should start with 2 roasted_coffee_bean items, got " .. bean_count)
-    assert(has_milking_center, "container should start with a milking_center")
-    assert(has_cheese_cave,    "container should start with a cheese_cave")
-
-    print("PASS: kitchen_scene: on_enter places coffee_machine at (6,2) and pre-stocks container with milking_center, cheese_cave, and 2 roasted_coffee_beans")
+    print("PASS: kitchen_scene: on_enter places the fryer-only starting layout (fryer, 2× raw_chicken, potato, onion)")
 end
 
 -- Test 26: merchant panel purchase guards.
