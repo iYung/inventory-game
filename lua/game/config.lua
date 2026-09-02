@@ -11,6 +11,8 @@ config.GRID_ROWS     = 9
 config.GRID_ORIGIN_X = (config.SCREEN_W - config.GRID_COLS * config.U) / 2
 config.GRID_ORIGIN_Y = config.SPLIT_Y + 12
 
+config.WALK_SPEED = 160  -- customer/merchant walk speed in px/sec
+
 config.RESTOCK_ITEM_COST = 5  -- currency per item dragged from a restock merchant
 
 config.MERCHANT_PANEL_COLS = 8
