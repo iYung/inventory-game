@@ -570,11 +570,13 @@ function KitchenScene:mouse_pressed(x, y)
             self.customer:advance_after()
         elseif self.customer:arrived() then
             self.customer:advance()
-            -- If advancing just finished the last greeting line, open the
-            -- order panel immediately instead of making the player click again
-            -- through a silent "customer stands there" state.
+            -- If advancing just finished the last greeting line, act immediately
+            -- rather than leaving the player with a silent standing customer.
             if self.customer.kind == "order" and self.customer.done_talking then
                 self:_open_or_focus_panel(self.customer)
+            elseif self.customer.kind == "scripted" and self.customer.done_talking then
+                self.customer:serve()
+                self.day_state:record_serve({}, 0)
             end
         end
         return
