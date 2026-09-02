@@ -147,8 +147,6 @@ function ItemPanel.new(item)
     self._reminder_h = 0
     if item.kind == "order" then
         self._reminder_h = order_reminder_h(#(item.order_rules or {}))
-    elseif item.kind == "restock" then
-        self._reminder_h = RULE_ROW_H + RULE_PAD
     end
 
     -- Button row sizing: any def.actions plus one more slot for "Leave" when
@@ -441,11 +439,6 @@ function ItemPanel:draw(skip_dragging)
     love.graphics.rectangle("line", tb.x, tb.y, tb.w, tb.h)
     love.graphics.setColor(colors.button_text or { 1, 1, 1, 1 })
     love.graphics.print((self.def and self.def.name) or self.item.type_id, tb.x + 8, tb.y + 6)
-
-    if self.item.kind == "restock" then
-        love.graphics.setColor(COLOR_NEUTRAL)
-        love.graphics.print("$" .. config.RESTOCK_ITEM_COST .. " per item", self.bg.x + MARGIN, tb.y + TITLE_H + 4)
-    end
 
     if self.item.kind == "order" and self._reminder_h > 0 then
         local panel_items = self.item.panel:items()
