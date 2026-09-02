@@ -59,44 +59,90 @@ function KitchenScene:on_enter()
         config.GRID_ORIGIN_X, config.GRID_ORIGIN_Y
     )
 
-    -- Starting layout: microwave (0,0), fryer (0,2), starters at (2,0)-(4,0),
-    -- broccoli/potato at (5,0)/(6,0), container at (2,2), coffee_machine at (7,2),
-    -- garden at (0,4). Cell (5,3) is intentionally left free.
-    local microwave = Item.new("microwave")
-    self.grid:place(microwave, 0, 0)
+    -- TEST LAYOUT: all programs unlocked, all machines placed, one container
+    -- per program stocked with its input ingredients.
+    --
+    -- Row 0-1:  fryer(0)  pump(2)  microwave(3)  coffee_machine(5)
+    --           pot(7)  incubator(9)  coop(10)  cheese_cave(12)
+    -- Row 2-4:  garden(0)  meat_machine(3)  barn(6)  milking_center(9)
+    -- Row 5-6:  containers for fryer/garden/pump_microwave/pot/coop/incubator/meat_machine
+    -- Row 7-8:  containers for barn/milking_center/cheese_cave/coffee_machine
 
-    local fryer = Item.new("fryer")
-    self.grid:place(fryer, 0, 2)
+    -- Machines — row 0-1
+    self.grid:place(Item.new("fryer"),          0,  0)
+    self.grid:place(Item.new("pump"),           2,  0)
+    self.grid:place(Item.new("microwave"),      3,  0)
+    self.grid:place(Item.new("coffee_machine"), 5,  0)
+    self.grid:place(Item.new("pot"),            7,  0)
+    self.grid:place(Item.new("incubator"),      9,  0)
+    self.grid:place(Item.new("coop"),          10,  0)
+    self.grid:place(Item.new("cheese_cave"),   12,  0)
 
-    local starter = { "raw_chicken", "raw_chicken", "raw_chicken" }
-    local col, row = 2, 0
-    for _, type_id in ipairs(starter) do
-        local it = Item.new(type_id)
-        if self.grid:can_place(it, col, row) then
-            self.grid:place(it, col, row)
-            col = col + 1
-            if col >= config.GRID_COLS then col = 0; row = row + 1 end
+    -- Machines — row 2-4 (large 3×3/3×2)
+    self.grid:place(Item.new("garden"),        0,  2)
+    self.grid:place(Item.new("meat_machine"),  3,  2)
+    self.grid:place(Item.new("barn"),          6,  2)
+    self.grid:place(Item.new("milking_center"),9,  2)
+
+    -- Containers row 5-6
+    -- Scans every slot in order; skips occupied/OOB cells so multi-cell items
+    -- (e.g. cow 2×2) pack correctly without infinite loops.
+    local function stocked_container(gc, gr, fills)
+        local ct = Item.new("container")
+        self.grid:place(ct, gc, gr)
+        local panel = ct.panel
+        local cols  = panel.cols
+        local rows  = panel.rows
+        for _, entry in ipairs(fills) do
+            local type_id, count = entry[1], entry[2]
+            local placed = 0
+            for slot = 0, cols * rows - 1 do
+                if placed >= count then break end
+                local c, r = slot % cols, math.floor(slot / cols)
+                local it = Item.new(type_id)
+                if panel:can_place(it, c, r) then
+                    panel:place(it, c, r)
+                    placed = placed + 1
+                end
+            end
         end
+        return ct
     end
 
-    self.grid:place(Item.new("broccoli"),       5, 0)
-    self.grid:place(Item.new("potato"),         6, 0)
-    self.grid:place(Item.new("coffee_machine"), 6, 2)
+    -- fryer inputs: raw_chicken, potato, onion
+    stocked_container( 0, 5, { {"raw_chicken",9}, {"potato",9}, {"onion",9} })
+    -- garden inputs: onion, broccoli, potato
+    stocked_container( 2, 5, { {"onion",9}, {"broccoli",9}, {"potato",9} })
+    -- pump_microwave inputs: raw_chicken, potato, water
+    stocked_container( 4, 5, { {"raw_chicken",9}, {"potato",9}, {"water",9} })
+    -- pot inputs: broccoli, onion, raw_chicken, egg, water
+    stocked_container( 6, 5, { {"broccoli",7}, {"onion",7}, {"raw_chicken",7}, {"egg",7}, {"water",7} })
+    -- coop inputs: chicken
+    stocked_container( 8, 5, { {"chicken",9} })
+    -- incubator inputs: egg
+    stocked_container(10, 5, { {"egg",18} })
+    -- meat_machine inputs: chicken, cow (cow is 2×2, shares space with chicken 1×1)
+    stocked_container(12, 5, { {"chicken",6}, {"cow",4} })
 
-    local container = Item.new("container")
-    self.grid:place(container, 4, 4)
-    container.panel:place(Item.new("roasted_coffee_bean"), 0, 0)
-    container.panel:place(Item.new("roasted_coffee_bean"), 1, 0)
-    container.panel:place(Item.new("milking_center"),      2, 0)
-    container.panel:place(Item.new("cheese_cave"),         3, 0)
-
-    self.grid:place(Item.new("garden"),         0, 4)
+    -- barn inputs: cow
+    stocked_container( 0, 7, { {"cow",9} })
+    -- milking_center inputs: cow
+    stocked_container( 2, 7, { {"cow",9} })
+    -- cheese_cave inputs: milk
+    stocked_container( 4, 7, { {"milk",18} })
+    -- coffee_machine inputs: coffee_bean, water
+    stocked_container( 6, 7, { {"coffee_bean",9}, {"water",9} })
 
     self._scene_bg = love.graphics.newImage("assets/images/scene/bg.png")
     self._scene_fg = love.graphics.newImage("assets/images/scene/fg.png")
 
     self.day_state    = DayState.new()
-    self.program_state = ProgramState.new("fryer")
+    -- All programs owned so every recipe and order type is available.
+    local program_defs_data = require("lua/game/data/program_defs")
+    self.program_state = ProgramState.new()
+    for id, _ in pairs(program_defs_data) do
+        self.program_state:buy(id)
+    end
     self.queue = CustomerQueue.new(self.day_state.day, self.program_state, self.day_state)
     self.day_state:start_day(self.queue.total)
     self._script_cooldowns = {}
