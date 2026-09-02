@@ -9,11 +9,15 @@ local item_defs    = require("lua/game/data/item_defs")
 local ProgramState = {}
 ProgramState.__index = ProgramState
 
-function ProgramState.new(starting_id)
+function ProgramState.new(starting)
     local self = setmetatable({}, ProgramState)
     self._owned = {}
-    if starting_id then
-        self._owned[starting_id] = true
+    if type(starting) == "string" then
+        self._owned[starting] = true
+    elseif type(starting) == "table" then
+        for _, id in ipairs(starting) do
+            self._owned[id] = true
+        end
     end
     return self
 end
