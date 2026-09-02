@@ -54,9 +54,9 @@ local function point_in_rect(x, y, r)
     return x >= r.x and x < r.x + r.w and y >= r.y and y < r.y + r.h
 end
 
--- Reminder-area height for an order panel: one row per rule + payout row.
+-- Reminder-area height for an order panel: one row per rule.
 local function order_reminder_h(rule_count)
-    return RULE_PAD + (rule_count + 1) * RULE_ROW_H + RULE_PAD
+    return RULE_PAD + rule_count * RULE_ROW_H + RULE_PAD
 end
 
 -- ── Rule evaluation ───────────────────────────────────────────────────────────
@@ -134,9 +134,8 @@ function ItemPanel.new(item)
     self.should_serve    = false
     self.should_skip     = false
     self._dragging_panel = false
-    -- Program merchant: tracks which program ids have been paid for this visit,
-    -- and how many machines from each have been placed on the floor.
-    self._paid_programs    = {}
+    -- Program merchant: tracks how many machines from each program have been
+    -- placed on the floor (used for program completion tracking).
     self._machines_placed  = {}
 
     local panel = item.panel
@@ -148,8 +147,6 @@ function ItemPanel.new(item)
     self._reminder_h = 0
     if item.kind == "order" then
         self._reminder_h = order_reminder_h(#(item.order_rules or {}))
-    elseif item.kind == "restock" then
-        self._reminder_h = RULE_ROW_H + RULE_PAD
     end
 
     -- Button row sizing: any def.actions plus one more slot for "Leave" when
@@ -443,11 +440,6 @@ function ItemPanel:draw(skip_dragging)
     love.graphics.setColor(colors.button_text or { 1, 1, 1, 1 })
     love.graphics.print((self.def and self.def.name) or self.item.type_id, tb.x + 8, tb.y + 6)
 
-    if self.item.kind == "restock" then
-        love.graphics.setColor(COLOR_NEUTRAL)
-        love.graphics.print("$" .. config.RESTOCK_ITEM_COST .. " per item", self.bg.x + MARGIN, tb.y + TITLE_H + 4)
-    end
-
     if self.item.kind == "order" and self._reminder_h > 0 then
         local panel_items = self.item.panel:items()
         local rules       = self.item.order_rules or {}
@@ -471,11 +463,6 @@ function ItemPanel:draw(skip_dragging)
             love.graphics.setColor(color)
             love.graphics.print(indicator .. rule_label(rule, item_defs), self.bg.x + MARGIN, base_y + (i - 1) * RULE_ROW_H)
         end
-
-        -- Payout line
-        local payout_y = base_y + #rules * RULE_ROW_H
-        love.graphics.setColor(COLOR_NEUTRAL)
-        love.graphics.print("Payout: $" .. (self.item.payout or 10), self.bg.x + MARGIN, payout_y)
     end
 
     self.item.panel:draw(skip_dragging)

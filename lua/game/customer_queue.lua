@@ -6,10 +6,11 @@
 -- On even days a program merchant also appears (different random slot).
 -- Remaining slots are rule-based food orders from OrderGen.
 
-local RestockGen        = require("lua/game/restock_gen")
-local MerchantGen       = require("lua/game/merchant_gen")
-local OrderGen          = require("lua/game/order_gen")
-local CHARACTER_SCRIPTS = require("lua/game/data/character_scripts")
+local config             = require("lua/game/config")
+local RestockGen         = require("lua/game/restock_gen")
+local MerchantGen        = require("lua/game/merchant_gen")
+local OrderGen           = require("lua/game/order_gen")
+local CHARACTER_SCRIPTS  = require("lua/game/data/character_scripts")
 
 local CustomerQueue = {}
 CustomerQueue.__index = CustomerQueue
@@ -20,7 +21,7 @@ local function make_restock_cfg(program_state)
         name       = "Restock Merchant",
         messages   = { "Fresh supplies — help yourself!" },
         stock      = RestockGen.stock(program_state),
-        walk_speed = 80,
+        walk_speed = config.WALK_SPEED,
     }
 end
 
@@ -31,7 +32,7 @@ local function make_program_cfg(program_state)
         messages       = { "Looking to expand? Take a look." },
         offer          = MerchantGen.offer(program_state),
         program_state  = program_state,
-        walk_speed     = 80,
+        walk_speed     = config.WALK_SPEED,
     }
 end
 
@@ -45,7 +46,7 @@ local function make_order_cfg(day, program_state)
         order_rules      = gen.order_rules,
         order_item_count = gen.order_item_count,
         payout           = gen.payout,
-        walk_speed       = 80,
+        walk_speed       = config.WALK_SPEED,
     }
 end
 
@@ -148,7 +149,7 @@ function CustomerQueue.new(day, program_state, day_state)
                 order_rules      = entry.order_rules      or {},
                 order_item_count = entry.order_item_count or 1,
                 payout           = entry.payout           or 0,
-                walk_speed       = 80,
+                walk_speed       = config.WALK_SPEED,
             }
             local insert_at
             if entry.slot == "after_restock" then

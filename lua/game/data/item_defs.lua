@@ -2,10 +2,17 @@
 -- Data-driven item type definitions, keyed by type id string.
 --
 -- Shape per entry:
---   { name, footprint, color, has_panel, panel_cols, panel_rows, actions, tags }
+--   { name, footprint, color, buy_price, sell_price, has_panel, panel_cols, panel_rows, actions, tags }
 --
 -- `footprint` is the item's *unrotated* base footprint: a list of {dx, dy}
 -- integer cell offsets relative to the item's anchor cell.
+--
+-- `buy_price`  (optional) is the gold cost to purchase this item.
+-- `sell_price` (optional) is the gold earned when selling/serving this item.
+-- Machine/equipment items carry only `buy_price`.
+-- Ingredient/consumable items carry both (or just `sell_price` for items
+-- that are never purchased directly).
+-- Sentinel items (merchant, order_customer, book) carry neither.
 --
 -- `actions` (only present on containers) is a list of:
 --   { name, duration, requires = {type_id = count, ...}, produces = {type_id = count, ...} }
@@ -36,18 +43,23 @@ local item_defs = {
         name = "Raw Chicken",
         footprint = { { 0, 0 } },
         color = { 0.75, 0.25, 0.25, 1 },
+        buy_price  = 3,
+        sell_price = 5,
     },
 
     raw_beef = {
         name = "Raw Beef",
         footprint = { { 0, 0 } },
         color = { 0.65, 0.15, 0.15, 1 },
+        buy_price  = 4,
+        sell_price = 6,
     },
 
     baked_chicken = {
         name = "Baked Chicken",
         footprint = { { 0, 0 } },
         color = { 0.55, 0.36, 0.20, 1 },
+        sell_price = 10,
         tags = { "Protein" },
     },
 
@@ -55,6 +67,7 @@ local item_defs = {
         name = "Steak",
         footprint = { { 0, 0 } },
         color = { 0.55, 0.25, 0.12, 1 },
+        sell_price = 12,
         tags = { "Protein" },
     },
 
@@ -62,6 +75,7 @@ local item_defs = {
         name = "Fried Chicken",
         footprint = { { 0, 0 } },
         color = { 0.88, 0.65, 0.20, 1 },
+        sell_price = 11,
         tags = { "Greasy", "Protein" },
     },
 
@@ -69,12 +83,15 @@ local item_defs = {
         name = "Broccoli",
         footprint = { { 0, 0 } },
         color = { 0.30, 0.55, 0.20, 1 },
+        buy_price  = 2,
+        sell_price = 4,
     },
 
     steamed_broccoli = {
         name = "Steamed Broccoli",
         footprint = { { 0, 0 } },
         color = { 0.45, 0.75, 0.30, 1 },
+        sell_price = 8,
         tags = { "Healthy", "Veggie" },
     },
 
@@ -94,6 +111,7 @@ local item_defs = {
         name = "Microwave",
         footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },
         color = { 0.55, 0.55, 0.60, 1 },
+        buy_price = 50,
         has_panel = true,
         panel_cols = 2,
         panel_rows = 1,
@@ -141,30 +159,38 @@ local item_defs = {
         name = "Potato",
         footprint = { { 0, 0 } },
         color = { 0.85, 0.75, 0.55, 1 },
+        buy_price  = 2,
+        sell_price = 4,
     },
 
     water = {
         name = "Water",
         footprint = { { 0, 0 } },
         color = { 0.40, 0.65, 0.90, 1 },
+        buy_price  = 1,
+        sell_price = 2,
     },
 
     coffee_bean = {
         name     = "Coffee Bean",
         footprint = { { 0, 0 } },
         color    = { 0.28, 0.20, 0.10, 1 },
+        buy_price  = 3,
+        sell_price = 5,
     },
 
     roasted_coffee_bean = {
         name = "Roasted Coffee Bean",
         footprint = { { 0, 0 } },
         color = { 0.35, 0.22, 0.10, 1 },
+        sell_price = 7,
     },
 
     black_coffee = {
         name = "Black Coffee",
         footprint = { { 0, 0 } },
         color = { 0.12, 0.08, 0.05, 1 },
+        sell_price = 12,
         tags = { "Caffeine", "Bitter" },
     },
 
@@ -172,6 +198,7 @@ local item_defs = {
         name = "Coffee Machine",
         footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },
         color = { 0.25, 0.22, 0.20, 1 },
+        buy_price = 65,
         has_panel = true,
         panel_cols = 2,
         panel_rows = 2,
@@ -190,6 +217,7 @@ local item_defs = {
         name = "Fries",
         footprint = { { 0, 0 } },
         color = { 0.95, 0.75, 0.25, 1 },
+        sell_price = 9,
         tags = { "Greasy" },
     },
 
@@ -197,6 +225,7 @@ local item_defs = {
         name = "Baked Potato",
         footprint = { { 0, 0 } },
         color = { 0.70, 0.55, 0.35, 1 },
+        sell_price = 9,
         tags = { "Filling" },
     },
 
@@ -204,6 +233,7 @@ local item_defs = {
         name = "Beef Stew",
         footprint = { { 0, 0 }, { 1, 0 }, { 2, 0 } },
         color = { 0.60, 0.40, 0.25, 1 },
+        sell_price = 15,
         tags = { "Filling", "Protein" },
     },
 
@@ -211,6 +241,7 @@ local item_defs = {
         name = "Chicken Soup",
         footprint = { { 0, 0 } },
         color = { 0.70, 0.50, 0.30, 1 },
+        sell_price = 13,
         tags = { "Protein", "Hearty" },
     },
 
@@ -218,12 +249,15 @@ local item_defs = {
         name  = "Onion",
         footprint = { {0,0} },
         color = { 0.90, 0.75, 0.40, 1 },
+        buy_price  = 2,
+        sell_price = 4,
     },
 
     blooming_onion = {
         name  = "Blooming Onion",
         footprint = { {0,0} },
         color = { 0.80, 0.60, 0.25, 1 },
+        sell_price = 10,
         tags  = { "Greasy" },
     },
 
@@ -231,6 +265,7 @@ local item_defs = {
         name  = "Onion Soup",
         footprint = { {0,0} },
         color = { 0.75, 0.55, 0.25, 1 },
+        sell_price = 11,
         tags  = { "Hearty", "Veggie" },
     },
 
@@ -238,6 +273,7 @@ local item_defs = {
         name = "Boiled Egg",
         footprint = { { 0, 0 } },
         color = { 0.95, 0.90, 0.75, 1 },
+        sell_price = 7,
         tags = { "Protein" },
     },
 
@@ -245,6 +281,7 @@ local item_defs = {
         name     = "Omelette",
         footprint = { { 0, 0 } },
         color    = { 0.90, 0.80, 0.40, 1 },
+        sell_price = 10,
         tags     = { "Protein", "Healthy" },
     },
 
@@ -252,24 +289,31 @@ local item_defs = {
         name     = "Chicken",
         footprint = { { 0, 0 } },
         color    = { 0.72, 0.55, 0.30, 1 },
+        buy_price  = 5,
+        sell_price = 8,
     },
 
     cow = {
         name     = "Cow",
         footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },
         color    = { 0.45, 0.28, 0.15, 1 },
+        buy_price  = 10,
+        sell_price = 15,
     },
 
     egg = {
         name     = "Egg",
         footprint = { { 0, 0 } },
         color    = { 0.95, 0.92, 0.80, 1 },
+        buy_price  = 2,
+        sell_price = 3,
     },
 
     coop = {
         name      = "Coop",
         footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },
         color     = { 0.55, 0.42, 0.25, 1 },
+        buy_price  = 40,
         has_panel  = true,
         panel_cols = 2,
         panel_rows = 2,
@@ -283,6 +327,7 @@ local item_defs = {
         name      = "Meat Machine",
         footprint = { { 0, 0 }, { 1, 0 }, { 2, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },
         color     = { 0.40, 0.40, 0.45, 1 },
+        buy_price  = 60,
         has_panel  = true,
         panel_cols = 2,
         panel_rows = 2,
@@ -302,6 +347,7 @@ local item_defs = {
         name      = "Incubator",
         footprint = { { 0, 0 } },
         color     = { 0.65, 0.75, 0.60, 1 },
+        buy_price  = 35,
         has_panel  = true,
         panel_cols = 1,
         panel_rows = 1,
@@ -314,6 +360,7 @@ local item_defs = {
         name = "Fryer",
         footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },
         color = { 0.35, 0.35, 0.40, 1 },
+        buy_price = 30,
         has_panel = true,
         panel_cols = 1,
         panel_rows = 1,
@@ -334,6 +381,7 @@ local item_defs = {
         name      = "Pump",
         footprint = { {0,0}, {0,1} },
         color     = { 0.35, 0.55, 0.75, 1 },
+        buy_price  = 20,
         has_panel  = true,
         panel_cols = 1,
         panel_rows = 1,
@@ -354,6 +402,7 @@ local item_defs = {
             {0,2},{1,2},{2,2},
         },
         color     = { 0.25, 0.48, 0.18, 1 },
+        buy_price  = 25,
         has_panel  = true,
         panel_cols = 3,
         panel_rows = 3,
@@ -364,6 +413,7 @@ local item_defs = {
         name      = "Container",
         footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },
         color     = { 0.60, 0.50, 0.35, 1 },
+        buy_price  = 20,
         has_panel  = true,
         panel_cols = 6,
         panel_rows = 6,
@@ -373,6 +423,7 @@ local item_defs = {
         name = "Pot",
         footprint = { { 0, 0 }, { 1, 0 } },
         color = { 0.25, 0.25, 0.30, 1 },
+        buy_price = 30,
         has_panel = true,
         panel_cols = 3,
         panel_rows = 1,
@@ -388,6 +439,7 @@ local item_defs = {
             {0,2},{1,2},{2,2},
         },
         color     = { 0.65, 0.35, 0.20, 1 },
+        buy_price  = 70,
         has_panel  = true,
         panel_cols = 6,
         panel_rows = 6,
@@ -407,12 +459,15 @@ local item_defs = {
         name     = "Milk",
         footprint = { { 0, 0 } },
         color    = { 0.92, 0.92, 0.96, 1 },
+        buy_price  = 3,
+        sell_price = 5,
     },
 
     cheese = {
         name     = "Cheese",
         footprint = { { 0, 0 } },
         color    = { 0.95, 0.80, 0.20, 1 },
+        sell_price = 10,
     },
 
     milking_center = {
@@ -423,6 +478,7 @@ local item_defs = {
             {0,2},{1,2},{2,2},
         },
         color     = { 0.60, 0.55, 0.70, 1 },
+        buy_price  = 55,
         has_panel  = true,
         panel_cols = 4,
         panel_rows = 3,
@@ -441,6 +497,7 @@ local item_defs = {
         name      = "Cheese Cave",
         footprint = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } },
         color     = { 0.55, 0.42, 0.30, 1 },
+        buy_price  = 45,
         has_panel  = true,
         panel_cols = 2,
         panel_rows = 2,
@@ -463,6 +520,7 @@ local item_defs = {
         name           = "Garden Book",
         footprint      = { { 0, 0 } },
         color          = { 0.30, 0.55, 0.22, 1 },
+        buy_price      = 10,
         has_book_panel = true,
         book_image     = "garden_book",
     },
@@ -471,6 +529,7 @@ local item_defs = {
         name           = "Microwave Book",
         footprint      = { { 0, 0 } },
         color          = { 0.50, 0.50, 0.60, 1 },
+        buy_price      = 10,
         has_book_panel = true,
         book_image     = "microwave_book",
     },
