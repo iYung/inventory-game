@@ -1,5 +1,6 @@
 local CustomerQueue = require("lua/game/customer_queue")
 local ProgramState  = require("lua/game/program_state")
+local item_defs     = require("lua/game/data/item_defs")
 
 -- Test 1: total respects day-based ramp (days 1-4: 3, days 5-10: 3-4, days 11+: 4-5).
 do
@@ -147,7 +148,13 @@ do
                     "program offer should have 2-4 entries, got " .. #cfg.offer)
                 for _, prog in ipairs(cfg.offer) do
                     assert(type(prog.id) == "string", "program entry should have id")
-                    assert(type(prog.cost) == "number", "program entry should have cost")
+                    -- Program cost now lives on each machine item's own def
+                    -- (buy_price), not on the program def itself.
+                    for _, machine_type_id in ipairs(prog.machines or {}) do
+                        local def = item_defs[machine_type_id]
+                        assert(def and type(def.buy_price) == "number",
+                            "program machine '" .. machine_type_id .. "' should have a buy_price")
+                    end
                 end
             end
         end

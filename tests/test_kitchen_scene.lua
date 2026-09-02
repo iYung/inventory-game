@@ -1217,8 +1217,10 @@ do
     scene15:mouse_pressed(serve15.x + serve15.w / 2, serve15.y + serve15.h / 2)
 
     assert(#scene15.panels == 2, "clicking Serve should close the order panel, leaving the microwave and pot panels open")
-    assert(scene15.day_state.currency == currency_before + 10,
-        "currency should increase by 10 when serving a Healthy-tagged item for a Healthy request")
+    -- Revenue on serve is the sum of served items' sell_price (item_defs),
+    -- not a flat customer payout; steamed_broccoli's sell_price is 8.
+    assert(scene15.day_state.currency == currency_before + 8,
+        "currency should increase by steamed_broccoli's sell_price (8) when serving a Healthy-tagged item for a Healthy request")
     assert(scene15.day_state.customers_served == served_before + 1,
         "customers_served should increment when serving directly from the panel")
     assert(not scene15.customer.dismissed, "the customer should be served, not dismissed")
