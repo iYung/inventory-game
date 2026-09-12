@@ -28,6 +28,16 @@ local program_defs = {
         requires      = {},
     },
 
+    container = {
+        id            = "container",
+        name          = "Container",
+        machines      = { "container" },
+        extras        = {},
+        inputs        = {},
+        tags_unlocked = {},
+        requires      = {},
+    },
+
     garden = {
         id            = "garden",
         name          = "Garden",

@@ -57,4 +57,13 @@ do
     print("PASS: program_state: available_outputs() returns producible items for owned machines")
 end
 
+-- Test 6: ProgramState.new accepts a list of starting ids.
+do
+    local ps = ProgramState.new({ "fryer", "container" })
+    assert(ps:owns("fryer"),     "fryer should be owned when passed in list")
+    assert(ps:owns("container"), "container should be owned when passed in list")
+    assert(not ps:owns("garden"), "garden should not be owned")
+    print("PASS: program_state: new() accepts a list of starting ids")
+end
+
 print("ALL TESTS PASSED")

@@ -96,7 +96,7 @@ function KitchenScene:on_enter()
     self._scene_fg = love.graphics.newImage("assets/images/scene/fg.png")
 
     self.day_state    = DayState.new()
-    self.program_state = ProgramState.new("fryer")
+    self.program_state = ProgramState.new({ "fryer", "container" })
     self.queue = CustomerQueue.new(self.day_state.day, self.program_state, self.day_state)
     self.day_state:start_day(self.queue.total)
     self._script_cooldowns = {}
