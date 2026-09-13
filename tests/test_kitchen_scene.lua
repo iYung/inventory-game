@@ -1957,4 +1957,30 @@ do
     print("PASS: kitchen_scene: dropping a floor item onto the merchant's panel snaps it back")
 end
 
+-- Test 27: mouse_moved does not crash when a BookPanel is open. ---------------
+-- Regression: panel.item.panel was nil for BookPanel (books have no inner grid)
+-- and the hover-suppression loop in mouse_moved crashed with
+-- "attempt to index field 'panel' (a nil value)".
+do
+    local ctx27 = runner.setup(function() return KitchenScene.new() end)
+    local scene27 = ctx27.sm.current
+
+    -- Place a garden_book on the floor grid.
+    local book27 = Item.new("garden_book")
+    scene27.grid:place(book27, 0, 0)
+
+    -- Open it as a BookPanel (mirroring what _open_or_focus_panel does).
+    local BookPanel = require("lua/game/book_panel")
+    scene27:_open_panel(BookPanel.new(book27))
+    assert(#scene27.panels == 1, "garden_book should be open as a panel")
+
+    -- mouse_moved over the panel backdrop must not crash.
+    local bx = scene27.panels[1].bg.x + scene27.panels[1].bg.w / 2
+    local by = scene27.panels[1].bg.y + scene27.panels[1].bg.h / 2
+    local ok, err = pcall(function() scene27:mouse_moved(bx, by) end)
+    assert(ok, "mouse_moved over an open BookPanel should not crash: " .. tostring(err))
+
+    print("PASS: kitchen_scene: mouse_moved does not crash with an open BookPanel")
+end
+
 print("ALL TESTS PASSED")
