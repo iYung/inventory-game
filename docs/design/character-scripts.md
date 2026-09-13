@@ -50,7 +50,7 @@ New data file, a table of script entries. Each entry:
     after_messages = { "Good luck!" },
 
     -- Order (all optional; a customer with no rules accepts any single item for 0 payout)
-    order_rules      = { { kind = "specific", type_id = "baked_chicken" } },
+    order_rules      = { { kind = "specific", type_id = "fried_chicken" } },
     order_item_count = 1,
     payout           = 0,
 }
@@ -108,7 +108,7 @@ Scripted characters use the **same click/panel flow as any order customer** — 
 
 ### Tutorial character data (in `character_scripts.lua`)
 
-Chapter 1 (always eligible) asks for a `baked_chicken` (teaches the microwave, which sits pre-stocked with raw chicken at scene start). Chapter 2 (fires once a `fried_chicken` has been sold) asks for another `fried_chicken` and mentions the restock merchant. Both are `no_dismiss = true` and placed `after_restock`. See `lua/game/data/character_scripts.lua` for the exact dialogue and `order_rules`.
+Chapter 1 (always eligible) asks for a `fried_chicken` (teaches the fryer, which starts pre-stocked with raw chicken). Chapter 2 (fires once a `fried_chicken` has been sold) asks for another `fried_chicken` and mentions the restock merchant. Both are `no_dismiss = true` and placed `after_restock`. See `lua/game/data/character_scripts.lua` for the exact dialogue and `order_rules`.
 
 ## What stays the same
 
