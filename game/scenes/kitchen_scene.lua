@@ -637,7 +637,7 @@ function KitchenScene:mouse_moved(x, y)
         if top_cover then
             self.grid:clear_hover()
             for _, panel in ipairs(self.panels) do
-                if panel ~= top_cover then
+                if panel ~= top_cover and panel.item.panel then
                     panel.item.panel:clear_hover()
                 end
             end
