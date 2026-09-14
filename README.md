@@ -64,7 +64,7 @@ lua/game/           Game logic — grid inventory, items, customers, day loop
   grid.lua           Generic cell grid: occupancy, placement/collision, drag, rotate
   item.lua           Base grid item: footprint/rotation, sprite, sub-inventory panel, timed actions
   item_panel.lua      Popup sub-inventory panel (panel grid + action buttons/progress)
-  book_panel.lua      Popup image panel for book items (title bar + content image, no grid)
+  book_panel.lua      Popup image panel for book items (title bar + content image, no grid); panel sizes to the image's natural pixel dimensions
   customer.lua        Walk-in/wait/talk/walk-out state machine + dialogue bubbles
   customer_queue.lua  Per-day customer list/spawning
   day_state.lua       Day number, customers served/total, currency
@@ -80,7 +80,7 @@ assets/images/
 scripts/
   gen_scene_art.py   Regenerates all scene/character PNGs (requires Pillow): python3 scripts/gen_scene_art.py
   gen_icons.py       Generates item icon PNGs (32×32, 3-shade rule)
-  gen_book_pages.py  Generates book panel content images (160×120 placeholder art)
+  gen_book_pages.py  Generates book panel content images (panels size to the image's natural pixel dimensions)
   item_graph.html    Dev tool — open in any browser to browse all items and their recipe/machine connections as an interactive graph
 conf.lua             Window config; suppresses graphics/audio modules under --headless
 main.lua             Entry point — canvas rendering with letterboxing, pixel-art filter, mouse/keyboard wiring

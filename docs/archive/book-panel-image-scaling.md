@@ -1,0 +1,5 @@
+## Book Panel Image Scaling Checklist
+
+- [x] Task A — `lua/game/book_panel.lua` — Replace hardcoded `IMG_W`/`IMG_H` constants with dynamic image dimensions. Rename to `FALLBACK_W = 160` / `FALLBACK_H = 120` (used only when no image loads). After a successful `pcall` load, store `self._img_w = self._image:getWidth()` and `self._img_h = self._image:getHeight()` and use them for `bg_w`/`bg_h`. When no image loads use `FALLBACK_W`/`FALLBACK_H` for `bg_w`/`bg_h`. In `draw`, remove the `sx = IMG_W / iw` / `sy = IMG_H / ih` scale computation and draw the image at 1:1 (no scale args).
+
+- [x] Task B — `tests/test_book_panel.lua` — Update Test 7's dimension assertions. The expected values (160, 120) don't change (current PNGs are 160×120), but the assertion comments should reflect that the dimensions now come from the image file itself, not from removed module constants. Add a new test asserting that `panel.bg.w` equals `IMG_W + MARGIN*2` using the image's actual width (access via `panel._img_w`) so the test explicitly verifies dynamic sizing.
