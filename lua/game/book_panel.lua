@@ -9,12 +9,12 @@ local item_defs = require("lua/game/data/item_defs")
 local BookPanel = {}
 BookPanel.__index = BookPanel
 
-local MARGIN     = 16
-local TITLE_H    = 28
-local CLOSE_SIZE = 22
-local CLOSE_GAP  = 6
-local IMG_W      = 160
-local IMG_H      = 120
+local MARGIN      = 16
+local TITLE_H     = 28
+local CLOSE_SIZE  = 22
+local CLOSE_GAP   = 6
+local FALLBACK_W  = 160
+local FALLBACK_H  = 120
 
 local COLOR_TITLE = { 0.20, 0.20, 0.26, 1 }
 local COLOR_CLOSE = { 0.75, 0.25, 0.25, 1 }
@@ -40,11 +40,19 @@ function BookPanel.new(item)
     -- Try to load the content image; fall back to a solid-color placeholder.
     local img_path = "assets/images/books/" .. def.book_image .. ".png"
     local ok, img = pcall(love.graphics.newImage, img_path)
-    self._image       = ok and img or nil
+    self._image          = ok and img or nil
     self._fallback_color = def.color or { 0.5, 0.5, 0.5, 1 }
 
-    self.bg_w = IMG_W + MARGIN * 2
-    self.bg_h = TITLE_H + MARGIN + IMG_H + MARGIN
+    if self._image then
+        self._img_w = self._image:getWidth()
+        self._img_h = self._image:getHeight()
+    else
+        self._img_w = FALLBACK_W
+        self._img_h = FALLBACK_H
+    end
+
+    self.bg_w = self._img_w + MARGIN * 2
+    self.bg_h = TITLE_H + MARGIN + self._img_h + MARGIN
 
     local default_x = (config.SCREEN_W - self.bg_w) / 2
     local default_y = math.max(8, config.SPLIT_Y - self.bg_h - 12)
@@ -120,15 +128,11 @@ function BookPanel:draw(skip_dragging)
     love.graphics.print(self.def.name or self.item.type_id, tb.x + 8, tb.y + 6)
 
     if self._image then
-        local iw = self._image:getWidth()
-        local ih = self._image:getHeight()
-        local sx = IMG_W / iw
-        local sy = IMG_H / ih
         love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.draw(self._image, self._img_x, self._img_y, 0, sx, sy)
+        love.graphics.draw(self._image, self._img_x, self._img_y)
     else
         love.graphics.setColor(self._fallback_color)
-        love.graphics.rectangle("fill", self._img_x, self._img_y, IMG_W, IMG_H)
+        love.graphics.rectangle("fill", self._img_x, self._img_y, self._img_w, self._img_h)
     end
 
     local cb = self.close_button

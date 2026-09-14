@@ -89,7 +89,21 @@ do
     local book = Item.new("microwave_book")
     local panel = BookPanel.new(book)
     assert(panel.item.type_id == "microwave_book")
-    assert(panel.bg.w == 160 + 16 * 2, "bg_w should be IMG_W + 2*MARGIN")
-    assert(panel.bg.h == 28 + 16 + 120 + 16, "bg_h should be TITLE_H + MARGIN + IMG_H + MARGIN")
+    assert(panel.bg.w == panel._img_w + 16 * 2, "bg_w should be image width + 2*MARGIN")
+    assert(panel.bg.h == 28 + 16 + panel._img_h + 16, "bg_h should be TITLE_H + MARGIN + image height + MARGIN")
     print("PASS: book_panel: microwave_book constructs with correct dimensions")
+end
+
+-- Test 8: panel dimensions derive from image dimensions. -------------------
+
+do
+    local book = Item.new("garden_book")
+    local panel = BookPanel.new(book)
+    local MARGIN = 16
+    local TITLE_H = 28
+    assert(panel._img_w > 0, "garden_book image width should be positive")
+    assert(panel._img_h > 0, "garden_book image height should be positive")
+    assert(panel.bg.w == panel._img_w + MARGIN * 2, "bg_w derives from image width")
+    assert(panel.bg.h == TITLE_H + MARGIN + panel._img_h + MARGIN, "bg_h derives from image height")
+    print("PASS: book_panel: panel dimensions derive from image dimensions")
 end
