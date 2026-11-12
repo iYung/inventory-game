@@ -59,38 +59,12 @@ function KitchenScene:on_enter()
         config.GRID_ORIGIN_X, config.GRID_ORIGIN_Y
     )
 
-    -- Starting layout: microwave (0,0), fryer (0,2), starters at (2,0)-(4,0),
-    -- broccoli/potato at (5,0)/(6,0), container at (2,2), coffee_machine at (7,2),
-    -- garden at (0,4). Cell (5,3) is intentionally left free.
-    local microwave = Item.new("microwave")
-    self.grid:place(microwave, 0, 0)
-
-    local fryer = Item.new("fryer")
-    self.grid:place(fryer, 0, 2)
-
-    local starter = { "raw_chicken", "raw_chicken", "raw_chicken" }
-    local col, row = 2, 0
-    for _, type_id in ipairs(starter) do
-        local it = Item.new(type_id)
-        if self.grid:can_place(it, col, row) then
-            self.grid:place(it, col, row)
-            col = col + 1
-            if col >= config.GRID_COLS then col = 0; row = row + 1 end
-        end
-    end
-
-    self.grid:place(Item.new("broccoli"),       5, 0)
-    self.grid:place(Item.new("potato"),         6, 0)
-    self.grid:place(Item.new("coffee_machine"), 6, 2)
-
-    local container = Item.new("container")
-    self.grid:place(container, 4, 4)
-    container.panel:place(Item.new("roasted_coffee_bean"), 0, 0)
-    container.panel:place(Item.new("roasted_coffee_bean"), 1, 0)
-    container.panel:place(Item.new("milking_center"),      2, 0)
-    container.panel:place(Item.new("cheese_cave"),         3, 0)
-
-    self.grid:place(Item.new("garden"),         0, 4)
+    -- Starting layout: fryer program — fryer machine plus its extras.
+    self.grid:place(Item.new("fryer"),       0, 0)
+    self.grid:place(Item.new("raw_chicken"), 2, 0)
+    self.grid:place(Item.new("raw_chicken"), 3, 0)
+    self.grid:place(Item.new("potato"),      4, 0)
+    self.grid:place(Item.new("onion"),       5, 0)
 
     self._scene_bg = love.graphics.newImage("assets/images/scene/bg.png")
     self._scene_fg = love.graphics.newImage("assets/images/scene/fg.png")
